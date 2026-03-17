@@ -17,6 +17,9 @@ import (
 	"github.com/cockroach-eater/lazyjira/pkg/tui/views"
 )
 
+// Version is set from main at startup.
+var Version = "dev"
+
 type focusPanel int
 
 const (
@@ -114,6 +117,7 @@ func NewAppWithAuth(cfg *config.Config, client *jira.Client, authMethod AuthMeth
 	})
 
 	splash := views.SplashInfo{
+		Version:    Version,
 		AuthMethod: string(authMethod),
 		Host:       cfg.Jira.Host,
 		Email:      cfg.Jira.Email,

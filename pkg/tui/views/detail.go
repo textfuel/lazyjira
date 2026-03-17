@@ -36,7 +36,8 @@ const (
 
 // SplashInfo holds data for the splash/status screen.
 type SplashInfo struct {
-	AuthMethod string // "API Token" or "OAuth" or "env vars"
+	Version    string
+	AuthMethod string
 	Host       string
 	Email      string
 	Project    string
@@ -680,7 +681,7 @@ func (d *DetailView) renderSplash(contentWidth, innerH int) string {
 		lines = append(lines, green.Render(l))
 	}
 	lines = append(lines, "")
-	lines = append(lines, gray.Render("  lazyjira — Jira TUI"))
+	lines = append(lines, gray.Render("  lazyjira "+d.splash.Version))
 	lines = append(lines, gray.Render("  (c) 2026 Andrey Kondratev"))
 
 	// Connection info.
