@@ -1,0 +1,22 @@
+# Credentials
+auth.json
+config.yml
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+
+# Binary
+lazyjira
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
