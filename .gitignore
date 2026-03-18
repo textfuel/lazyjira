@@ -10,7 +10,7 @@ config.yml
 .env.*
 
 # Binary
-lazyjira
+/lazyjira
 
 # IDE
 .idea/

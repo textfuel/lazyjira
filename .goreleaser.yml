@@ -1,8 +1,7 @@
 version: 2
 
 builds:
-  - main: .
-    dir: ./cmd/lazyjira
+  - main: ./cmd/lazyjira
     binary: lazyjira
     ldflags:
       - -s -w -X main.version={{.Version}}
