@@ -100,14 +100,14 @@ func (m *Modal) Update(msg tea.Msg) (Modal, tea.Cmd) {
 			return *m, func() tea.Msg { return ModalCancelledMsg{} }
 		}
 	case tea.MouseMsg:
-		switch msg.Type {
-		case tea.MouseWheelDown:
+		switch {
+		case msg.Button == tea.MouseButtonWheelDown:
 			if m.readOnly {
 				m.offset++
 			} else if m.cursor < len(m.items)-1 {
 				m.cursor++
 			}
-		case tea.MouseWheelUp:
+		case msg.Button == tea.MouseButtonWheelUp:
 			if m.readOnly {
 				if m.offset > 0 {
 					m.offset--
@@ -115,7 +115,7 @@ func (m *Modal) Update(msg tea.Msg) (Modal, tea.Cmd) {
 			} else if m.cursor > 0 {
 				m.cursor--
 			}
-		case tea.MouseLeft:
+		case msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft:
 			if !m.readOnly {
 				// Click on item: title=1 line + blank=1 line, items start at y offset ~2 from modal top.
 				// Approximate: map click Y to item index.
@@ -126,10 +126,7 @@ func (m *Modal) Update(msg tea.Msg) (Modal, tea.Cmd) {
 				idx := clickY - 3 // rough: border + title + blank
 				if m.height > 0 {
 					// Adjust for centering.
-					modalH := len(m.items) + 5 // title + blank + items + blank + hint
-					if modalH > m.height-2 {
-						modalH = m.height - 2
-					}
+					modalH := min(len(m.items)+5, m.height-2) // title + blank + items + blank + hint
 					topOffset := (m.height - modalH) / 2
 					idx = clickY - topOffset - 3
 				}
@@ -156,37 +153,14 @@ func (m *Modal) View() string {
 
 	internalStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
 
-	// Calculate content width from longest item.
-	contentW := lipgloss.Width(m.title) + 2
-	for _, item := range m.items {
-		if w := lipgloss.Width(item.Label) + 2; w > contentW {
-			contentW = w
-		}
-	}
-	maxW := 55
-	if maxW > m.width-6 {
-		maxW = m.width - 6
-	}
-	if contentW > maxW {
-		contentW = maxW
-	}
-
 	if m.readOnly {
-		contentW = m.width - 2
-		if contentW < 10 {
-			contentW = 10
-		}
-
 		// Collect item lines only (title is in panel border).
 		var lines []string
 		for _, item := range m.items {
 			lines = append(lines, " "+item.Label)
 		}
 		totalLines := len(lines)
-		visibleH := m.height - 2
-		if visibleH < 3 {
-			visibleH = 3
-		}
+		visibleH := max(m.height-2, 3)
 		if m.offset > totalLines-visibleH {
 			m.offset = totalLines - visibleH
 		}
@@ -205,6 +179,18 @@ func (m *Modal) View() string {
 			&ScrollInfo{Total: totalLines, Visible: visibleH, Offset: m.offset})
 	}
 
+	// Calculate content width from longest item.
+	contentW := lipgloss.Width(m.title) + 2
+	for _, item := range m.items {
+		if w := lipgloss.Width(item.Label) + 2; w > contentW {
+			contentW = w
+		}
+	}
+	maxW := min(55, m.width-6)
+	if contentW > maxW {
+		contentW = maxW
+	}
+
 	// Normal modal (selection) — no hints, title + blank + items.
 	var lines []string
 	lines = append(lines, " "+titleStyle.Render(m.title))
@@ -212,20 +198,18 @@ func (m *Modal) View() string {
 
 	for i, item := range m.items {
 		label := " " + item.Label
-		if i == m.cursor {
+		switch {
+		case i == m.cursor:
 			lines = append(lines, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("4")).Width(contentW).Render(label))
-		} else if item.Internal {
+		case item.Internal:
 			lines = append(lines, internalStyle.Width(contentW).Render(label))
-		} else {
+		default:
 			lines = append(lines, lipgloss.NewStyle().Width(contentW).Render(label))
 		}
 	}
 
 	popupH := len(lines)
-	maxH := m.height - 2
-	if maxH < 5 {
-		maxH = 5
-	}
+	maxH := max(m.height-2, 5)
 	if popupH > maxH {
 		popupH = maxH
 	}

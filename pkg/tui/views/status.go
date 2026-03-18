@@ -39,10 +39,7 @@ func (s *StatusPanel) Init() tea.Cmd                              { return nil }
 func (s *StatusPanel) Update(msg tea.Msg) (*StatusPanel, tea.Cmd) { return s, nil }
 
 func (s *StatusPanel) View() string {
-	innerHeight := s.height - 2
-	if innerHeight < 1 {
-		innerHeight = 1
-	}
+	innerHeight := max(s.height-2, 1)
 
 	indicator := theme.StatusColor("done").Render("✓")
 	if !s.online {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -39,6 +40,13 @@ func main() {
 		}
 	}
 
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	dryRun := flag.Bool("dry-run", false, "Log API requests without making write operations")
 	logFile := flag.String("log", "", "Log API requests to file")
 	flag.Parse()
@@ -47,8 +55,7 @@ func main() {
 
 	client, authMethod, err := resolveClient(cfg)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return err
 	}
 
 	if *dryRun {
@@ -61,10 +68,9 @@ func main() {
 	if *logFile != "" {
 		f, err := os.OpenFile(*logFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening log file: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("opening log file: %w", err)
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		client.SetLogger(f)
 	}
 
@@ -72,10 +78,8 @@ func main() {
 	app := tui.NewAppWithAuth(cfg, client, authMethod)
 
 	p := tea.NewProgram(app, tea.WithAltScreen(), tea.WithMouseCellMotion())
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	_, err = p.Run()
+	return err
 }
 
 // resolveClient finds credentials from: saved auth.json > env vars > interactive wizard.
@@ -117,7 +121,7 @@ func runSetupWizard() (*jira.Client, error) {
 	host, _ := reader.ReadString('\n')
 	host = strings.TrimSpace(host)
 	if host == "" {
-		return nil, fmt.Errorf("host is required")
+		return nil, errors.New("host is required")
 	}
 	host = strings.TrimRight(host, "/")
 	if !strings.HasPrefix(host, "http") {
@@ -134,7 +138,7 @@ func runSetupWizard() (*jira.Client, error) {
 	email, _ := reader.ReadString('\n')
 	email = strings.TrimSpace(email)
 	if email == "" {
-		return nil, fmt.Errorf("email is required")
+		return nil, errors.New("email is required")
 	}
 
 	fmt.Println()
@@ -148,7 +152,7 @@ func runSetupWizard() (*jira.Client, error) {
 	token, _ := reader.ReadString('\n')
 	token = strings.TrimSpace(token)
 	if token == "" {
-		return nil, fmt.Errorf("API token is required")
+		return nil, errors.New("API token is required")
 	}
 
 	fmt.Println()
@@ -160,7 +164,7 @@ func runSetupWizard() (*jira.Client, error) {
 		fmt.Printf("\n  \033[31m✗ Connection failed: %v\033[0m\n\n", err)
 		fmt.Println("  Please check your credentials and try again.")
 		fmt.Println("  Run 'lazyjira auth' to retry.")
-		return nil, fmt.Errorf("connection test failed")
+		return nil, errors.New("connection test failed")
 	}
 
 	fmt.Println("  \033[32m✓ Connected successfully!\033[0m")
@@ -198,7 +202,7 @@ func testConnection(client *jira.Client) error {
 	if err != nil {
 		return fmt.Errorf("cannot reach %s: %w", client.BaseURL(), err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("auth failed (HTTP %d) — check email and API token", resp.StatusCode)
@@ -209,7 +213,7 @@ func testConnection(client *jira.Client) error {
 // runAuth handles 'lazyjira auth' — re-runs the setup wizard.
 func runAuth(args []string) {
 	authFlags := flag.NewFlagSet("auth", flag.ExitOnError)
-	authFlags.Parse(args)
+	_ = authFlags.Parse(args)
 
 	_, err := runSetupWizard()
 	if err != nil {

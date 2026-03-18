@@ -42,19 +42,13 @@ func RenderPanelFull(title, footer, content string, width, innerHeight int, focu
 		styledTitle = lipgloss.NewStyle().Foreground(borderColor).Render(title)
 	}
 
-	contentWidth := width - 2
-	if contentWidth < 1 {
-		contentWidth = 1
-	}
+	contentWidth := max(width-2, 1)
 
 	borderStyle := lipgloss.NewStyle().Foreground(borderColor)
 
 	// Top border.
 	titleLen := lipgloss.Width(styledTitle)
-	topPadding := contentWidth - titleLen
-	if topPadding < 0 {
-		topPadding = 0
-	}
+	topPadding := max(contentWidth-titleLen, 0)
 	topLine := borderStyle.Render("╭") +
 		styledTitle +
 		borderStyle.Render(strings.Repeat("─", topPadding)+"╮")
@@ -78,25 +72,20 @@ func RenderPanelFull(title, footer, content string, width, innerHeight int, focu
 		scrollArea := innerHeight
 
 		// Thumb height proportional to visible/total.
-		thumbH := int(float64(pageSize) / float64(listSize) * float64(scrollArea))
-		if thumbH < 1 {
-			thumbH = 1
-		}
+		thumbH := max(int(float64(pageSize)/float64(listSize)*float64(scrollArea)), 1)
 
 		// Thumb position — snap to bottom at end.
 		maxPos := listSize - pageSize
-		if maxPos <= 0 {
+		switch {
+		case maxPos <= 0:
 			thumbStart = 0
-		} else if position >= maxPos {
+		case position >= maxPos:
 			thumbStart = scrollArea - thumbH
-		} else {
+		default:
 			thumbStart = int(math.Ceil(float64(position) / float64(maxPos) * float64(scrollArea-thumbH-1)))
 		}
 
-		thumbEnd = thumbStart + thumbH
-		if thumbEnd > scrollArea {
-			thumbEnd = scrollArea
-		}
+		thumbEnd = min(thumbStart+thumbH, scrollArea)
 	}
 
 	borderVert := borderStyle.Render("│")
@@ -121,10 +110,7 @@ func RenderPanelFull(title, footer, content string, width, innerHeight int, focu
 	if footer != "" {
 		styledFooter := borderStyle.Render(footer)
 		footerLen := lipgloss.Width(styledFooter)
-		padding := contentWidth - footerLen
-		if padding < 0 {
-			padding = 0
-		}
+		padding := max(contentWidth-footerLen, 0)
 		bottomLine = borderStyle.Render("╰"+strings.Repeat("─", padding)) +
 			styledFooter +
 			borderStyle.Render("╯")

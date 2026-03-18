@@ -23,6 +23,8 @@ const (
 	IssueTabAssigned
 )
 
+const statusOpen = "○"
+
 type IssuesList struct {
 	issues      []jira.Issue
 	allIssues   []jira.Issue
@@ -159,11 +161,7 @@ func (m *IssuesList) SetSize(w, h int) { m.width = w; m.height = h }
 
 // ContentHeight returns natural height: items + 2 borders. Min 7 before data loads.
 func (m *IssuesList) ContentHeight() int {
-	h := len(m.issues) + 2
-	if h < 7 {
-		h = 7
-	}
-	return h
+	return max(len(m.issues)+2, 7)
 }
 func (m *IssuesList) SetFocused(focused bool) { m.focused = focused }
 
@@ -203,8 +201,7 @@ func (m *IssuesList) Update(msg tea.Msg) (*IssuesList, tea.Cmd) {
 	if !m.focused {
 		return m, nil
 	}
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		prevCursor := m.cursor
 		switch msg.String() {
 		case "j", "down":
@@ -243,11 +240,7 @@ func (m *IssuesList) Update(msg tea.Msg) (*IssuesList, tea.Cmd) {
 }
 
 func (m *IssuesList) visibleRows() int {
-	rows := m.height - 2 // top + bottom border
-	if rows < 1 {
-		rows = 1
-	}
-	return rows
+	return max(m.height-2, 1) // top + bottom border
 }
 
 func (m *IssuesList) adjustOffset() {
@@ -255,17 +248,11 @@ func (m *IssuesList) adjustOffset() {
 }
 
 func (m *IssuesList) View() string {
-	contentWidth := m.width - 2
-	if contentWidth < 10 {
-		contentWidth = 10
-	}
+	contentWidth := max(m.width-2, 10)
 	visible := m.visibleRows()
 
 	var rows []string
-	end := m.offset + visible
-	if end > len(m.issues) {
-		end = len(m.issues)
-	}
+	end := min(m.offset+visible, len(m.issues))
 	for i := m.offset; i < end; i++ {
 		rows = append(rows, m.renderIssueRow(m.issues[i], contentWidth, i == m.cursor))
 	}
@@ -343,17 +330,11 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 	}
 
 	// Pad key to fixed column width.
-	keyPad := m.keyColWidth - lipgloss.Width(key)
-	if keyPad < 0 {
-		keyPad = 0
-	}
+	keyPad := max(m.keyColWidth-lipgloss.Width(key), 0)
 	paddedKey := key + strings.Repeat(" ", keyPad)
 
 	separators := 4 // leading space + space after key + space after emoji + trailing
-	summaryWidth := width - m.keyColWidth - 1 - separators
-	if summaryWidth < 5 {
-		summaryWidth = 5
-	}
+	summaryWidth := max(width-m.keyColWidth-1-separators, 5)
 
 	summary := truncateRunes(issue.Summary, summaryWidth)
 
@@ -390,7 +371,7 @@ func truncateRunes(s string, maxWidth int) string {
 // statusEmojiPlain returns uncolored status char for selected rows.
 func statusEmojiPlain(status *jira.Status) string {
 	if status == nil {
-		return "○"
+		return statusOpen
 	}
 	switch status.CategoryKey {
 	case "done":
@@ -398,13 +379,13 @@ func statusEmojiPlain(status *jira.Status) string {
 	case "indeterminate":
 		return "→"
 	default:
-		return "○"
+		return statusOpen
 	}
 }
 
 func statusEmoji(status *jira.Status) string {
 	if status == nil {
-		return "○"
+		return statusOpen
 	}
 	switch status.CategoryKey {
 	case "done":

@@ -1,0 +1,71 @@
+version: "2"
+
+linters:
+  enable:
+    # Defaults
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # Style
+    - gocritic
+    - revive
+    - misspell
+    - goconst
+    - nakedret
+    # Bugs
+    - nilerr
+    - bodyclose
+    - noctx
+    - exhaustive
+    - errorlint
+    - gosec
+    # Perf
+    - prealloc
+    - unconvert
+    - perfsprint
+    - intrange
+    # Complexity
+    - gocognit
+    # Modern
+    - modernize
+    - copyloopvar
+    - fatcontext
+
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocognit:
+      min-complexity: 50
+    goconst:
+      min-occurrences: 4
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: unused-parameter
+          disabled: true
+        - name: package-comments
+          disabled: true
+
+  exclusions:
+    rules:
+      # gosec: subprocess with variable is by design (openBrowser/copyToClipboard)
+      - linters: [gosec]
+        text: "G204"
+      # gosec: config/log directory and file permissions (0755/0644) are fine
+      - linters: [gosec]
+        text: "G301|G302|G306"
+      # gosec: md5 used for non-security author coloring
+      - linters: [gosec]
+        text: "G401|G501"
+      # errcheck: logger writes are best-effort
+      - linters: [errcheck]
+        text: "fmt.Fprint"
+      # noctx: http.NewRequest in testConnection is one-off CLI tool
+      - linters: [noctx]
+        path: "cmd/lazyjira/main.go"
+      # modernize stringsseq: keep strings.Split for clarity in view code
+      - linters: [modernize]
+        text: "stringsseq"

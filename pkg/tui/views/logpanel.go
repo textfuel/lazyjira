@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -55,14 +56,8 @@ func (l *LogPanel) Update(msg tea.Msg) (*LogPanel, tea.Cmd) {
 }
 
 func (l *LogPanel) View() string {
-	contentWidth := l.width - 2
-	if contentWidth < 10 {
-		contentWidth = 10
-	}
-	innerHeight := l.height - 2
-	if innerHeight < 1 {
-		innerHeight = 1
-	}
+	contentWidth := max(l.width-2, 10)
+	innerHeight := max(l.height-2, 1)
 
 	l.mu.Lock()
 	entries := l.entries
@@ -71,10 +66,7 @@ func (l *LogPanel) View() string {
 	var lines []string
 
 	// Show last N entries that fit.
-	start := len(entries) - innerHeight
-	if start < 0 {
-		start = 0
-	}
+	start := max(len(entries)-innerHeight, 0)
 	for _, e := range entries[start:] {
 		statusStyle := l.theme.SuccessText
 		if e.Status >= 400 {
@@ -84,7 +76,7 @@ func (l *LogPanel) View() string {
 			l.theme.Subtitle.Render(e.Time.Format("15:04:05")),
 			l.theme.KeyStyle.Render(e.Method),
 			l.theme.ValueStyle.Render(truncate(e.Path, contentWidth-30)),
-			statusStyle.Render(fmt.Sprintf("%d", e.Status)),
+			statusStyle.Render(strconv.Itoa(e.Status)),
 			l.theme.Subtitle.Render(e.Elapsed.Round(time.Millisecond).String()),
 		)
 		lines = append(lines, line)

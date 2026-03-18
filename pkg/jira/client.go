@@ -24,7 +24,7 @@ type ClientInterface interface {
 	GetProjects(ctx context.Context) ([]Project, error)
 	GetBoards(ctx context.Context) ([]Board, error)
 	GetBoardIssues(ctx context.Context, boardID int, jql string) ([]Issue, error)
-	UpdateIssue(ctx context.Context, issueKey string, fields map[string]interface{}) error
+	UpdateIssue(ctx context.Context, issueKey string, fields map[string]any) error
 	CreateIssue(ctx context.Context, projectKey, issueTypeID, summary, description string) (*Issue, error)
 	GetComments(ctx context.Context, issueKey string) ([]Comment, error)
 	GetUsers(ctx context.Context, projectKey string) ([]User, error)
@@ -87,7 +87,7 @@ func (c *Client) SetLogger(w io.Writer) { c.logger = w }
 // SetOnRequest sets a callback for each completed request (for TUI log panel).
 func (c *Client) SetOnRequest(fn func(RequestLog)) { c.onRequest = fn }
 
-func (c *Client) do(ctx context.Context, method, path string, body interface{}, result interface{}) error {
+func (c *Client) do(ctx context.Context, method, path string, body any, result any) error {
 	start := time.Now()
 
 	var reqBody io.Reader
@@ -126,7 +126,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 		c.log("  ERROR: %v\n", err)
 		return fmt.Errorf("execute request %s %s: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -160,7 +160,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 	return nil
 }
 
-func (c *Client) log(format string, args ...interface{}) {
+func (c *Client) log(format string, args ...any) {
 	if c.logger != nil {
 		fmt.Fprintf(c.logger, format, args...)
 	}
@@ -220,7 +220,7 @@ func (c *Client) GetTransitions(ctx context.Context, issueKey string) ([]Transit
 }
 
 func (c *Client) DoTransition(ctx context.Context, issueKey, transitionID string) error {
-	body := map[string]interface{}{
+	body := map[string]any{
 		"transition": map[string]string{"id": transitionID},
 	}
 	err := c.do(ctx, http.MethodPost, "/issue/"+issueKey+"/transitions", body, nil)
@@ -231,7 +231,7 @@ func (c *Client) DoTransition(ctx context.Context, issueKey, transitionID string
 }
 
 func (c *Client) AddComment(ctx context.Context, issueKey, body string) (*Comment, error) {
-	reqBody := map[string]interface{}{
+	reqBody := map[string]any{
 		"body": body,
 	}
 	var raw commentResponse
@@ -307,8 +307,8 @@ func (c *Client) GetBoardIssues(ctx context.Context, boardID int, jql string) ([
 	return issues, nil
 }
 
-func (c *Client) UpdateIssue(ctx context.Context, issueKey string, fields map[string]interface{}) error {
-	body := map[string]interface{}{"fields": fields}
+func (c *Client) UpdateIssue(ctx context.Context, issueKey string, fields map[string]any) error {
+	body := map[string]any{"fields": fields}
 	err := c.do(ctx, http.MethodPut, "/issue/"+issueKey, body, nil)
 	if err != nil {
 		return fmt.Errorf("update issue %s: %w", issueKey, err)
@@ -317,8 +317,8 @@ func (c *Client) UpdateIssue(ctx context.Context, issueKey string, fields map[st
 }
 
 func (c *Client) CreateIssue(ctx context.Context, projectKey, issueTypeID, summary, description string) (*Issue, error) {
-	body := map[string]interface{}{
-		"fields": map[string]interface{}{
+	body := map[string]any{
+		"fields": map[string]any{
 			"project":     map[string]string{"key": projectKey},
 			"issuetype":   map[string]string{"id": issueTypeID},
 			"summary":     summary,
@@ -399,7 +399,7 @@ type issueResponse struct {
 	Key    string `json:"key"`
 	Fields struct {
 		Summary     string              `json:"summary"`
-		Description interface{}         `json:"description"`
+		Description any         `json:"description"`
 		Status      *statusResponse     `json:"status"`
 		Priority    *Priority           `json:"priority"`
 		Assignee    *userResponse    `json:"assignee"`
@@ -477,9 +477,11 @@ func (r *issueResponse) toIssue() Issue {
 }
 
 // extractADFText recursively extracts plain text from Atlassian Document Format.
-func extractADFText(v interface{}) string {
+//
+//nolint:gocognit // ADF parser complexity is inherent to the format
+func extractADFText(v any) string {
 	switch node := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		nodeType, _ := node["type"].(string)
 
 		switch nodeType {
@@ -490,13 +492,13 @@ func extractADFText(v interface{}) string {
 		case "mention":
 			// {"type":"mention","attrs":{"text":"@Name","id":"..."}}
 			// Wrap in markers so TUI can color the full name including spaces.
-			if attrs, ok := node["attrs"].(map[string]interface{}); ok {
+			if attrs, ok := node["attrs"].(map[string]any); ok {
 				if text, ok := attrs["text"].(string); ok {
 					return "\x00MENTION:" + text + "\x00"
 				}
 			}
 		case "emoji":
-			if attrs, ok := node["attrs"].(map[string]interface{}); ok {
+			if attrs, ok := node["attrs"].(map[string]any); ok {
 				if shortName, ok := attrs["shortName"].(string); ok {
 					return shortName
 				}
@@ -505,14 +507,14 @@ func extractADFText(v interface{}) string {
 			return "\n"
 		case "inlineCard":
 			// {"type":"inlineCard","attrs":{"url":"..."}}
-			if attrs, ok := node["attrs"].(map[string]interface{}); ok {
+			if attrs, ok := node["attrs"].(map[string]any); ok {
 				if url, ok := attrs["url"].(string); ok {
 					return url
 				}
 			}
 		case "listItem":
 			// Render list items with bullet.
-			if content, ok := node["content"].([]interface{}); ok {
+			if content, ok := node["content"].([]any); ok {
 				var parts []string
 				for _, child := range content {
 					if text := extractADFText(child); text != "" {
@@ -524,7 +526,7 @@ func extractADFText(v interface{}) string {
 		}
 
 		// Recurse into content array for container nodes.
-		if content, ok := node["content"].([]interface{}); ok {
+		if content, ok := node["content"].([]any); ok {
 			var parts []string
 			for _, child := range content {
 				if text := extractADFText(child); text != "" {
@@ -538,7 +540,7 @@ func extractADFText(v interface{}) string {
 			return strings.Join(parts, "") + sep
 		}
 
-	case []interface{}:
+	case []any:
 		var parts []string
 		for _, child := range node {
 			if text := extractADFText(child); text != "" {
@@ -602,7 +604,7 @@ func (r *userResponse) toUser() User {
 type commentResponse struct {
 	ID      string        `json:"id"`
 	Author  *userResponse `json:"author"`
-	Body    interface{}   `json:"body"`
+	Body    any   `json:"body"`
 	Created JiraTime      `json:"created"`
 	Updated JiraTime      `json:"updated"`
 }

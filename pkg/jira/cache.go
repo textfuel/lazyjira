@@ -7,7 +7,7 @@ import (
 )
 
 type cacheEntry struct {
-	value     interface{}
+	value     any
 	expiresAt time.Time
 }
 
@@ -24,7 +24,7 @@ func NewCache(ttl time.Duration) *Cache {
 	}
 }
 
-func (c *Cache) Get(key string) (interface{}, bool) {
+func (c *Cache) Get(key string) (any, bool) {
 	c.mu.RLock()
 	entry, ok := c.entries[key]
 	c.mu.RUnlock()
@@ -38,11 +38,11 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	return entry.value, true
 }
 
-func (c *Cache) Set(key string, value interface{}) {
+func (c *Cache) Set(key string, value any) {
 	c.SetWithTTL(key, value, c.defaultTTL)
 }
 
-func (c *Cache) SetWithTTL(key string, value interface{}, ttl time.Duration) {
+func (c *Cache) SetWithTTL(key string, value any, ttl time.Duration) {
 	c.mu.Lock()
 	c.entries[key] = cacheEntry{
 		value:     value,

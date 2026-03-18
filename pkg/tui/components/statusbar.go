@@ -94,10 +94,7 @@ func (s StatusBar) View() string {
 	leftWidth := lipgloss.Width(leftContent)
 	rightWidth := lipgloss.Width(rightContent)
 
-	gap := s.width - leftWidth - rightWidth
-	if gap < 0 {
-		gap = 0
-	}
+	gap := max(s.width-leftWidth-rightWidth, 0)
 	filler := barStyle.Render(fmt.Sprintf("%*s", gap, ""))
 
 	return leftContent + filler + rightContent

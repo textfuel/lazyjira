@@ -171,6 +171,7 @@ func (a *App) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+//nolint:gocognit // will be refactored in Phase 5
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -612,12 +613,12 @@ func (a *App) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	x, y := msg.X, msg.Y
 	panel, relY := a.hitTest(x, y)
 
-	switch msg.Type {
-	case tea.MouseWheelUp:
+	switch {
+	case msg.Button == tea.MouseButtonWheelUp:
 		return a.mouseScroll(panel, -3)
-	case tea.MouseWheelDown:
+	case msg.Button == tea.MouseButtonWheelDown:
 		return a.mouseScroll(panel, 3)
-	case tea.MouseLeft:
+	case msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft:
 		return a.mouseClick(panel, relY, x)
 	}
 	return a, nil
@@ -678,7 +679,7 @@ func (a *App) hitTest(x, y int) (panelID, int) {
 }
 
 func (a *App) mouseScroll(panel panelID, delta int) (tea.Model, tea.Cmd) {
-	switch panel {
+	switch panel { //nolint:exhaustive // only scrollable panels handled
 	case panelIssues:
 		if a.side != sideLeft || a.leftFocus != focusIssues {
 			a.side = sideLeft
@@ -724,7 +725,7 @@ func (a *App) mouseScroll(panel panelID, delta int) (tea.Model, tea.Cmd) {
 }
 
 func (a *App) mouseClick(panel panelID, relY int, x int) (tea.Model, tea.Cmd) {
-	switch panel {
+	switch panel { //nolint:exhaustive // only clickable panels handled
 	case panelStatus:
 		a.side = sideLeft
 		a.leftFocus = focusStatus
@@ -788,10 +789,7 @@ func (a *App) View() string {
 		// Vertical: all stacked.
 		var detailArea string
 		if a.modal.IsVisible() {
-			detailH := a.height - 1 - 3 - 5 - 3 - 5 // rough: total - status - issues - projects - log
-			if detailH < 5 {
-				detailH = 5
-			}
+			detailH := max(a.height-1-3-5-3-5, 5) // rough: total - status - issues - projects - log
 			detailArea = lipgloss.Place(a.width, detailH,
 				lipgloss.Center, lipgloss.Center,
 				a.modal.View(),
@@ -817,10 +815,7 @@ func (a *App) View() string {
 		if a.modal.IsVisible() {
 			sideW := a.sideWidth()
 			mainW := a.width - sideW
-			detailH := a.height - 1 - 8
-			if detailH < 5 {
-				detailH = 5
-			}
+			detailH := max(a.height-1-8, 5)
 			popup := a.modal.View()
 			detailArea = lipgloss.Place(mainW, detailH,
 				lipgloss.Center, lipgloss.Center,
@@ -877,7 +872,7 @@ func (a *App) renderHelpOverlay(base string) string {
 	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
 	descStyle := lipgloss.NewStyle()
 
-	var lines []string
+	lines := make([]string, 0, len(bindings)+3)
 	lines = append(lines, "")
 	for _, b := range bindings {
 		padded := b.Key
@@ -891,14 +886,8 @@ func (a *App) renderHelpOverlay(base string) string {
 
 	popupContent := strings.Join(lines, "\n")
 
-	popupW := maxKey + 40
-	if popupW > a.width-4 {
-		popupW = a.width - 4
-	}
-	popupH := len(lines)
-	if popupH > a.height-4 {
-		popupH = a.height - 4
-	}
+	popupW := min(maxKey+40, a.width-4)
+	popupH := min(len(lines), a.height-4)
 
 	popup := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -919,8 +908,8 @@ func (a *App) renderHelpOverlay(base string) string {
 func (a *App) extractIssueKey(url string) string {
 	host := strings.TrimRight(a.cfg.Jira.Host, "/")
 	prefix := host + "/browse/"
-	if strings.HasPrefix(url, prefix) {
-		key := strings.TrimPrefix(url, prefix)
+	key, found := strings.CutPrefix(url, prefix)
+	if found {
 		// Strip any trailing query params or fragments.
 		if idx := strings.IndexAny(key, "?#&/"); idx != -1 {
 			key = key[:idx]
@@ -969,7 +958,7 @@ func saveLastProject(projectKey string) {
 		return
 	}
 	creds.LastProject = projectKey
-	config.SaveCredentials(creds)
+	_ = config.SaveCredentials(creds)
 }
 
 // ellipsisMiddle truncates a string keeping start and end visible: "abcdef...xyz"
@@ -985,30 +974,33 @@ func ellipsisMiddle(s string, maxLen int) string {
 }
 
 func copyToClipboard(text string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("pbcopy")
+		cmd = exec.CommandContext(ctx, "pbcopy")
 	case "windows":
-		cmd = exec.Command("clip")
+		cmd = exec.CommandContext(ctx, "clip")
 	default:
-		cmd = exec.Command("xclip", "-selection", "clipboard")
+		cmd = exec.CommandContext(ctx, "xclip", "-selection", "clipboard")
 	}
 	cmd.Stdin = strings.NewReader(text)
-	cmd.Run()
+	_ = cmd.Run()
 }
 
 func openBrowser(url string) {
+	ctx := context.Background()
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.CommandContext(ctx, "open", url)
 	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		cmd = exec.CommandContext(ctx, "rundll32", "url.dll,FileProtocolHandler", url)
 	default:
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.CommandContext(ctx, "xdg-open", url)
 	}
-	cmd.Start()
+	_ = cmd.Start()
 }
 
 // isVerticalLayout returns true when terminal is too narrow for side-by-side.
@@ -1122,22 +1114,10 @@ func (a *App) layoutPanels() {
 		// Not enough space — focused panel gets remaining, other gets natural or min.
 		switch a.leftFocus {
 		case focusIssues:
-			projectsH = projectsNat
-			if projectsH > remaining/3 {
-				projectsH = remaining / 3
-			}
-			if projectsH < minH {
-				projectsH = minH
-			}
+			projectsH = max(min(projectsNat, remaining/3), minH)
 			issuesH = remaining - projectsH
 		case focusProjects:
-			issuesH = issuesNat
-			if issuesH > remaining/3 {
-				issuesH = remaining / 3
-			}
-			if issuesH < minH {
-				issuesH = minH
-			}
+			issuesH = max(min(issuesNat, remaining/3), minH)
 			projectsH = remaining - issuesH
 		default:
 			issuesH = remaining / 2
@@ -1158,10 +1138,7 @@ func (a *App) layoutPanels() {
 
 	// Right column: log fits content or max 8, detail gets the rest.
 	logH := 8
-	detailH := totalH - logH
-	if detailH < 5 {
-		detailH = 5
-	}
+	detailH := max(totalH-logH, 5)
 
 	a.detailView.SetSize(mainW, detailH)
 	a.logPanel.SetSize(mainW, logH)

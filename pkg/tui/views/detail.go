@@ -43,7 +43,11 @@ type SplashInfo struct {
 	Project    string
 }
 
-const maxBlockLines = 8 // max visible lines per entry before collapsing
+const (
+	maxBlockLines   = 8 // max visible lines per entry before collapsing
+	unknownLabel    = "Unknown"
+	noneLabel       = "none"
+)
 
 // ExpandBlockMsg is sent when user wants to expand a collapsed block.
 type ExpandBlockMsg struct {
@@ -173,7 +177,7 @@ func (d *DetailView) ClickTab(x int) {
 	}
 
 	// Tabs start after "[0] KEY" + " - " (the border char "╭" is col 0).
-	prefix := fmt.Sprintf("[0] %s", d.issue.Key)
+	prefix := "[0] " + d.issue.Key
 	sepW := 3 // " - "
 	tabsStart := len(prefix) + sepW
 
@@ -237,10 +241,7 @@ func (d *DetailView) ClickItem(relY int) tea.Cmd {
 
 	// Walk blocks to find which one contains the clicked line.
 	var blocks [][]string
-	contentWidth := d.width - 2
-	if contentWidth < 10 {
-		contentWidth = 10
-	}
+	contentWidth := max(d.width-2, 10)
 	switch d.activeTab {
 	case TabSubtasks:
 		blocks = d.renderSubtaskBlocks(contentWidth)
@@ -252,6 +253,8 @@ func (d *DetailView) ClickItem(relY int) tea.Cmd {
 		blocks = d.renderHistoryBlocks(contentWidth)
 	case TabInfo:
 		blocks = d.renderInfoBlocks(contentWidth)
+	default:
+		return nil
 	}
 
 	linePos := 0
@@ -298,8 +301,9 @@ func (d *DetailView) listTabItemCount() int {
 		return len(d.issue.Changelog)
 	case TabInfo:
 		return d.infoFieldCount()
+	default:
+		return 0
 	}
-	return 0
 }
 
 func (d *DetailView) infoFieldCount() int {
@@ -320,8 +324,9 @@ func (d *DetailView) IsListTab() bool {
 	switch d.activeTab {
 	case TabSubtasks, TabComments, TabLinks, TabHistory, TabInfo:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func (d *DetailView) ListCursorUp() {
@@ -340,8 +345,7 @@ func (d *DetailView) Update(msg tea.Msg) (*DetailView, tea.Cmd) {
 	if !d.focused {
 		return d, nil
 	}
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.String() {
 		case "j", "down":
 			if count := d.listTabItemCount(); count > 0 {
@@ -405,22 +409,13 @@ func (d *DetailView) Update(msg tea.Msg) (*DetailView, tea.Cmd) {
 
 func (d *DetailView) visibleRows() int {
 	// Total height = innerHeight + 2 (borders). Tabs are in the title now.
-	rows := d.height - 2
-	if rows < 1 {
-		rows = 1
-	}
-	return rows
+	return max(d.height-2, 1)
 }
 
+//nolint:gocognit // will be refactored in Phase 5
 func (d *DetailView) View() string {
-	contentWidth := d.width - 2
-	if contentWidth < 10 {
-		contentWidth = 10
-	}
-	innerH := d.height - 2
-	if innerH < 1 {
-		innerH = 1
-	}
+	contentWidth := max(d.width-2, 10)
+	innerH := max(d.height-2, 1)
 
 	// Splash mode.
 	if d.mode == ModeSplash {
@@ -461,6 +456,8 @@ func (d *DetailView) View() string {
 			blocks = d.renderHistoryBlocks(contentWidth)
 		case TabInfo:
 			blocks = d.renderInfoBlocks(contentWidth)
+		default:
+			// TabDetails handled by else branch (text tab)
 		}
 
 		// Clamp cursor.
@@ -598,7 +595,7 @@ func (d *DetailView) buildTitle(maxWidth int) string {
 	inactiveStyle := lipgloss.NewStyle().Foreground(theme.ColorWhite)
 	sepStyle := lipgloss.NewStyle().Foreground(theme.ColorGray)
 
-	prefix := fmt.Sprintf("[0] %s", d.issue.Key)
+	prefix := "[0] " + d.issue.Key
 
 	var tabParts []string
 	for _, t := range tabs {
@@ -615,7 +612,7 @@ func (d *DetailView) buildTitle(maxWidth int) string {
 
 func (d *DetailView) renderDescription(width int) []string {
 	valStyle := d.theme.ValueStyle
-	var lines []string
+	lines := make([]string, 0, 16)
 
 	desc := d.issue.Description
 	if desc == "" {
@@ -638,19 +635,18 @@ func colorMentions(s string) string {
 			break
 		}
 		rest := result[start+len(prefix):]
-		end := strings.Index(rest, suffix)
-		if end == -1 {
+		name, after, found := strings.Cut(rest, suffix)
+		if !found {
 			break
 		}
-		name := rest[:end]
 		colored := theme.AuthorRender(name)
-		result = result[:start] + colored + rest[end+len(suffix):]
+		result = result[:start] + colored + after
 	}
 	return result
 }
 
 func (d *DetailView) renderSubtaskBlocks(width int) [][]string {
-	var blocks [][]string
+	blocks := make([][]string, 0, len(d.issue.Subtasks))
 	for _, sub := range d.issue.Subtasks {
 		emoji := statusEmoji(sub.Status)
 		line := fmt.Sprintf(" %s %s: %s", emoji, sub.Key, sub.Summary)
@@ -664,7 +660,7 @@ func (d *DetailView) renderInfoBlocks(width int) [][]string {
 	valStyle := d.theme.ValueStyle
 	var blocks [][]string
 
-	statusName := "Unknown"
+	statusName := unknownLabel
 	if issue.Status != nil {
 		statusName = theme.StatusColor(issue.Status.CategoryKey).Render(issue.Status.Name)
 	}
@@ -688,7 +684,7 @@ func (d *DetailView) renderInfoBlocks(width int) [][]string {
 	}
 	blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Reporter:", reporter)})
 
-	typeName := "Unknown"
+	typeName := unknownLabel
 	if issue.IssueType != nil {
 		typeName = issue.IssueType.Name
 	}
@@ -705,7 +701,7 @@ func (d *DetailView) renderInfoBlocks(width int) [][]string {
 	}
 
 	if len(issue.Components) > 0 {
-		var names []string
+		names := make([]string, 0, len(issue.Components))
 		for _, c := range issue.Components {
 			names = append(names, c.Name)
 		}
@@ -719,12 +715,12 @@ func (d *DetailView) renderInfoBlocks(width int) [][]string {
 
 func (d *DetailView) renderHistoryBlocks(width int) [][]string {
 	gray := lipgloss.NewStyle().Foreground(theme.ColorGray)
-	var blocks [][]string
+	blocks := make([][]string, 0, len(d.issue.Changelog))
 
 	// Reverse order: newest first.
 	for i := len(d.issue.Changelog) - 1; i >= 0; i-- {
 		entry := d.issue.Changelog[i]
-		author := "Unknown"
+		author := unknownLabel
 		if entry.Author != nil {
 			author = entry.Author.DisplayName
 		}
@@ -736,10 +732,10 @@ func (d *DetailView) renderHistoryBlocks(width int) [][]string {
 			from := cleanWikiMarkup(item.FromString)
 			to := cleanWikiMarkup(item.ToString)
 			if from == "" {
-				from = "none"
+				from = noneLabel
 			}
 			if to == "" {
-				to = "none"
+				to = noneLabel
 			}
 
 			field := strings.ToLower(item.Field)
@@ -751,17 +747,15 @@ func (d *DetailView) renderHistoryBlocks(width int) [][]string {
 			}
 
 			if field == "assignee" || field == "reviewer" || field == "reporter" {
-				if from != "none" {
+				if from != noneLabel {
 					from = theme.AuthorRender(from)
 				}
-				if to != "none" {
+				if to != noneLabel {
 					to = theme.AuthorRender(to)
 				}
 			}
 			changeLine := fmt.Sprintf("   %s: %s → %s", gray.Render(item.Field), from, to)
-			for _, wl := range wrapText(changeLine, width-2) {
-				block = append(block, wl)
-			}
+			block = append(block, wrapText(changeLine, width-2)...)
 		}
 
 		blocks = append(blocks, block)
@@ -772,15 +766,16 @@ func (d *DetailView) renderHistoryBlocks(width int) [][]string {
 func (d *DetailView) renderCommentBlocks(width int) [][]string {
 	gray := lipgloss.NewStyle().Foreground(theme.ColorGray)
 	valStyle := d.theme.ValueStyle
-	var blocks [][]string
+	blocks := make([][]string, 0, len(d.issue.Comments))
 	for _, c := range d.issue.Comments {
-		author := "Unknown"
+		author := unknownLabel
 		if c.Author != nil {
 			author = c.Author.DisplayName
 		}
-		var block []string
+		wrapped := wrapText(c.Body, width-2)
+		block := make([]string, 0, 1+len(wrapped))
 		block = append(block, " "+theme.AuthorRender(author)+" "+gray.Render(timeAgo(c.Created)))
-		for _, wl := range wrapText(c.Body, width-2) {
+		for _, wl := range wrapped {
 			block = append(block, " "+colorMentions(valStyle.Render(wl)))
 		}
 		blocks = append(blocks, block)
@@ -869,7 +864,7 @@ func (d *DetailView) renderProjectView(contentWidth, innerH int) string {
 	}
 
 	content := strings.Join(lines, "\n")
-	title := fmt.Sprintf("[0] Project: %s", p.Name)
+	title := "[0] Project: " + p.Name
 	title = truncateRunes(title, contentWidth-2)
 	return components.RenderPanel(title, content, d.width, innerH, d.focused)
 }
@@ -965,6 +960,18 @@ func ExtractURLs(issue *jira.Issue, host string) []string {
 	for _, c := range issue.Comments {
 		for _, u := range findURLs(c.Body) {
 			add(u)
+		}
+	}
+
+	// URLs from changelog (e.g. MR url, branch url fields).
+	for _, entry := range issue.Changelog {
+		for _, item := range entry.Items {
+			for _, u := range findURLs(item.FromString) {
+				add(u)
+			}
+			for _, u := range findURLs(item.ToString) {
+				add(u)
+			}
 		}
 	}
 

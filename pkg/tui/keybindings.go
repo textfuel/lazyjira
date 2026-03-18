@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/textfuel/lazyjira/pkg/tui/components"
+import (
+	"strings"
+
+	"github.com/textfuel/lazyjira/pkg/tui/components"
+)
 
 // Binding represents a single keybinding with context.
 type Binding struct {
@@ -112,11 +116,11 @@ func (a *App) HelpPopupContent(width int) string {
 		}
 	}
 
-	var lines string
+	var sb strings.Builder
 	for _, b := range bindings {
-		lines += " " + a.helpKeyStyle(b.Key, maxKey) + "  " + b.Description + "\n"
+		sb.WriteString(" " + a.helpKeyStyle(b.Key, maxKey) + "  " + b.Description + "\n")
 	}
-	return lines
+	return sb.String()
 }
 
 func (a *App) helpKeyStyle(key string, maxW int) string {

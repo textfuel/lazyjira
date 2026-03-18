@@ -67,11 +67,7 @@ func (p *ProjectList) SetSize(w, h int)       { p.width = w; p.height = h }
 func (p *ProjectList) SetActiveKey(key string) { p.activeKey = key }
 
 func (p *ProjectList) ContentHeight() int {
-	h := len(p.projects) + 2
-	if h < 5 {
-		h = 5
-	}
-	return h
+	return max(len(p.projects)+2, 5)
 }
 func (p *ProjectList) SetFocused(focused bool) { p.focused = focused }
 
@@ -85,11 +81,7 @@ func (p *ProjectList) SelectedProject() *jira.Project {
 func (p *ProjectList) Init() tea.Cmd           { return nil }
 
 func (p *ProjectList) visibleRows() int {
-	rows := p.height - 2
-	if rows < 1 {
-		rows = 1
-	}
-	return rows
+	return max(p.height-2, 1)
 }
 
 func (p *ProjectList) adjustOffset() {
@@ -122,8 +114,7 @@ func (p *ProjectList) Update(msg tea.Msg) (*ProjectList, tea.Cmd) {
 	if !p.focused {
 		return p, nil
 	}
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		prevCursor := p.cursor
 		switch msg.String() {
 		case "j", "down":
@@ -154,27 +145,17 @@ func (p *ProjectList) Update(msg tea.Msg) (*ProjectList, tea.Cmd) {
 }
 
 func (p *ProjectList) View() string {
-	contentWidth := p.width - 2
-	if contentWidth < 10 {
-		contentWidth = 10
-	}
-	innerHeight := p.height - 2
-	if innerHeight < 1 {
-		innerHeight = 1
-	}
+	contentWidth := max(p.width-2, 10)
+	innerHeight := max(p.height-2, 1)
 
 	var rows []string
-	end := p.offset + innerHeight
-	if end > len(p.projects) {
-		end = len(p.projects)
-	}
+	end := min(p.offset+innerHeight, len(p.projects))
 	for i := p.offset; i < end; i++ {
 		proj := p.projects[i]
 		lead := ""
 		if proj.Lead != nil {
 			lead = " · " + proj.Lead.DisplayName
 		}
-		line := fmt.Sprintf(" %-8s %s", proj.Key, proj.Name)
 		// Truncate name+lead to fit.
 		maxName := contentWidth - 10 - len(lead)
 		if maxName < 5 {
@@ -191,11 +172,10 @@ func (p *ProjectList) View() string {
 			marker = "*"
 		}
 
+		line := fmt.Sprintf("%s%-8s %s%s", marker, proj.Key, namePart, lead)
 		if i == p.cursor && p.focused {
-			line = fmt.Sprintf("%s%-8s %s%s", marker, proj.Key, namePart, lead)
 			rows = append(rows, p.theme.SelectedItem.Width(contentWidth).Render(line))
 		} else {
-			line = fmt.Sprintf("%s%-8s %s%s", marker, proj.Key, namePart, lead)
 			rows = append(rows, p.theme.NormalItem.Width(contentWidth).Render(line))
 		}
 	}

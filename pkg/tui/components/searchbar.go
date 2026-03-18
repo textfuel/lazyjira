@@ -36,8 +36,7 @@ func (s *SearchBar) Update(msg tea.Msg) (SearchBar, tea.Cmd) {
 		return *s, nil
 	}
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.Type {
 		case tea.KeyEnter:
 			s.active = false
@@ -57,6 +56,8 @@ func (s *SearchBar) Update(msg tea.Msg) (SearchBar, tea.Cmd) {
 			s.query += msg.String()
 			q := s.query
 			return *s, func() tea.Msg { return SearchChangedMsg{Query: q} }
+		default:
+			// Ignore other key types.
 		}
 	}
 	return *s, nil
