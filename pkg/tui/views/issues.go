@@ -26,6 +26,7 @@ const (
 const statusOpen = "○"
 
 type IssuesList struct {
+	components.ListBase
 	issues      []jira.Issue
 	allIssues   []jira.Issue
 	filter      string
@@ -33,11 +34,6 @@ type IssuesList struct {
 	userEmail   string
 	activeKey   string // the issue currently being viewed
 	keyColWidth int
-	cursor      int
-	offset      int
-	width       int
-	height      int
-	focused     bool
 	theme       *theme.Theme
 }
 
@@ -108,8 +104,8 @@ func (m *IssuesList) applyFilterKeepCursor() {
 func (m *IssuesList) SelectByKey(key string) bool {
 	for i, issue := range m.issues {
 		if issue.Key == key {
-			m.cursor = i
-			m.adjustOffset()
+			m.Cursor = i
+			m.AdjustOffset()
 			return true
 		}
 	}
@@ -153,84 +149,31 @@ func (m *IssuesList) applyFilter() {
 		}
 		m.issues = filtered
 	}
-	m.cursor = 0
-	m.offset = 0
+	m.Cursor = 0
+	m.Offset = 0
+	m.SetItemCount(len(m.issues))
 }
-
-func (m *IssuesList) SetSize(w, h int) { m.width = w; m.height = h }
 
 // ContentHeight returns natural height: items + 2 borders. Min 7 before data loads.
 func (m *IssuesList) ContentHeight() int {
-	return max(len(m.issues)+2, 7)
-}
-func (m *IssuesList) SetFocused(focused bool) { m.focused = focused }
-
-func (m *IssuesList) ScrollBy(delta int) {
-	m.cursor += delta
-	if m.cursor < 0 {
-		m.cursor = 0
-	}
-	if m.cursor >= len(m.issues) {
-		m.cursor = len(m.issues) - 1
-	}
-	if m.cursor < 0 {
-		m.cursor = 0
-	}
-	m.adjustOffset()
-}
-
-func (m *IssuesList) ClickAt(relY int) {
-	// relY is relative to the top of this panel.
-	idx := m.offset + relY - 1 // -1 for top border
-	if idx >= 0 && idx < len(m.issues) {
-		m.cursor = idx
-		m.adjustOffset()
-	}
+	return m.ListBase.ContentHeight(7)
 }
 
 func (m *IssuesList) SelectedIssue() *jira.Issue {
-	if len(m.issues) == 0 || m.cursor < 0 || m.cursor >= len(m.issues) {
+	if len(m.issues) == 0 || m.Cursor < 0 || m.Cursor >= len(m.issues) {
 		return nil
 	}
-	return &m.issues[m.cursor]
+	return &m.issues[m.Cursor]
 }
 
 func (m *IssuesList) Init() tea.Cmd { return nil }
 
 func (m *IssuesList) Update(msg tea.Msg) (*IssuesList, tea.Cmd) {
-	if !m.focused {
+	if !m.Focused {
 		return m, nil
 	}
 	if msg, ok := msg.(tea.KeyMsg); ok {
-		prevCursor := m.cursor
-		switch msg.String() {
-		case "j", "down":
-			if m.cursor < len(m.issues)-1 {
-				m.cursor++
-			}
-		case "k", "up":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "g", "home":
-			m.cursor = 0
-		case "G", "end":
-			if len(m.issues) > 0 {
-				m.cursor = len(m.issues) - 1
-			}
-		case "ctrl+d":
-			m.cursor += m.visibleRows() / 2
-			if m.cursor >= len(m.issues) {
-				m.cursor = len(m.issues) - 1
-			}
-		case "ctrl+u":
-			m.cursor -= m.visibleRows() / 2
-			if m.cursor < 0 {
-				m.cursor = 0
-			}
-		}
-		m.adjustOffset()
-		if prevCursor != m.cursor {
+		if m.KeyNav(msg.String()) {
 			return m, func() tea.Msg {
 				return IssueSelectedMsg{Issue: m.SelectedIssue()}
 			}
@@ -239,32 +182,24 @@ func (m *IssuesList) Update(msg tea.Msg) (*IssuesList, tea.Cmd) {
 	return m, nil
 }
 
-func (m *IssuesList) visibleRows() int {
-	return max(m.height-2, 1) // top + bottom border
-}
-
-func (m *IssuesList) adjustOffset() {
-	m.offset = components.AdjustOffset(m.cursor, m.offset, m.visibleRows(), len(m.issues))
-}
-
 func (m *IssuesList) View() string {
-	contentWidth, _ := components.PanelDimensions(m.width, m.height)
-	visible := m.visibleRows()
+	contentWidth, _ := components.PanelDimensions(m.Width, m.Height)
+	visible := m.VisibleRows()
 
 	var rows []string
-	end := min(m.offset+visible, len(m.issues))
-	for i := m.offset; i < end; i++ {
-		rows = append(rows, m.renderIssueRow(m.issues[i], contentWidth, i == m.cursor))
+	end := min(m.Offset+visible, len(m.issues))
+	for i := m.Offset; i < end; i++ {
+		rows = append(rows, m.renderIssueRow(m.issues[i], contentWidth, i == m.Cursor))
 	}
 
 	content := strings.Join(rows, "\n")
 	title := m.buildTitle()
 	footer := ""
 	if len(m.issues) > 0 {
-		footer = fmt.Sprintf("%d of %d", m.cursor+1, len(m.issues))
+		footer = fmt.Sprintf("%d of %d", m.Cursor+1, len(m.issues))
 	}
-	scroll := &components.ScrollInfo{Total: len(m.issues), Visible: visible, Offset: m.offset}
-	return components.RenderPanelFull(title, footer, content, m.width, visible, m.focused, scroll)
+	scroll := &components.ScrollInfo{Total: len(m.issues), Visible: visible, Offset: m.Offset}
+	return components.RenderPanelFull(title, footer, content, m.Width, visible, m.Focused, scroll)
 }
 
 // ClickTabAt handles clicks on the title bar to switch All/Assigned tabs.
@@ -344,7 +279,7 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		marker = "*"
 	}
 
-	if selected && m.focused {
+	if selected && m.Focused {
 		line := fmt.Sprintf("%s%s %s %s", marker, paddedKey, emoji, summary)
 		return m.theme.SelectedItem.Width(width).Render(line)
 	}

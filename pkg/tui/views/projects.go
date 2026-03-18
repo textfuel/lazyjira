@@ -20,15 +20,11 @@ type ProjectHoveredMsg struct {
 }
 
 type ProjectList struct {
+	components.ListBase
 	projects    []jira.Project
 	allProjects []jira.Project
 	filter      string
 	activeKey   string // the project currently in use
-	cursor      int
-	offset      int
-	width       int
-	height      int
-	focused     bool
 	theme       *theme.Theme
 }
 
@@ -60,84 +56,46 @@ func (p *ProjectList) applyFilter() {
 		}
 		p.projects = filtered
 	}
-	p.cursor = 0
+	p.Cursor = 0
+	p.Offset = 0
+	p.SetItemCount(len(p.projects))
 }
 
-func (p *ProjectList) SetSize(w, h int)       { p.width = w; p.height = h }
 func (p *ProjectList) SetActiveKey(key string) { p.activeKey = key }
 
 func (p *ProjectList) ContentHeight() int {
-	return max(len(p.projects)+2, 5)
+	return p.ListBase.ContentHeight(5)
 }
-func (p *ProjectList) SetFocused(focused bool) { p.focused = focused }
 
 func (p *ProjectList) SelectedProject() *jira.Project {
-	if p.cursor >= 0 && p.cursor < len(p.projects) {
-		proj := p.projects[p.cursor]
+	if p.Cursor >= 0 && p.Cursor < len(p.projects) {
+		proj := p.projects[p.Cursor]
 		return &proj
 	}
 	return nil
 }
-func (p *ProjectList) Init() tea.Cmd           { return nil }
-
-func (p *ProjectList) visibleRows() int {
-	return max(p.height-2, 1)
-}
-
-func (p *ProjectList) adjustOffset() {
-	p.offset = components.AdjustOffset(p.cursor, p.offset, p.visibleRows(), len(p.projects))
-}
-
-func (p *ProjectList) ScrollBy(delta int) {
-	p.cursor += delta
-	if p.cursor < 0 {
-		p.cursor = 0
-	}
-	if p.cursor >= len(p.projects) {
-		p.cursor = len(p.projects) - 1
-	}
-	if p.cursor < 0 {
-		p.cursor = 0
-	}
-	p.adjustOffset()
-}
-
-func (p *ProjectList) ClickAt(relY int) {
-	idx := p.offset + relY - 1 // -1 for top border
-	if idx >= 0 && idx < len(p.projects) {
-		p.cursor = idx
-		p.adjustOffset()
-	}
-}
+func (p *ProjectList) Init() tea.Cmd { return nil }
 
 func (p *ProjectList) Update(msg tea.Msg) (*ProjectList, tea.Cmd) {
-	if !p.focused {
+	if !p.Focused {
 		return p, nil
 	}
 	if msg, ok := msg.(tea.KeyMsg); ok {
-		prevCursor := p.cursor
 		switch msg.String() {
-		case "j", "down":
-			if p.cursor < len(p.projects)-1 {
-				p.cursor++
-			}
-		case "k", "up":
-			if p.cursor > 0 {
-				p.cursor--
-			}
 		case "enter", " ":
-			if p.cursor >= 0 && p.cursor < len(p.projects) {
-				selected := p.projects[p.cursor]
+			if p.Cursor >= 0 && p.Cursor < len(p.projects) {
+				selected := p.projects[p.Cursor]
 				return p, func() tea.Msg {
 					return ProjectSelectedMsg{ProjectKey: selected.Key}
 				}
 			}
-		}
-		p.adjustOffset()
-		if prevCursor != p.cursor && p.cursor >= 0 && p.cursor < len(p.projects) {
-			proj := p.projects[p.cursor]
-			return p, func() tea.Msg {
-				return ProjectHoveredMsg{Project: &proj}
+		default:
+			if p.KeyNav(msg.String()) {
+				if proj := p.SelectedProject(); proj != nil {
+					return p, func() tea.Msg {
+						return ProjectHoveredMsg{Project: proj}
+					}
+				}
 			}
 		}
 	}
@@ -145,11 +103,11 @@ func (p *ProjectList) Update(msg tea.Msg) (*ProjectList, tea.Cmd) {
 }
 
 func (p *ProjectList) View() string {
-	contentWidth, innerHeight := components.PanelDimensions(p.width, p.height)
+	contentWidth, innerHeight := components.PanelDimensions(p.Width, p.Height)
 
 	var rows []string
-	end := min(p.offset+innerHeight, len(p.projects))
-	for i := p.offset; i < end; i++ {
+	end := min(p.Offset+innerHeight, len(p.projects))
+	for i := p.Offset; i < end; i++ {
 		proj := p.projects[i]
 		lead := ""
 		if proj.Lead != nil {
@@ -172,7 +130,7 @@ func (p *ProjectList) View() string {
 		}
 
 		line := fmt.Sprintf("%s%-8s %s%s", marker, proj.Key, namePart, lead)
-		if i == p.cursor && p.focused {
+		if i == p.Cursor && p.Focused {
 			rows = append(rows, p.theme.SelectedItem.Width(contentWidth).Render(line))
 		} else {
 			rows = append(rows, p.theme.NormalItem.Width(contentWidth).Render(line))
@@ -182,8 +140,8 @@ func (p *ProjectList) View() string {
 	content := strings.Join(rows, "\n")
 	footer := ""
 	if len(p.projects) > 0 {
-		footer = fmt.Sprintf("%d of %d", p.cursor+1, len(p.projects))
+		footer = fmt.Sprintf("%d of %d", p.Cursor+1, len(p.projects))
 	}
-	scroll := &components.ScrollInfo{Total: len(p.projects), Visible: innerHeight, Offset: p.offset}
-	return components.RenderPanelFull("[3] Projects", footer, content, p.width, innerHeight, p.focused, scroll)
+	scroll := &components.ScrollInfo{Total: len(p.projects), Visible: innerHeight, Offset: p.Offset}
+	return components.RenderPanelFull("[3] Projects", footer, content, p.Width, innerHeight, p.Focused, scroll)
 }
