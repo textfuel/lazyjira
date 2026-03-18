@@ -33,7 +33,7 @@ type ProjectList struct {
 }
 
 func NewProjectList() *ProjectList {
-	return &ProjectList{theme: theme.DefaultTheme()}
+	return &ProjectList{theme: theme.Default}
 }
 
 func (p *ProjectList) SetProjects(projects []jira.Project) {
@@ -145,8 +145,7 @@ func (p *ProjectList) Update(msg tea.Msg) (*ProjectList, tea.Cmd) {
 }
 
 func (p *ProjectList) View() string {
-	contentWidth := max(p.width-2, 10)
-	innerHeight := max(p.height-2, 1)
+	contentWidth, innerHeight := components.PanelDimensions(p.width, p.height)
 
 	var rows []string
 	end := min(p.offset+innerHeight, len(p.projects))

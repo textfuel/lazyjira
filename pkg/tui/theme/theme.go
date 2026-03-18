@@ -33,8 +33,13 @@ type Theme struct {
 	PriorityLow    lipgloss.Style
 }
 
-// DefaultTheme returns a lazygit-matching theme using ANSI 16 colors.
-func DefaultTheme() *Theme {
+// Default is the singleton theme instance.
+var Default = defaultTheme()
+
+// DefaultTheme returns the singleton theme. Kept for compatibility.
+func DefaultTheme() *Theme { return Default }
+
+func defaultTheme() *Theme {
 	return &Theme{
 		Title: lipgloss.NewStyle().
 			Bold(true).

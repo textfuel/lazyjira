@@ -26,7 +26,7 @@ func NewStatusPanel(project, user, host string) *StatusPanel {
 		user:    user,
 		host:    host,
 		online:  true,
-		theme:   theme.DefaultTheme(),
+		theme:   theme.Default,
 	}
 }
 
@@ -39,7 +39,7 @@ func (s *StatusPanel) Init() tea.Cmd                              { return nil }
 func (s *StatusPanel) Update(msg tea.Msg) (*StatusPanel, tea.Cmd) { return s, nil }
 
 func (s *StatusPanel) View() string {
-	innerHeight := max(s.height-2, 1)
+	_, innerHeight := components.PanelDimensions(s.width, s.height)
 
 	indicator := theme.StatusColor("done").Render("✓")
 	if !s.online {

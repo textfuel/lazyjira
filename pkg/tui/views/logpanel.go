@@ -33,7 +33,7 @@ type LogPanel struct {
 
 func NewLogPanel() *LogPanel {
 	return &LogPanel{
-		theme: theme.DefaultTheme(),
+		theme: theme.Default,
 	}
 }
 
@@ -56,8 +56,7 @@ func (l *LogPanel) Update(msg tea.Msg) (*LogPanel, tea.Cmd) {
 }
 
 func (l *LogPanel) View() string {
-	contentWidth := max(l.width-2, 10)
-	innerHeight := max(l.height-2, 1)
+	contentWidth, innerHeight := components.PanelDimensions(l.width, l.height)
 
 	l.mu.Lock()
 	entries := l.entries
@@ -75,7 +74,7 @@ func (l *LogPanel) View() string {
 		line := fmt.Sprintf("%s %s %s %s %s",
 			l.theme.Subtitle.Render(e.Time.Format("15:04:05")),
 			l.theme.KeyStyle.Render(e.Method),
-			l.theme.ValueStyle.Render(truncate(e.Path, contentWidth-30)),
+			l.theme.ValueStyle.Render(components.Truncate(e.Path, contentWidth-30)),
 			statusStyle.Render(strconv.Itoa(e.Status)),
 			l.theme.Subtitle.Render(e.Elapsed.Round(time.Millisecond).String()),
 		)
@@ -96,14 +95,4 @@ func (l *LogPanel) View() string {
 
 	content := strings.Join(lines, "\n")
 	return components.RenderPanel("Command log", content, l.width, innerHeight, false)
-}
-
-func truncate(s string, max int) string {
-	if max <= 0 {
-		return s
-	}
-	if len(s) > max {
-		return s[:max-1] + "…"
-	}
-	return s
 }

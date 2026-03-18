@@ -73,7 +73,7 @@ type DetailView struct {
 }
 
 func NewDetailView() *DetailView {
-	return &DetailView{theme: theme.DefaultTheme(), mode: ModeIssue}
+	return &DetailView{theme: theme.Default, mode: ModeIssue}
 }
 
 func (d *DetailView) SetIssue(issue *jira.Issue) {
@@ -414,8 +414,7 @@ func (d *DetailView) visibleRows() int {
 
 //nolint:gocognit // will be refactored in Phase 5
 func (d *DetailView) View() string {
-	contentWidth := max(d.width-2, 10)
-	innerH := max(d.height-2, 1)
+	contentWidth, innerH := components.PanelDimensions(d.width, d.height)
 
 	// Splash mode.
 	if d.mode == ModeSplash {
@@ -865,7 +864,7 @@ func (d *DetailView) renderProjectView(contentWidth, innerH int) string {
 
 	content := strings.Join(lines, "\n")
 	title := "[0] Project: " + p.Name
-	title = truncateRunes(title, contentWidth-2)
+	title = components.TruncateEnd(title, contentWidth-2)
 	return components.RenderPanel(title, content, d.width, innerH, d.focused)
 }
 
@@ -933,67 +932,90 @@ func renderDiff(from, to string, maxWidth int) []string {
 	return lines
 }
 
-// ExtractURLs returns all URLs found in the issue (description, comments, links).
-func ExtractURLs(issue *jira.Issue, host string) []string {
+// URLGroup is a named group of URLs for the URL picker.
+type URLGroup struct {
+	Section string
+	URLs    []string
+}
+
+// ExtractURLs returns URLs found in the issue, grouped by source.
+func ExtractURLs(issue *jira.Issue, host string) []URLGroup {
 	if issue == nil {
 		return nil
 	}
 	seen := make(map[string]bool)
-	var urls []string
-	add := func(u string) {
+	// Skip the issue's own URL — it's already open.
+	seen[host+"/browse/"+issue.Key] = true
+
+	add := func(urls *[]string, u string) {
 		if u != "" && !seen[u] {
 			seen[u] = true
-			urls = append(urls, u)
+			*urls = append(*urls, u)
 		}
 	}
 
-	// Skip the issue's own URL — it's already open.
-	selfURL := host + "/browse/" + issue.Key
-	seen[selfURL] = true
+	var groups []URLGroup
 
-	// URLs from description.
+	// Body (description).
+	var body []string
 	for _, u := range findURLs(issue.Description) {
-		add(u)
+		add(&body, u)
+	}
+	if len(body) > 0 {
+		groups = append(groups, URLGroup{"Body", body})
 	}
 
-	// URLs from comments.
+	// Comments.
+	var comments []string
 	for _, c := range issue.Comments {
 		for _, u := range findURLs(c.Body) {
-			add(u)
+			add(&comments, u)
 		}
 	}
+	if len(comments) > 0 {
+		groups = append(groups, URLGroup{"Comments", comments})
+	}
 
-	// URLs from changelog (e.g. MR url, branch url fields).
+	// Linked issues.
+	var links []string
+	for _, link := range issue.IssueLinks {
+		if link.OutwardIssue != nil {
+			add(&links, host+"/browse/"+link.OutwardIssue.Key)
+		}
+		if link.InwardIssue != nil {
+			add(&links, host+"/browse/"+link.InwardIssue.Key)
+		}
+	}
+	if len(links) > 0 {
+		groups = append(groups, URLGroup{"Links", links})
+	}
+
+	// History (changelog).
+	var history []string
 	for _, entry := range issue.Changelog {
 		for _, item := range entry.Items {
 			for _, u := range findURLs(item.FromString) {
-				add(u)
+				add(&history, u)
 			}
 			for _, u := range findURLs(item.ToString) {
-				add(u)
+				add(&history, u)
 			}
 		}
 	}
-
-	// Linked issue URLs.
-	for _, link := range issue.IssueLinks {
-		if link.OutwardIssue != nil {
-			add(host + "/browse/" + link.OutwardIssue.Key)
-		}
-		if link.InwardIssue != nil {
-			add(host + "/browse/" + link.InwardIssue.Key)
-		}
+	if len(history) > 0 {
+		groups = append(groups, URLGroup{"History", history})
 	}
 
-	return urls
+	return groups
 }
 
 // findURLs extracts http/https URLs from text.
 func findURLs(text string) []string {
 	var urls []string
 	for _, word := range strings.Fields(text) {
-		// Strip trailing punctuation.
-		word = strings.TrimRight(word, ".,;:!?)")
+		// Strip surrounding punctuation/brackets.
+		word = strings.TrimLeft(word, "([{<\"'")
+		word = strings.TrimRight(word, ".,;:!?)]}>\"'")
 		if strings.HasPrefix(word, "http://") || strings.HasPrefix(word, "https://") {
 			urls = append(urls, word)
 		}

@@ -42,7 +42,7 @@ type IssuesList struct {
 }
 
 func NewIssuesList() *IssuesList {
-	return &IssuesList{theme: theme.DefaultTheme()}
+	return &IssuesList{theme: theme.Default}
 }
 
 func (m *IssuesList) SetUserEmail(email string) { m.userEmail = email }
@@ -248,7 +248,7 @@ func (m *IssuesList) adjustOffset() {
 }
 
 func (m *IssuesList) View() string {
-	contentWidth := max(m.width-2, 10)
+	contentWidth, _ := components.PanelDimensions(m.width, m.height)
 	visible := m.visibleRows()
 
 	var rows []string
@@ -336,7 +336,7 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 	separators := 4 // leading space + space after key + space after emoji + trailing
 	summaryWidth := max(width-m.keyColWidth-1-separators, 5)
 
-	summary := truncateRunes(issue.Summary, summaryWidth)
+	summary := components.TruncateEnd(issue.Summary, summaryWidth)
 
 	active := issue.Key == m.activeKey
 	marker := " "
@@ -350,22 +350,6 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 	}
 	line := fmt.Sprintf("%s%s %s %s", marker, paddedKey, emoji, summary)
 	return m.theme.NormalItem.Width(width).Render(line)
-}
-
-// truncateRunes truncates a string to fit within maxWidth display columns,
-// respecting multi-byte UTF-8 characters (Cyrillic, etc).
-func truncateRunes(s string, maxWidth int) string {
-	if lipgloss.Width(s) <= maxWidth {
-		return s
-	}
-	runes := []rune(s)
-	for i := len(runes); i > 0; i-- {
-		candidate := string(runes[:i])
-		if lipgloss.Width(candidate)+1 <= maxWidth { // +1 for "…"
-			return candidate + "…"
-		}
-	}
-	return "…"
 }
 
 // statusEmojiPlain returns uncolored status char for selected rows.

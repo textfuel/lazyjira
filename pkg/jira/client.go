@@ -267,15 +267,20 @@ func (c *Client) GetProjects(ctx context.Context) ([]Project, error) {
 	return projects, nil
 }
 
+// doAgile executes a GET request against the Jira Agile REST API.
+func (c *Client) doAgile(ctx context.Context, path string, result any) error {
+	origBase := c.baseURL
+	c.baseURL = strings.Replace(c.baseURL, "/rest/api/3", "/rest/agile/1.0", 1)
+	err := c.do(ctx, http.MethodGet, path, nil, result)
+	c.baseURL = origBase
+	return err
+}
+
 func (c *Client) GetBoards(ctx context.Context) ([]Board, error) {
 	var raw struct {
 		Values []boardResponse `json:"values"`
 	}
-	// Boards are under the Agile API.
-	origBase := c.baseURL
-	c.baseURL = strings.Replace(c.baseURL, "/rest/api/3", "/rest/agile/1.0", 1)
-	err := c.do(ctx, http.MethodGet, "/board?maxResults=100", nil, &raw)
-	c.baseURL = origBase
+	err := c.doAgile(ctx, "/board?maxResults=100", &raw)
 	if err != nil {
 		return nil, fmt.Errorf("get boards: %w", err)
 	}
@@ -293,10 +298,7 @@ func (c *Client) GetBoardIssues(ctx context.Context, boardID int, jql string) ([
 	}
 
 	var raw searchResponse
-	origBase := c.baseURL
-	c.baseURL = strings.Replace(c.baseURL, "/rest/api/3", "/rest/agile/1.0", 1)
-	err := c.do(ctx, http.MethodGet, path, nil, &raw)
-	c.baseURL = origBase
+	err := c.doAgile(ctx, path, &raw)
 	if err != nil {
 		return nil, fmt.Errorf("get board %d issues: %w", boardID, err)
 	}
@@ -382,10 +384,7 @@ func (c *Client) GetSprints(ctx context.Context, boardID int) ([]Sprint, error) 
 		Values []Sprint `json:"values"`
 	}
 	path := fmt.Sprintf("/board/%d/sprint?maxResults=50", boardID)
-	origBase := c.baseURL
-	c.baseURL = strings.Replace(c.baseURL, "/rest/api/3", "/rest/agile/1.0", 1)
-	err := c.do(ctx, http.MethodGet, path, nil, &raw)
-	c.baseURL = origBase
+	err := c.doAgile(ctx, path, &raw)
 	if err != nil {
 		return nil, fmt.Errorf("get sprints for board %d: %w", boardID, err)
 	}

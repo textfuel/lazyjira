@@ -23,7 +23,7 @@ func RenderPanel(title, content string, width, innerHeight int, focused bool) st
 
 // RenderPanelFull draws a panel with title, footer, and optional scrollbar.
 func RenderPanelFull(title, footer, content string, width, innerHeight int, focused bool, scroll *ScrollInfo) string {
-	th := theme.DefaultTheme()
+	th := theme.Default
 
 	borderColor := theme.ColorNone
 	if focused {

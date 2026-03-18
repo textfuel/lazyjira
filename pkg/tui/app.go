@@ -337,9 +337,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.side = sideLeft
 			a.leftFocus = focusIssues
 			if sel := a.issuesList.SelectedIssue(); sel != nil {
-				if cached, ok := a.issueCache[sel.Key]; ok {
-					a.detailView.SetIssue(cached)
-				}
+				a.showCachedIssue(sel.Key)
 			}
 			a.updateFocusState()
 			return a, nil
@@ -368,15 +366,19 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if c, ok := a.issueCache[sel.Key]; ok {
 					cached = c
 				}
-				urls := views.ExtractURLs(cached, a.cfg.Jira.Host)
-				if len(urls) > 0 {
+				groups := views.ExtractURLs(cached, a.cfg.Jira.Host)
+				if len(groups) > 0 {
 					var items []components.ModalItem
-					for _, u := range urls {
-						if key := a.extractIssueKey(u); key != "" {
-							// Jira issue — show key with marker.
-							items = append(items, components.ModalItem{ID: u, Label: key, Internal: true})
-						} else {
-							items = append(items, components.ModalItem{ID: u, Label: ellipsisMiddle(u, 50)})
+					for i, g := range groups {
+						if i > 0 || len(groups) > 1 {
+							items = append(items, components.ModalItem{Label: g.Section, Separator: true})
+						}
+						for _, u := range g.URLs {
+							if key := a.extractIssueKey(u); key != "" {
+								items = append(items, components.ModalItem{ID: u, Label: key, Internal: true})
+							} else {
+								items = append(items, components.ModalItem{ID: u, Label: components.TruncateMiddle(u, 50)})
+							}
 						}
 					}
 					a.modal.SetSize(a.width, a.height)
@@ -527,11 +529,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case views.IssueSelectedMsg:
 		if msg.Issue != nil {
-			// Use cache — instant render, no API call.
 			if cached, ok := a.issueCache[msg.Issue.Key]; ok {
 				a.detailView.SetIssue(cached)
 			} else {
-				// Fallback: show basic info from list, detail will arrive from prefetch.
 				a.detailView.SetIssue(msg.Issue)
 			}
 		}
@@ -692,9 +692,7 @@ func (a *App) mouseScroll(panel panelID, delta int) (tea.Model, tea.Cmd) {
 			a.issuesList.ScrollBy(-1)
 		}
 		if sel := a.issuesList.SelectedIssue(); sel != nil {
-			if cached, ok := a.issueCache[sel.Key]; ok {
-				a.detailView.SetIssue(cached)
-			}
+			a.showCachedIssue(sel.Key)
 		}
 	case panelProjects:
 		if a.side != sideLeft || a.leftFocus != focusProjects {
@@ -743,9 +741,7 @@ func (a *App) mouseClick(panel panelID, relY int, x int) (tea.Model, tea.Cmd) {
 		} else {
 			a.issuesList.ClickAt(relY)
 			if sel := a.issuesList.SelectedIssue(); sel != nil {
-				if cached, ok := a.issueCache[sel.Key]; ok {
-					a.detailView.SetIssue(cached)
-				}
+				a.showCachedIssue(sel.Key)
 			}
 		}
 
@@ -903,6 +899,13 @@ func (a *App) renderHelpOverlay(base string) string {
 	)
 }
 
+// showCachedIssue updates the detail view with the cached version of the given issue key.
+func (a *App) showCachedIssue(key string) {
+	if cached, ok := a.issueCache[key]; ok {
+		a.detailView.SetIssue(cached)
+	}
+}
+
 // extractIssueKey checks if a URL points to our Jira and extracts the issue key.
 // e.g. https://didlogic.atlassian.net/browse/DR-13819 → "DR-13819"
 func (a *App) extractIssueKey(url string) string {
@@ -930,9 +933,7 @@ func (a *App) navigateToIssue(key string) {
 		a.side = sideLeft
 		a.leftFocus = focusIssues
 		a.updateFocusState()
-		if cached, ok := a.issueCache[key]; ok {
-			a.detailView.SetIssue(cached)
-		}
+		a.showCachedIssue(key)
 		return
 	}
 	// Switch to All tab and try again.
@@ -942,9 +943,7 @@ func (a *App) navigateToIssue(key string) {
 			a.side = sideLeft
 			a.leftFocus = focusIssues
 			a.updateFocusState()
-			if cached, ok := a.issueCache[key]; ok {
-				a.detailView.SetIssue(cached)
-			}
+			a.showCachedIssue(key)
 			return
 		}
 	}
@@ -961,45 +960,43 @@ func saveLastProject(projectKey string) {
 	_ = config.SaveCredentials(creds)
 }
 
-// ellipsisMiddle truncates a string keeping start and end visible: "abcdef...xyz"
-func ellipsisMiddle(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
+// platformCommand returns the OS-specific command name and args for the given action.
+func platformCommand(action string, arg string) (name string, args []string) {
+	switch action {
+	case "open":
+		switch runtime.GOOS {
+		case "darwin":
+			return "open", []string{arg}
+		case "windows":
+			return "rundll32", []string{"url.dll,FileProtocolHandler", arg}
+		default:
+			return "xdg-open", []string{arg}
+		}
+	case "copy":
+		switch runtime.GOOS {
+		case "darwin":
+			return "pbcopy", nil
+		case "windows":
+			return "clip", nil
+		default:
+			return "xclip", []string{"-selection", "clipboard"}
+		}
 	}
-	if maxLen < 5 {
-		return s[:maxLen]
-	}
-	side := (maxLen - 3) / 2
-	return s[:side+1] + "..." + s[len(s)-side:]
+	return "", nil
 }
 
 func copyToClipboard(text string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.CommandContext(ctx, "pbcopy")
-	case "windows":
-		cmd = exec.CommandContext(ctx, "clip")
-	default:
-		cmd = exec.CommandContext(ctx, "xclip", "-selection", "clipboard")
-	}
+	name, args := platformCommand("copy", "")
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdin = strings.NewReader(text)
 	_ = cmd.Run()
 }
 
 func openBrowser(url string) {
-	ctx := context.Background()
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.CommandContext(ctx, "open", url)
-	case "windows":
-		cmd = exec.CommandContext(ctx, "rundll32", "url.dll,FileProtocolHandler", url)
-	default:
-		cmd = exec.CommandContext(ctx, "xdg-open", url)
-	}
+	name, args := platformCommand("open", url)
+	cmd := exec.CommandContext(context.Background(), name, args...)
 	_ = cmd.Start()
 }
 
@@ -1188,11 +1185,12 @@ func fetchIssues(client *jira.Client, projectKey string) tea.Cmd {
 	}
 }
 
-func fetchIssueDetail(client *jira.Client, key string) tea.Cmd {
+// fetchFullIssue fetches issue + comments + changelog, returning the given message type.
+func fetchFullIssue(client *jira.Client, key string, mkMsg func(*jira.Issue) tea.Msg) tea.Cmd {
 	return func() tea.Msg {
 		issue, err := client.GetIssue(context.Background(), key)
 		if err != nil {
-			return errorMsg{err: err}
+			return mkMsg(nil)
 		}
 		comments, err := client.GetComments(context.Background(), key)
 		if err == nil {
@@ -1202,8 +1200,17 @@ func fetchIssueDetail(client *jira.Client, key string) tea.Cmd {
 		if err == nil {
 			issue.Changelog = changelog
 		}
-		return issueDetailLoadedMsg{issue: issue}
+		return mkMsg(issue)
 	}
+}
+
+func fetchIssueDetail(client *jira.Client, key string) tea.Cmd {
+	return fetchFullIssue(client, key, func(issue *jira.Issue) tea.Msg {
+		if issue == nil {
+			return errorMsg{err: fmt.Errorf("failed to fetch issue %s", key)}
+		}
+		return issueDetailLoadedMsg{issue: issue}
+	})
 }
 
 func fetchProjects(client *jira.Client) tea.Cmd {
@@ -1217,21 +1224,12 @@ func fetchProjects(client *jira.Client) tea.Cmd {
 }
 
 func prefetchIssue(client *jira.Client, key string) tea.Cmd {
-	return func() tea.Msg {
-		issue, err := client.GetIssue(context.Background(), key)
-		if err != nil {
+	return fetchFullIssue(client, key, func(issue *jira.Issue) tea.Msg {
+		if issue == nil {
 			return nil // silent fail for prefetch
 		}
-		comments, err := client.GetComments(context.Background(), key)
-		if err == nil {
-			issue.Comments = comments
-		}
-		changelog, err := client.GetChangelog(context.Background(), key)
-		if err == nil {
-			issue.Changelog = changelog
-		}
 		return issuePrefetchedMsg{issue: issue}
-	}
+	})
 }
 
 func fetchTransitions(client *jira.Client, issueKey string) tea.Cmd {
