@@ -1,7 +1,7 @@
 version: 2
 
 builds:
-  - main: ./cmd/lazyjira
+  - dir: ./cmd/lazyjira
     binary: lazyjira
     ldflags:
       - -s -w -X main.version={{.Version}}
@@ -16,11 +16,13 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
 brews:
   - repository:
