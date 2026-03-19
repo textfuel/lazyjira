@@ -58,10 +58,15 @@ func run() error {
 	var authMethod tui.AuthMethod
 
 	if *demo {
-		client = jira.NewDemoClient()
-		authMethod = tui.AuthDemo
-		cfg.Jira.Host = "https://demo.atlassian.net"
-		cfg.Jira.Email = "demo@lazyjira.dev"
+		var cleanup func()
+		var err error
+		client, authMethod, cleanup, err = startDemo(cfg)
+		if err != nil {
+			return fmt.Errorf("demo: %w", err)
+		}
+		if cleanup != nil {
+			defer cleanup()
+		}
 	} else {
 		var err error
 		var jiraClient *jira.Client

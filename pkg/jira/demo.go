@@ -1,3 +1,5 @@
+//go:build demo
+
 package jira
 
 import (
@@ -375,7 +377,7 @@ func (d *DemoClient) initDemoData() {
 		},
 		{
 			ID: "203", Key: "PLAT-3", Summary: "Rate limiter returns 500 instead of 429",
-			Description: "When rate limit is exceeded, the API returns 500 Internal Server Error.\nShould return 429 Too Many Requests with Retry-After header.",
+			Description: "When rate limit is exceeded, the API returns 500 Internal Server Error.\nShould return 429 Too Many Requests with Retry-After header.\n\nSee RFC 6585 https://datatracker.ietf.org/doc/html/rfc6585#section-4\nRelated PR: https://github.com/acme/platform/pull/847\nGrafana dashboard: https://grafana.internal/d/api-errors",
 			Status: inReview, Priority: high, Assignee: demo, Reporter: dave,
 			IssueType: bug,
 			Labels: []string{"bug", "api"},
@@ -427,6 +429,26 @@ func (d *DemoClient) initDemoData() {
 		{Key: "PLAT-1a", Summary: "OAuth provider integration", Status: done, IssueType: task},
 		{Key: "PLAT-1b", Summary: "Token refresh flow", Status: inProgress, IssueType: task},
 		{Key: "PLAT-1c", Summary: "Migration script for existing sessions", Status: todo, IssueType: task},
+	}
+
+	// PLAT-3 subtasks
+	platIssues[2].Subtasks = []Issue{
+		{Key: "PLAT-3a", Summary: "Add RateLimitError type to error enum", Status: done, IssueType: task},
+		{Key: "PLAT-3b", Summary: "Map 429 in error handler + Retry-After header", Status: done, IssueType: task},
+		{Key: "PLAT-3c", Summary: "Integration tests for rate limit responses", Status: inReview, IssueType: task},
+	}
+	// PLAT-3 issue links
+	platIssues[2].IssueLinks = []IssueLink{
+		{
+			ID:   "lnk3",
+			Type: &IssueLinkType{Name: "Blocks", Inward: "is blocked by", Outward: "blocks"},
+			OutwardIssue: &Issue{Key: "PLAT-1", Summary: "Migrate auth service to OAuth 2.0", Status: inProgress},
+		},
+		{
+			ID:   "lnk4",
+			Type: &IssueLinkType{Name: "Relates", Inward: "relates to", Outward: "relates to"},
+			OutwardIssue: &Issue{Key: "PLAT-5", Summary: "Database connection pool exhaustion under load", Status: inProgress},
+		},
 	}
 
 	// --- MOBI issues ---
@@ -511,7 +533,10 @@ func (d *DemoClient) initDemoData() {
 		{ID: "c9", Author: bob, Body: "Yes, implementing rotation with replay detection. If a stolen refresh token is used, all tokens for that session get revoked.", Created: now.Add(-3 * day), Updated: now.Add(-3 * day)},
 	}
 	d.comments["PLAT-3"] = []Comment{
-		{ID: "c10", Author: demo, Body: "The middleware catches the rate limit but re-throws as a generic InternalError. One-line fix — PR incoming.", Created: now.Add(-2 * day), Updated: now.Add(-2 * day)},
+		{ID: "c10", Author: dave, Body: "Reproduced in staging — sending 50 req/s to /api/users, after threshold we get 500 with generic error body. No Retry-After header at all. Logs: https://kibana.internal/app/discover#/plat-3-repro", Created: now.Add(-3 * day), Updated: now.Add(-3 * day)},
+		{ID: "c16", Author: demo, Body: "Found the root cause. The middleware catches RateLimitExceeded but re-throws as InternalError. The error handler in error_handler.go doesn't have a case for rate limit errors, so it falls through to the default 500.", Created: now.Add(-2 * day), Updated: now.Add(-2 * day)},
+		{ID: "c17", Author: bob, Body: "Good catch. Make sure the Retry-After header uses the actual reset time from the rate limiter, not a hardcoded value. Also add X-RateLimit-Remaining for client-side backoff. See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After for spec.", Created: now.Add(-36 * time.Hour), Updated: now.Add(-36 * time.Hour)},
+		{ID: "c18", Author: demo, Body: "Done — PR is up https://github.com/acme/platform/pull/847 — added all three headers. Integration tests pass on staging.", Created: now.Add(-12 * time.Hour), Updated: now.Add(-12 * time.Hour)},
 	}
 	d.comments["PLAT-5"] = []Comment{
 		{ID: "c11", Author: eve, Body: "Added PgBouncer to the staging environment. Connection usage dropped from 200 to 15 under the same load. Preparing production rollout.", Created: now.Add(-2 * day), Updated: now.Add(-2 * day)},
@@ -553,6 +578,18 @@ func (d *DemoClient) initDemoData() {
 			ToString:   "Replace legacy session-based auth with OAuth 2.0 + PKCE.\nSupport Google, GitHub, and SAML SSO providers.\nMaintain backward compatibility during migration.\n\nMigration Plan:\n1. Deploy OAuth endpoints alongside existing session auth\n2. New logins use OAuth, existing sessions remain valid\n3. Background job converts active sessions to OAuth tokens (2 week window)\n4. After migration window, disable session auth endpoints\n5. Remove session tables from database\n\nSecurity Requirements:\n- PKCE required for all public clients (mobile, SPA)\n- Refresh token rotation with replay detection\n- Access token lifetime: 15 minutes\n- Refresh token lifetime: 30 days (sliding window)\n- Rate limit: 10 failed auth attempts per minute per IP\n- All tokens stored as bcrypt hashes, never plaintext\n- Revocation endpoint must invalidate within 30 seconds\n\nSSO Configuration:\n- Google: OpenID Connect discovery, scopes: openid profile email\n- GitHub: OAuth 2.0 with user:email scope\n- SAML: Support both IdP-initiated and SP-initiated flows\n- Attribute mapping configurable per tenant\n- JIT provisioning with default role assignment",
 		}}},
 		{Author: bob, Created: now.Add(-12 * day), Items: []ChangeItem{{Field: "status", FromString: "To Do", ToString: "In Progress"}}},
+	}
+	d.changelog["PLAT-3"] = []ChangelogEntry{
+		{Author: dave, Created: now.Add(-3 * day), Items: []ChangeItem{{Field: "status", FromString: "", ToString: "To Do"}}},
+		{Author: dave, Created: now.Add(-3 * day), Items: []ChangeItem{{Field: "priority", FromString: "Medium", ToString: "High"}}},
+		{Author: demo, Created: now.Add(-2 * day), Items: []ChangeItem{{Field: "assignee", FromString: "Dave Patel", ToString: "Demo User"}}},
+		{Author: demo, Created: now.Add(-2 * day), Items: []ChangeItem{{Field: "description",
+			FromString: "When rate limit is exceeded, the API returns 500 Internal Server Error.\nShould return 429 Too Many Requests with Retry-After header.",
+			ToString:   "When rate limit is exceeded, the API returns 500 Internal Server Error.\nShould return 429 Too Many Requests with Retry-After header.\n\nRoot Cause:\nThe rate limiter middleware catches the RateLimitExceeded exception but\nre-throws it as a generic InternalError. The error mapping in\nerror_handler.go only has explicit cases for AuthError, ValidationError,\nand NotFoundError — everything else falls through to 500.\n\nFix:\n1. Add RateLimitError to the error type enum in pkg/errors/types.go\n2. Map RateLimitError → 429 in error_handler.go\n3. Set Retry-After header from the limiter's reset timestamp\n4. Add X-RateLimit-Remaining and X-RateLimit-Limit headers\n5. Return JSON body: {\"error\": \"rate_limit_exceeded\", \"retry_after\": N}\n\nTesting:\n- Unit test: verify 429 status and headers when limit exceeded\n- Integration test: hit endpoint 100 times, confirm 429 after threshold\n- Load test: confirm Retry-After values are accurate under sustained load\n- Verify existing 500 errors for real server errors are not affected\n\nRollout:\n- Deploy behind feature flag rate_limiter_v2\n- Enable on staging, soak for 24h\n- Enable on production with 10% traffic, then 50%, then 100%\n- Monitor error rate dashboard for false positives",
+		}}},
+		{Author: demo, Created: now.Add(-36 * time.Hour), Items: []ChangeItem{{Field: "status", FromString: "To Do", ToString: "In Progress"}}},
+		{Author: demo, Created: now.Add(-12 * time.Hour), Items: []ChangeItem{{Field: "labels", FromString: "bug", ToString: "bug, api"}}},
+		{Author: demo, Created: now.Add(-8 * time.Hour), Items: []ChangeItem{{Field: "status", FromString: "In Progress", ToString: "In Review"}}},
 	}
 	d.changelog["PLAT-5"] = []ChangelogEntry{
 		{Author: eve, Created: now.Add(-4 * day), Items: []ChangeItem{{Field: "status", FromString: "", ToString: "To Do"}}},
