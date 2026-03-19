@@ -6,7 +6,6 @@ Terminal UI for Jira. Like [lazygit](https://github.com/jesseduffield/lazygit) b
 |------|--------|
 | ![preview](e2e/golden/00_preview.gif) | ![preview vertical](e2e/golden/00_preview_vertical.gif) |
 
-<details>
 <summary><h2>Installation</h2></summary>
 
 <details>
@@ -83,8 +82,6 @@ git clone https://github.com/textfuel/lazyjira.git
 cd lazyjira
 make build
 ```
-
-</details>
 
 </details>
 
