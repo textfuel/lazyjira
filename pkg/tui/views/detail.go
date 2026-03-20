@@ -1132,20 +1132,32 @@ func ExtractURLs(issue *jira.Issue, host string) []URLGroup {
 
 	var groups []URLGroup
 
-	// Body (description).
+	// Body (description): prefer ADF, fallback to plain text.
 	var body []string
-	for _, u := range findURLs(issue.Description) {
-		add(&body, u)
+	if issue.DescriptionADF != nil {
+		for _, u := range extractADFURLs(issue.DescriptionADF) {
+			add(&body, u)
+		}
+	} else {
+		for _, u := range findURLs(issue.Description) {
+			add(&body, u)
+		}
 	}
 	if len(body) > 0 {
 		groups = append(groups, URLGroup{"Body", body})
 	}
 
-	// Comments.
+	// Comments: prefer ADF, fallback to plain text.
 	var comments []string
 	for _, c := range issue.Comments {
-		for _, u := range findURLs(c.Body) {
-			add(&comments, u)
+		if c.BodyADF != nil {
+			for _, u := range extractADFURLs(c.BodyADF) {
+				add(&comments, u)
+			}
+		} else {
+			for _, u := range findURLs(c.Body) {
+				add(&comments, u)
+			}
 		}
 	}
 	if len(comments) > 0 {

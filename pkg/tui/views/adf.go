@@ -449,3 +449,59 @@ func highlightCode(code, lang string) string {
 	}
 	return strings.TrimRight(buf.String(), "\n")
 }
+
+// extractADFURLs recursively extracts all URLs from an ADF document.
+// Finds URLs in link marks, inlineCard nodes, and plain text.
+//
+//nolint:gocognit // recursive ADF walker with multiple node types
+func extractADFURLs(node any) []string {
+	var urls []string
+	switch v := node.(type) {
+	case map[string]any:
+		nodeType, _ := v["type"].(string)
+
+		// inlineCard: {"type":"inlineCard","attrs":{"url":"..."}}
+		if nodeType == "inlineCard" {
+			if attrs, ok := v["attrs"].(map[string]any); ok {
+				if u, ok := attrs["url"].(string); ok {
+					urls = append(urls, u)
+				}
+			}
+		}
+
+		// text with link mark: {"type":"text","marks":[{"type":"link","attrs":{"href":"..."}}]}
+		if marks, ok := v["marks"].([]any); ok {
+			for _, m := range marks {
+				if mark, ok := m.(map[string]any); ok {
+					if mt, _ := mark["type"].(string); mt == "link" {
+						if attrs, ok := mark["attrs"].(map[string]any); ok {
+							if href, ok := attrs["href"].(string); ok {
+								urls = append(urls, href)
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Also find plain-text URLs in text nodes.
+		if nodeType == "text" {
+			if text, ok := v["text"].(string); ok {
+				urls = append(urls, findURLs(text)...)
+			}
+		}
+
+		// Recurse into content.
+		if content, ok := v["content"].([]any); ok {
+			for _, child := range content {
+				urls = append(urls, extractADFURLs(child)...)
+			}
+		}
+
+	case []any:
+		for _, child := range v {
+			urls = append(urls, extractADFURLs(child)...)
+		}
+	}
+	return urls
+}
