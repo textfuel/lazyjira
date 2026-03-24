@@ -2,9 +2,8 @@
 
 Terminal UI for Jira. Like [lazygit](https://github.com/jesseduffield/lazygit) but for Jira.
 
-<p>
-  <img src="e2e/golden/00_preview.gif" width="70%" alt="preview">
-  <img src="e2e/golden/00_preview_vertical.gif" width="28%" alt="preview vertical">
+<p align="center">
+  <img src="e2e/golden/00_preview.gif" width="68%" alt="preview">&nbsp;<img src="e2e/golden/00_preview_vertical.gif" width="30%" alt="preview vertical">
 </p>
 
 ## Features
