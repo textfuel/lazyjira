@@ -2,11 +2,19 @@
 
 Terminal UI for Jira. Like [lazygit](https://github.com/jesseduffield/lazygit) but for Jira.
 
-| Wide | Narrow |
-|------|--------|
-| ![preview](e2e/golden/00_preview.gif) | ![preview vertical](e2e/golden/00_preview_vertical.gif) |
+<p>
+  <img src="e2e/golden/00_preview.gif" width="67%" alt="preview">&nbsp;<img src="e2e/golden/00_preview_vertical.gif" width="31%" alt="preview vertical">
+</p>
 
-<summary><h2>Installation</h2></summary>
+## Features
+
+- **JQL search** with autocomplete, syntax highlighting, and persistent history
+- **4-panel layout** - issues, projects, detail, status - with vim-style navigation
+- **Inline editing** - transitions, priority, assignee, labels, comments, description (`$EDITOR`)
+- **Configurable** - custom keybindings, JQL tabs, issue columns, custom fields
+- **Adaptive** - side-by-side or stacked layout, mouse support, ANSI 16 colors
+
+## Installation
 
 <details>
 <summary><b>macOS</b></summary>
@@ -108,12 +116,31 @@ Credentials saved to `~/.config/lazyjira/auth.json`.
 lazyjira                 # start
 lazyjira auth            # re-authenticate
 lazyjira logout          # clear credentials
+lazyjira --dry-run       # read-only mode (no writes to Jira)
+lazyjira --log app.log   # log API requests to file
 lazyjira --version       # show version
-lazyjira --log app.log   # log API requests
-lazyjira --dry-run       # read-only mode
 ```
 
 Press `?` inside the app for all keybindings.
+
+### Demo mode
+
+Try without a Jira account (build from source required):
+
+```
+make build-demo
+./lazyjira --demo
+```
+
+## Roadmap
+
+- [x] Robust JQL search
+- [ ] Git integration - create branches from issues, open issue from current branch
+- [ ] Create issues
+- [ ] Rich text editing - colors, panels, media in ADF descriptions
+- [ ] Bulk operations - transition/assign multiple issues at once
+- [ ] Notifications - watch for issue updates
+- [ ] Offline mode - cached view when network is unavailable
 
 ## License
 
