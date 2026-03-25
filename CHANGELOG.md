@@ -7,6 +7,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-03-25
+
+### Added
+
+- CI workflow: golangci-lint + vet + build on PRs and main
+- Required status checks on main branch
+- GitHub issue templates (bug report, feature request)
+- Pull request template
+- CONTRIBUTING.md
+
+### Changed
+
+- Homebrew distribution: brews -> homebrew_casks (goreleaser v2)
+- Refactored app.go: extracted handlers into handlers_keys, handlers_data, handlers_jql, handlers_modal
+- OverlayStack: unified modal intercept/render dispatch for all overlay panels
+- DRY helpers for modal, inputmodal, jqlmodal, diffview components
+- Unit tests for modal, overlaystack, text utilities
+
 ## [2.4.0] - 2026-03-25
 
 ### Added
@@ -71,7 +89,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.4.1...HEAD
+[2.4.1]: https://github.com/textfuel/lazyjira/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/textfuel/lazyjira/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/textfuel/lazyjira/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/textfuel/lazyjira/compare/v2.1.0...v2.2.0
