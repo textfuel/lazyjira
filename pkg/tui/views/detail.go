@@ -1223,7 +1223,7 @@ func (d *DetailView) renderSplash(contentWidth, innerH int) string {
 	}
 	lines = append(lines, "")
 	lines = append(lines, gray.Render("  lazyjira "+d.splash.Version))
-	lines = append(lines, gray.Render("  (c) 2026 Andrey Kondratev"))
+	lines = append(lines, gray.Render("  (c) 2026 textfuel"))
 
 	// Connection info.
 	s := d.splash
