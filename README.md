@@ -1,10 +1,25 @@
 # lazyjira
 
+[![Go](https://img.shields.io/github/go-mod/go-version/textfuel/lazyjira)](https://go.dev/)
+[![Release](https://img.shields.io/github/v/release/textfuel/lazyjira)](https://github.com/textfuel/lazyjira/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Terminal UI for Jira. Like [lazygit](https://github.com/jesseduffield/lazygit) but for Jira.
+
+Jira's web UI is painfully slow. Changing a ticket status takes multiple clicks, pages take seconds to load, and you spend more time fighting the interface than actually working. lazyjira gives you a fast, keyboard-driven terminal UI so you can browse issues, update statuses, read descriptions and more with minimum latency.
 
 <p>
   <img src="e2e/golden/00_preview.gif" width="67%" alt="preview">&nbsp;<img src="e2e/golden/00_preview_vertical.gif" width="31%" alt="preview vertical">
 </p>
+
+### Demo mode
+
+Try without a Jira account (build from source required):
+
+```
+make build-demo
+./lazyjira --demo
+```
 
 ## Features
 
@@ -22,8 +37,7 @@ Terminal UI for Jira. Like [lazygit](https://github.com/jesseduffield/lazygit) b
 #### Homebrew
 
 ```
-brew tap textfuel/tap
-brew install lazyjira
+brew install textfuel/tap/lazyjira
 ```
 
 </details>
@@ -123,15 +137,6 @@ lazyjira --version       # show version
 
 Press `?` inside the app for all keybindings.
 
-### Demo mode
-
-Try without a Jira account (build from source required):
-
-```
-make build-demo
-./lazyjira --demo
-```
-
 ## Roadmap
 
 - [x] Robust JQL search
@@ -141,6 +146,10 @@ make build-demo
 - [ ] Bulk operations - transition/assign multiple issues at once
 - [ ] Notifications - watch for issue updates
 - [ ] Offline mode - cached view when network is unavailable
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=textfuel/lazyjira&type=Date)](https://star-history.com/#textfuel/lazyjira&Date)
 
 ## License
 

@@ -24,17 +24,16 @@ archives:
         formats:
           - zip
 
-brews:
-  - repository:
+homebrew_casks:
+  - name: lazyjira
+    description: "Terminal UI for Jira"
+    homepage: "https://github.com/textfuel/lazyjira"
+    binaries:
+      - lazyjira
+    repository:
       owner: textfuel
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
-    homepage: "https://github.com/textfuel/lazyjira"
-    description: "Terminal UI for Jira"
-    license: "MIT"
-    test: |
-      assert_match "lazyjira", shell_output("#{bin}/lazyjira --version")
 
 nfpms:
   - package_name: lazyjira
