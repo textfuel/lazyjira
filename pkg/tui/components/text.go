@@ -34,26 +34,28 @@ func TruncateMiddle(s string, maxWidth int) string {
 	runes := []rune(s)
 	ellipsis := "..."
 	ellipsisW := 3
-	sideW := (maxWidth - ellipsisW) / 2
+	budget := maxWidth - ellipsisW
+	startBudget := (budget + 1) / 2 // start gets the extra column on odd budget
+	endBudget := budget - startBudget
 
-	// Build start: runes from the beginning fitting sideW+1 display columns.
+	// Build start: runes from the beginning.
 	var start []rune
 	w := 0
 	for _, r := range runes {
 		rw := lipgloss.Width(string(r))
-		if w+rw > sideW+1 {
+		if w+rw > startBudget {
 			break
 		}
 		start = append(start, r)
 		w += rw
 	}
 
-	// Build end: runes from the end fitting sideW display columns.
+	// Build end: runes from the end.
 	var end []rune
 	w = 0
 	for i := len(runes) - 1; i >= 0; i-- {
 		rw := lipgloss.Width(string(runes[i]))
-		if w+rw > sideW {
+		if w+rw > endBudget {
 			break
 		}
 		end = append([]rune{runes[i]}, end...)
