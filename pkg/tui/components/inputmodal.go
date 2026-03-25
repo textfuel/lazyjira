@@ -52,6 +52,7 @@ func (m *InputModal) SetHints(hints []string) {
 
 func (m *InputModal) Hide()           { m.visible = false }
 func (m *InputModal) IsVisible() bool { return m.visible }
+func (m *InputModal) HasHints() bool  { return len(m.hints) > 0 }
 func (m *InputModal) SetSize(w, h int) {
 	m.width = w
 	m.height = h
@@ -91,6 +92,9 @@ func (m *InputModal) Update(msg tea.Msg) (InputModal, tea.Cmd) {
 				}
 			default:
 				switch msg.String() {
+				case "q":
+					m.visible = false
+					return *m, func() tea.Msg { return InputCancelledMsg{} }
 				case "j":
 					if m.hintCursor < len(m.hints)-1 {
 						m.hintCursor++

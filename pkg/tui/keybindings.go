@@ -118,10 +118,14 @@ func (a *App) helpBarItems() []components.HelpItem {
 			{Key: "j/k", Description: "scroll"},
 		}
 	case a.inputModal.IsVisible():
-		return []components.HelpItem{
+		items := []components.HelpItem{
 			{Key: "enter", Description: "confirm"},
 			{Key: "esc", Description: "cancel"},
 		}
+		if a.inputModal.HasHints() {
+			items = append(items, components.HelpItem{Key: "tab", Description: "existing branches"})
+		}
+		return items
 	case a.modal.IsVisible() && a.modal.IsChecklist():
 		return []components.HelpItem{
 			{Key: "j/k", Description: "navigate"},
