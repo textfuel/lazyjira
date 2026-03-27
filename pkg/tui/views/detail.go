@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,13 +17,9 @@ import (
 type DetailTab int
 
 const (
-	TabDetails  DetailTab = iota
-	TabSubtasks
+	TabDetails DetailTab = iota
 	TabComments
-	TabLinks
-	TabInfo
 	TabHistory
-	tabCount = 6
 )
 
 // MainMode controls what the right panel displays.
@@ -86,6 +81,14 @@ func (d *DetailView) SetCustomFields(fields []config.CustomFieldConfig) { d.cust
 
 func NewDetailView() *DetailView {
 	return &DetailView{theme: theme.Default, mode: ModeIssue}
+}
+
+// IssueKey returns the key of the currently displayed issue, or "".
+func (d *DetailView) IssueKey() string {
+	if d.issue != nil && d.mode == ModeIssue {
+		return d.issue.Key
+	}
+	return ""
 }
 
 func (d *DetailView) SetIssue(issue *jira.Issue) {
@@ -154,100 +157,6 @@ func (d *DetailView) SelectedComment() *jira.Comment {
 	return nil
 }
 
-// InfoFieldType determines which editor to use for a field.
-type InfoFieldType int
-
-const (
-	FieldSingleSelect InfoFieldType = iota // priority, status, issue type, sprint
-	FieldMultiSelect                       // labels, components
-	FieldPerson                            // assignee, reporter
-	FieldSingleText                        // summary, single-line custom fields
-	FieldMultiText                         // environment, multi-line custom fields
-)
-
-// InfoField represents an editable field in the Info tab.
-type InfoField struct {
-	Name    string        // display label (e.g. "Priority")
-	FieldID string        // API field name (e.g. "priority", "labels", "customfield_10015")
-	Type    InfoFieldType // determines which modal/editor to open
-	Value   string        // current display value
-}
-
-// infoFields returns the list of info fields in the same order as renderInfoBlocks.
-func (d *DetailView) infoFields() []InfoField {
-	if d.issue == nil {
-		return nil
-	}
-	issue := d.issue
-	var fields []InfoField
-
-	statusName := unknownLabel
-	if issue.Status != nil {
-		statusName = issue.Status.Name
-	}
-	fields = append(fields, InfoField{Name: "Status", FieldID: "status", Type: FieldSingleSelect, Value: statusName})
-
-	priorityName := noneLabelUpper
-	if issue.Priority != nil {
-		priorityName = issue.Priority.Name
-	}
-	fields = append(fields, InfoField{Name: "Priority", FieldID: "priority", Type: FieldSingleSelect, Value: priorityName})
-
-	assignee := "Unassigned"
-	if issue.Assignee != nil {
-		assignee = issue.Assignee.DisplayName
-	}
-	fields = append(fields, InfoField{Name: "Assignee", FieldID: "assignee", Type: FieldPerson, Value: assignee})
-
-	reporter := "Unknown"
-	if issue.Reporter != nil {
-		reporter = issue.Reporter.DisplayName
-	}
-	fields = append(fields, InfoField{Name: "Reporter", FieldID: "reporter", Type: FieldPerson, Value: reporter})
-
-	typeName := unknownLabel
-	if issue.IssueType != nil {
-		typeName = issue.IssueType.Name
-	}
-	fields = append(fields, InfoField{Name: "Type", FieldID: "issuetype", Type: FieldSingleSelect, Value: typeName})
-
-	sprintName := noneLabelUpper
-	if issue.Sprint != nil {
-		sprintName = issue.Sprint.Name
-	}
-	fields = append(fields, InfoField{Name: "Sprint", FieldID: "sprint", Type: FieldSingleSelect, Value: sprintName})
-
-	if len(issue.Labels) > 0 {
-		fields = append(fields, InfoField{Name: "Labels", FieldID: "labels", Type: FieldMultiSelect, Value: strings.Join(issue.Labels, ", ")})
-	}
-
-	if len(issue.Components) > 0 {
-		names := make([]string, 0, len(issue.Components))
-		for _, c := range issue.Components {
-			names = append(names, c.Name)
-		}
-		fields = append(fields, InfoField{Name: "Components", FieldID: "components", Type: FieldMultiSelect, Value: strings.Join(names, ", ")})
-	}
-
-	for _, cf := range d.customFields {
-		val := formatCustomFieldValue(issue.CustomFields[cf.ID])
-		fields = append(fields, InfoField{Name: cf.Name, FieldID: cf.ID, Type: FieldSingleText, Value: val})
-	}
-
-	return fields
-}
-
-// SelectedInfoField returns the info field under the cursor, or nil.
-func (d *DetailView) SelectedInfoField() *InfoField {
-	if d.issue == nil || d.activeTab != TabInfo {
-		return nil
-	}
-	fields := d.infoFields()
-	if d.listCursor >= 0 && d.listCursor < len(fields) {
-		return &fields[d.listCursor]
-	}
-	return nil
-}
 
 func (d *DetailView) Init() tea.Cmd           { return nil }
 
@@ -399,39 +308,18 @@ func (d *DetailView) listTabItemCount() int {
 		return 0
 	}
 	switch d.activeTab {
-	case TabSubtasks:
-		return len(d.issue.Subtasks)
 	case TabComments:
 		return len(d.issue.Comments)
-	case TabLinks:
-		return len(d.issue.IssueLinks)
 	case TabHistory:
 		return len(d.issue.Changelog)
-	case TabInfo:
-		return d.infoFieldCount()
 	default:
 		return 0
 	}
 }
 
-func (d *DetailView) infoFieldCount() int {
-	if d.issue == nil {
-		return 0
-	}
-	count := 6 // Status, Priority, Assignee, Reporter, Type, Sprint
-	if len(d.issue.Labels) > 0 {
-		count++
-	}
-	if len(d.issue.Components) > 0 {
-		count++
-	}
-	count += len(d.customFields)
-	return count
-}
-
 func (d *DetailView) IsListTab() bool {
 	switch d.activeTab {
-	case TabSubtasks, TabComments, TabLinks, TabHistory, TabInfo:
+	case TabComments, TabHistory:
 		return true
 	default:
 		return false
@@ -478,11 +366,7 @@ func (d *DetailView) Update(msg tea.Msg) (*DetailView, tea.Cmd) {
 				d.scrollY--
 			}
 		case "tab":
-			d.activeTab = (d.activeTab + 1) % tabCount
-			d.scrollY = 0
-			d.listCursor = 0
-		case "i":
-			d.activeTab = TabInfo
+			d.NextTab()
 			d.scrollY = 0
 			d.listCursor = 0
 		case "ctrl+d":
@@ -681,15 +565,8 @@ func (d *DetailView) tabLabels() []tabLabel {
 	var tabs []tabLabel
 	tabs = append(tabs, tabLabel{TabDetails, "Body"})
 	if d.issue != nil {
-		if len(d.issue.Subtasks) > 0 {
-			tabs = append(tabs, tabLabel{TabSubtasks, "Sub"})
-		}
 		tabs = append(tabs, tabLabel{TabComments, "Cmt"})
-		if len(d.issue.IssueLinks) > 0 {
-			tabs = append(tabs, tabLabel{TabLinks, "Lnk"})
-		}
 	}
-	tabs = append(tabs, tabLabel{TabInfo, "Info"})
 	if d.issue != nil && len(d.issue.Changelog) > 0 {
 		tabs = append(tabs, tabLabel{TabHistory, "Hist"})
 	}
@@ -829,156 +706,18 @@ func colorMentions(s string) string {
 
 // buildBlockKeys returns an issue key per block for navigable tabs (subtasks, links).
 func (d *DetailView) buildBlockKeys(blocks [][]string) []string {
-	keys := make([]string, len(blocks))
-	switch d.activeTab { //nolint:exhaustive // only subtasks and links have navigable keys
-	case TabSubtasks:
-		for i, sub := range d.issue.Subtasks {
-			if i < len(keys) {
-				keys[i] = sub.Key
-			}
-		}
-	case TabLinks:
-		idx := 0
-		for _, link := range d.issue.IssueLinks {
-			if link.Type == nil {
-				continue
-			}
-			if link.OutwardIssue != nil || link.InwardIssue != nil {
-				if idx < len(keys) {
-					if link.OutwardIssue != nil {
-						keys[idx] = link.OutwardIssue.Key
-					} else if link.InwardIssue != nil {
-						keys[idx] = link.InwardIssue.Key
-					}
-				}
-				idx++
-			}
-		}
-	}
-	return keys
+	return make([]string, len(blocks))
 }
 
 // renderActiveTabBlocks dispatches block rendering to the current tab.
 func (d *DetailView) renderActiveTabBlocks(width int) [][]string {
 	switch d.activeTab { //nolint:exhaustive // TabDetails is text-based, not block-based
-	case TabSubtasks:
-		return d.renderSubtaskBlocks(width)
 	case TabComments:
 		return d.renderCommentBlocks(width)
-	case TabLinks:
-		return d.renderLinkBlocks(width)
 	case TabHistory:
 		return d.renderHistoryBlocks(width)
-	case TabInfo:
-		return d.renderInfoBlocks(width)
 	}
 	return nil
-}
-
-func (d *DetailView) renderSubtaskBlocks(width int) [][]string {
-	blocks := make([][]string, 0, len(d.issue.Subtasks))
-	for _, sub := range d.issue.Subtasks {
-		emoji := statusEmoji(sub.Status)
-		line := fmt.Sprintf(" %s %s: %s", emoji, sub.Key, sub.Summary)
-		blocks = append(blocks, wrapText(line, width-2))
-	}
-	return blocks
-}
-
-func (d *DetailView) renderInfoBlocks(width int) [][]string {
-	issue := d.issue
-	valStyle := d.theme.ValueStyle
-	var blocks [][]string
-
-	statusName := unknownLabel
-	if issue.Status != nil {
-		statusName = theme.StatusColor(issue.Status.CategoryKey).Render(issue.Status.Name)
-	}
-	blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Status:", statusName)})
-
-	priorityName := noneLabelUpper
-	if issue.Priority != nil {
-		priorityName = d.priorityStyled(issue.Priority.Name)
-	}
-	blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Priority:", priorityName)})
-
-	assignee := "Unassigned"
-	if issue.Assignee != nil {
-		assignee = theme.AuthorRender(issue.Assignee.DisplayName)
-	}
-	blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Assignee:", assignee)})
-
-	reporter := "Unknown"
-	if issue.Reporter != nil {
-		reporter = theme.AuthorRender(issue.Reporter.DisplayName)
-	}
-	blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Reporter:", reporter)})
-
-	typeName := unknownLabel
-	if issue.IssueType != nil {
-		typeName = issue.IssueType.Name
-	}
-	blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Type:", valStyle.Render(typeName))})
-
-	sprintName := noneLabelUpper
-	if issue.Sprint != nil {
-		sprintName = issue.Sprint.Name
-	}
-	blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Sprint:", valStyle.Render(sprintName))})
-
-	if len(issue.Labels) > 0 {
-		blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Labels:", valStyle.Render(strings.Join(issue.Labels, ", ")))})
-	}
-
-	if len(issue.Components) > 0 {
-		names := make([]string, 0, len(issue.Components))
-		for _, c := range issue.Components {
-			names = append(names, c.Name)
-		}
-		blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", "Components:", valStyle.Render(strings.Join(names, ", ")))})
-	}
-
-	// Custom fields.
-	for _, cf := range d.customFields {
-		val := formatCustomFieldValue(issue.CustomFields[cf.ID])
-		blocks = append(blocks, []string{fmt.Sprintf(" %-11s %s", cf.Name+":", valStyle.Render(val))})
-	}
-
-	return blocks
-}
-
-func formatCustomFieldValue(v any) string {
-	if v == nil {
-		return noneLabelUpper
-	}
-	switch val := v.(type) {
-	case string:
-		return val
-	case float64:
-		if val == float64(int64(val)) {
-			return strconv.FormatInt(int64(val), 10)
-		}
-		return fmt.Sprintf("%.2f", val)
-	case map[string]any:
-		if name, ok := val["displayName"].(string); ok {
-			return name
-		}
-		if value, ok := val["value"].(string); ok {
-			return value
-		}
-		if name, ok := val["name"].(string); ok {
-			return name
-		}
-		return fmt.Sprintf("%v", val)
-	case []any:
-		var parts []string
-		for _, item := range val {
-			parts = append(parts, formatCustomFieldValue(item))
-		}
-		return strings.Join(parts, ", ")
-	default:
-		return fmt.Sprintf("%v", val)
-	}
 }
 
 // renderEntry renders a single author+time header + content block + separator.
@@ -1029,7 +768,7 @@ func (d *DetailView) renderHistoryBlocks(width int) [][]string {
 				// Apply field-name gray.
 				wl = strings.Replace(wl, item.Field+":", gray.Render(item.Field)+":", 1)
 				// Apply value coloring.
-				if field == "status" {
+				if field == fieldStatus {
 					if from != noneLabel {
 						wl = strings.Replace(wl, from, statusNameStyle(from).Render(from), 1)
 					}
@@ -1180,32 +919,6 @@ func (d *DetailView) renderCommentBlocks(width int) [][]string {
 	return blocks
 }
 
-func (d *DetailView) renderLinkBlocks(width int) [][]string {
-	keyStyle := d.theme.KeyStyle
-	valStyle := d.theme.ValueStyle
-	var blocks [][]string
-	for _, link := range d.issue.IssueLinks {
-		if link.Type == nil {
-			continue
-		}
-		var block []string
-		if link.OutwardIssue != nil {
-			line := " " + keyStyle.Render(link.Type.Outward) + " " +
-				valStyle.Render(fmt.Sprintf("%s: %s", link.OutwardIssue.Key, link.OutwardIssue.Summary))
-			block = append(block, wrapText(line, width-2)...)
-		}
-		if link.InwardIssue != nil {
-			line := " " + keyStyle.Render(link.Type.Inward) + " " +
-				valStyle.Render(fmt.Sprintf("%s: %s", link.InwardIssue.Key, link.InwardIssue.Summary))
-			block = append(block, wrapText(line, width-2)...)
-		}
-		if len(block) > 0 {
-			blocks = append(blocks, block)
-		}
-	}
-	return blocks
-}
-
 func (d *DetailView) renderSplash(contentWidth, innerH int) string {
 	green := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
 	gray := lipgloss.NewStyle().Foreground(theme.ColorGray)
@@ -1264,17 +977,6 @@ func (d *DetailView) renderProjectView(contentWidth, innerH int) string {
 	title := "[0] Project: " + p.Name
 	title = components.TruncateEnd(title, contentWidth-2)
 	return components.RenderPanel(title, content, d.width, innerH, d.focused)
-}
-
-func (d *DetailView) priorityStyled(name string) string {
-	switch strings.ToLower(name) {
-	case "highest", "high", "critical", "blocker":
-		return d.theme.PriorityHigh.Render(name)
-	case "medium":
-		return d.theme.PriorityMedium.Render(name)
-	default:
-		return d.theme.PriorityLow.Render(name)
-	}
 }
 
 // renderDiff shows removed lines in red and added lines in green.

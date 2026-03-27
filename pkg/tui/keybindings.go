@@ -23,6 +23,7 @@ func (a *App) ContextBindings() []Binding {
 		{km.Keys(ActSwitchPanel), "switch left/right panels"},
 		{km.Keys(ActFocusStatus), "focus status panel"},
 		{km.Keys(ActFocusIssues), "focus issues panel"},
+		{km.Keys(ActFocusInfo), "focus info panel"},
 		{km.Keys(ActFocusProj), "focus projects panel"},
 		{km.Keys(ActSearch), "search / filter current list"},
 		{km.Keys(ActRefresh), "refresh data from Jira"},
@@ -51,6 +52,22 @@ func (a *App) ContextBindings() []Binding {
 			Binding{"[]", "switch tab"},
 		)
 
+	case a.side == sideLeft && a.leftFocus == focusInfo:
+		return append(global,
+			Binding{"j/k", "navigate up/down"},
+			Binding{"g/G", "go to top/bottom"},
+			Binding{"ctrl+d/u", "half-page down/up"},
+			Binding{"[]", "switch tab (Info/Lnk/Sub)"},
+			a.bind(ActEdit, "edit field"),
+			a.bind(ActTransition, "transition issue status"),
+			a.bind(ActEditPriority, "change priority"),
+			a.bind(ActEditAssignee, "change assignee"),
+			a.bind(ActBrowser, "open issue in browser"),
+			a.bind(ActURLPicker, "open URL picker"),
+			a.bind(ActFocusRight, "next panel"),
+			a.bind(ActFocusLeft, "previous panel"),
+		)
+
 	case a.side == sideLeft && a.leftFocus == focusProjects:
 		return append(global,
 			Binding{"j/k", "navigate up/down"},
@@ -58,7 +75,8 @@ func (a *App) ContextBindings() []Binding {
 			Binding{"ctrl+d/u", "half-page down/up"},
 			a.bind(ActSelect, "select project and load issues"),
 			a.bind(ActOpen, "preview project"),
-			a.bind(ActFocusRight, "switch to detail panel"),
+			a.bind(ActFocusRight, "next panel"),
+			a.bind(ActFocusLeft, "previous panel"),
 		)
 
 	case a.side == sideLeft && a.leftFocus == focusStatus:
@@ -74,7 +92,7 @@ func (a *App) ContextBindings() []Binding {
 			Binding{"ctrl+d/u", "half-page down/up"},
 			Binding{"[]", "previous/next tab"},
 			a.bind(ActFocusLeft, "back to left panel"),
-			a.bind(ActInfoTab, "jump to info tab"),
+			a.bind(ActInfoTab, "focus info panel"),
 			a.bind(ActEditPriority, "change priority"),
 			a.bind(ActEditAssignee, "change assignee"),
 			a.bind(ActBrowser, "open in browser"),
@@ -156,6 +174,14 @@ func (a *App) helpBarItems() []components.HelpItem {
 			components.HelpItem{Key: km.Keys(ActHelp), Description: "help"},
 		)
 		return items
+	case a.side == sideLeft && a.leftFocus == focusInfo:
+		return []components.HelpItem{
+			{Key: km.Keys(ActEdit), Description: "edit"},
+			{Key: km.Keys(ActTransition), Description: "transition"},
+			{Key: km.Keys(ActEditPriority), Description: "priority"},
+			{Key: km.Keys(ActEditAssignee), Description: "assignee"},
+			{Key: km.Keys(ActHelp), Description: "help"},
+		}
 	case a.side == sideLeft && a.leftFocus == focusProjects:
 		return []components.HelpItem{
 			{Key: km.Keys(ActSelect), Description: "select"},
@@ -176,10 +202,6 @@ func (a *App) helpBarItems() []components.HelpItem {
 			items = append(items,
 				components.HelpItem{Key: km.Keys(ActEdit), Description: "edit comment"},
 				components.HelpItem{Key: km.Keys(ActAddComment), Description: "new comment"},
-			)
-		case views.TabInfo:
-			items = append(items,
-				components.HelpItem{Key: km.Keys(ActEdit), Description: "edit field"},
 			)
 		default:
 			items = append(items,

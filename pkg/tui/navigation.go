@@ -12,6 +12,7 @@ import (
 func (a *App) showCachedIssue(key string) {
 	if cached, ok := a.issueCache[key]; ok {
 		a.detailView.SetIssue(cached)
+		a.infoPanel.SetIssue(cached)
 	}
 }
 

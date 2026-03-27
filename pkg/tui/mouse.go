@@ -9,6 +9,7 @@ type panelID int
 const (
 	panelStatus panelID = iota
 	panelIssues
+	panelInfo
 	panelProjects
 	panelDetail
 	panelLog
@@ -42,6 +43,10 @@ func (a *App) hitTest(x, y int) (panelID, int) {
 			return panelIssues, y - top
 		}
 		top += a.panelIssuesH
+		if y < top+a.panelInfoH {
+			return panelInfo, y - top
+		}
+		top += a.panelInfoH
 		if y < top+a.panelProjectsH {
 			return panelProjects, y - top
 		}
@@ -63,6 +68,10 @@ func (a *App) hitTest(x, y int) (panelID, int) {
 			return panelIssues, y - top
 		}
 		top += a.panelIssuesH
+		if y < top+a.panelInfoH {
+			return panelInfo, y - top
+		}
+		top += a.panelInfoH
 		return panelProjects, y - top
 	}
 
@@ -88,6 +97,17 @@ func (a *App) mouseScroll(panel panelID, delta int) (tea.Model, tea.Cmd) {
 		}
 		if sel := a.issuesList.SelectedIssue(); sel != nil {
 			a.showCachedIssue(sel.Key)
+		}
+	case panelInfo:
+		if a.side != sideLeft || a.leftFocus != focusInfo {
+			a.side = sideLeft
+			a.leftFocus = focusInfo
+			a.updateFocusState()
+		}
+		if delta > 0 {
+			a.infoPanel.ScrollBy(1)
+		} else {
+			a.infoPanel.ScrollBy(-1)
 		}
 	case panelProjects:
 		if a.side != sideLeft || a.leftFocus != focusProjects {
@@ -145,6 +165,16 @@ func (a *App) mouseClick(panel panelID, relY int, x int) (tea.Model, tea.Cmd) {
 			}
 		} else if sel := a.issuesList.SelectedIssue(); sel != nil {
 			a.showCachedIssue(sel.Key)
+		}
+
+	case panelInfo:
+		a.side = sideLeft
+		a.leftFocus = focusInfo
+		a.updateFocusState()
+		if relY == 0 {
+			a.infoPanel.ClickTabAt(x)
+		} else {
+			a.infoPanel.ClickAt(relY)
 		}
 
 	case panelProjects:

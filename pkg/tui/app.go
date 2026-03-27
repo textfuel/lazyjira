@@ -24,6 +24,7 @@ type focusPanel int
 const (
 	focusStatus   focusPanel = iota
 	focusIssues
+	focusInfo
 	focusProjects
 )
 
@@ -72,7 +73,12 @@ type projectsLoadedMsg struct{ projects []jira.Project }
 type issuePrefetchedMsg struct {
 	issue *jira.Issue
 }
+type batchPrefetchedMsg struct {
+	issues []jira.Issue
+}
 type autoFetchTickMsg struct{}
+type boardsLoadedMsg struct{ boards []jira.Board }
+type sprintsLoadedMsg struct{ sprints []jira.Sprint }
 type transitionsLoadedMsg struct {
 	issueKey    string
 	transitions []jira.Transition
@@ -85,6 +91,7 @@ type App struct {
 
 	statusPanel *views.StatusPanel
 	issuesList  *views.IssuesList
+	infoPanel   *views.InfoPanel
 	projectList *views.ProjectList
 	detailView  *views.DetailView
 	logPanel    *views.LogPanel
@@ -113,6 +120,8 @@ type App struct {
 	leftFocus   focusPanel
 	projectKey  string
 	projectID   string
+	boardID     int         // agile board for current project (0 = unknown)
+	boards      []jira.Board // cached boards from API
 	showHelp    bool
 	helpCursor  int
 	logFlag     *bool
@@ -125,16 +134,16 @@ type App struct {
 	gitDetectedKey string // issue key from auto-detect (consumed once)
 
 	// Cached panel sizes for mouse hit-testing.
-	panelSideW    int
-	panelStatusH  int
-	panelIssuesH  int
+	panelSideW     int
+	panelStatusH   int
+	panelIssuesH   int
+	panelInfoH     int
 	panelProjectsH int
-	panelDetailH  int
-	panelLogH     int
+	panelDetailH   int
+	panelLogH      int
 
 	width  int
 	height int
-	err    error
 }
 
 // AuthMethod describes how the user authenticated.
@@ -165,6 +174,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	issuesList.SetTabs(cfg.IssueTabs)
 	issuesList.SetFocused(true)
 	issuesList.SetUserEmail(cfg.Jira.Email)
+	infoPanel := views.NewInfoPanel()
 	projectList := views.NewProjectList()
 	detailView := views.NewDetailView()
 	logPanel := views.NewLogPanel()
@@ -203,6 +213,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		}
 		client.SetCustomFields(ids)
 		detailView.SetCustomFields(cfg.CustomFields)
+		infoPanel.SetCustomFields(cfg.CustomFields)
 	}
 
 	app := &App{
@@ -212,6 +223,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		splashInfo: splash,
 		statusPanel: statusPanel,
 		issuesList:  issuesList,
+		infoPanel:   infoPanel,
 		projectList: projectList,
 		detailView:  detailView,
 		logPanel:    logPanel,
@@ -256,6 +268,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 func (a *App) Init() tea.Cmd {
 	var cmds []tea.Cmd
 	cmds = append(cmds, fetchProjects(a.client))
+	cmds = append(cmds, fetchBoards(a.client))
 	if cmd := a.fetchActiveTab(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
@@ -306,6 +319,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.handleIssueDetailLoaded(msg)
 	case issuePrefetchedMsg:
 		return a.handleIssuePrefetched(msg)
+	case batchPrefetchedMsg:
+		return a.handleBatchPrefetched(msg)
 	case projectsLoadedMsg:
 		return a.handleProjectsLoaded(msg)
 
@@ -315,6 +330,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.handleTransitionsLoaded(msg)
 	case prioritiesLoadedMsg:
 		return a.handlePrioritiesLoaded(msg)
+	case boardsLoadedMsg:
+		return a.handleBoardsLoaded(msg)
+	case sprintsLoadedMsg:
+		return a.handleSprintsLoaded(msg)
 	case usersLoadedMsg:
 		return a.handleUsersLoaded(msg)
 	case labelsLoadedMsg:
@@ -374,10 +393,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case gitCheckoutDoneMsg:
 		return a.handleGitBranchSwitch(msg.name)
 	case gitErrorMsg:
-		a.err = msg.err
+		a.statusPanel.SetError(msg.err.Error())
 		return a, nil
 	case errorMsg:
-		a.err = msg.err
+		a.statusPanel.SetError(msg.err.Error())
 		a.statusPanel.SetOnline(false)
 		return a, nil
 
@@ -385,8 +404,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Issue != nil {
 			if cached, ok := a.issueCache[msg.Issue.Key]; ok {
 				a.detailView.SetIssue(cached)
+				a.infoPanel.SetIssue(cached)
 			} else {
 				a.detailView.SetIssue(msg.Issue)
+				a.infoPanel.SetIssue(msg.Issue)
 			}
 		}
 		return a, nil
@@ -413,6 +434,7 @@ func (a *App) View() string {
 		content = lipgloss.JoinVertical(lipgloss.Left,
 			a.statusPanel.View(),
 			a.issuesList.View(),
+			a.infoPanel.View(),
 			a.projectList.View(),
 			a.detailView.View(),
 			a.logPanel.View(),
@@ -421,6 +443,7 @@ func (a *App) View() string {
 		leftCol := lipgloss.JoinVertical(lipgloss.Left,
 			a.statusPanel.View(),
 			a.issuesList.View(),
+			a.infoPanel.View(),
 			a.projectList.View(),
 		)
 
@@ -430,15 +453,6 @@ func (a *App) View() string {
 		)
 
 		content = lipgloss.JoinHorizontal(lipgloss.Top, leftCol, rightCol)
-	}
-
-	if a.err != nil {
-		errLine := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("1")).
-			Bold(true).
-			Width(a.width).
-			Render(fmt.Sprintf(" Error: %v", a.err))
-		content = lipgloss.JoinVertical(lipgloss.Left, content, errLine)
 	}
 
 	// Refresh help bar hints for current context (overlays, panels).
@@ -466,9 +480,9 @@ func (a *App) View() string {
 	return full
 }
 
-// editInfoField dispatches field editing by type when `e` is pressed on the Info tab.
+// editInfoField dispatches field editing by type when `e` is pressed on the Info panel or tab.
 func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
-	field := a.detailView.SelectedInfoField()
+	field := a.infoPanel.SelectedInfoField()
 	if field == nil {
 		return a, nil
 	}
@@ -486,6 +500,12 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 				a.onSelect = a.makeFieldSelectCallback(sel.Key, "issuetype")
 				return a, fetchIssueTypes(a.client, a.projectID)
 			}
+		case "sprint":
+			if a.boardID != 0 {
+				return a, fetchSprints(a.client, a.boardID)
+			}
+			a.statusPanel.SetError("no agile board found for this project")
+			return a, nil
 		}
 	case views.FieldPerson:
 		a.onSelect = a.makePersonSelectCallback(field.FieldID)
@@ -662,6 +682,7 @@ func (a *App) fetchActiveTab() tea.Cmd {
 func (a *App) updateFocusState() {
 	a.statusPanel.SetFocused(false)
 	a.issuesList.SetFocused(false)
+	a.infoPanel.SetFocused(false)
 	a.projectList.SetFocused(false)
 	a.detailView.SetFocused(false)
 
@@ -671,6 +692,8 @@ func (a *App) updateFocusState() {
 			a.statusPanel.SetFocused(true)
 		case focusIssues:
 			a.issuesList.SetFocused(true)
+		case focusInfo:
+			a.infoPanel.SetFocused(true)
 		case focusProjects:
 			a.projectList.SetFocused(true)
 		}

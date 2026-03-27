@@ -126,6 +126,17 @@ func prefetchIssue(client jira.ClientInterface, key string) tea.Cmd {
 	})
 }
 
+func batchPrefetch(client jira.ClientInterface, keys []string) tea.Cmd {
+	return func() tea.Msg {
+		jql := "key in (" + strings.Join(keys, ",") + ")"
+		result, err := client.SearchIssues(context.Background(), jql, 0, len(keys))
+		if err != nil || result == nil {
+			return nil
+		}
+		return batchPrefetchedMsg{issues: result.Issues}
+	}
+}
+
 func fetchTransitions(client jira.ClientInterface, issueKey string) tea.Cmd {
 	return func() tea.Msg {
 		transitions, err := client.GetTransitions(context.Background(), issueKey)
@@ -267,6 +278,36 @@ func fetchComponents(client jira.ClientInterface, projectKey string) tea.Cmd {
 			return errorMsg{err: err}
 		}
 		return componentsLoadedMsg{components: comps}
+	}
+}
+
+func fetchBoards(client jira.ClientInterface) tea.Cmd {
+	return func() tea.Msg {
+		boards, err := client.GetBoards(context.Background())
+		if err != nil {
+			return nil // silent fail — boards are optional (agile API may be unavailable)
+		}
+		return boardsLoadedMsg{boards: boards}
+	}
+}
+
+func fetchSprints(client jira.ClientInterface, boardID int) tea.Cmd {
+	return func() tea.Msg {
+		sprints, err := client.GetSprints(context.Background(), boardID)
+		if err != nil {
+			return errorMsg{err: err}
+		}
+		return sprintsLoadedMsg{sprints: sprints}
+	}
+}
+
+func moveToSprint(client jira.ClientInterface, sprintID int, issueKey string) tea.Cmd {
+	return func() tea.Msg {
+		err := client.MoveToSprint(context.Background(), sprintID, issueKey)
+		if err != nil {
+			return errorMsg{err: err}
+		}
+		return issueUpdatedMsg{issueKey: issueKey}
 	}
 }
 

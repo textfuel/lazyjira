@@ -118,7 +118,7 @@ func (p *ProjectList) View() string {
 		if n := len(p.projects); n > 0 {
 			footer = fmt.Sprintf("%d of %d", p.Cursor+1, n)
 		}
-		return components.RenderCollapsedBar("[3] Projects", footer, p.Width, p.Focused)
+		return components.RenderCollapsedBar("[4] Projects", footer, p.Width, p.Focused)
 	}
 
 	contentWidth, innerHeight := components.PanelDimensions(p.Width, p.Height)
@@ -166,5 +166,5 @@ func (p *ProjectList) View() string {
 		footer = fmt.Sprintf("%d of %d", p.Cursor+1, len(p.projects))
 	}
 	scroll := &components.ScrollInfo{Total: len(p.projects), Visible: innerHeight, Offset: p.Offset}
-	return components.RenderPanelFull("[3] Projects", footer, content, p.Width, innerHeight, p.Focused, scroll)
+	return components.RenderPanelFull("[4] Projects", footer, content, p.Width, innerHeight, p.Focused, scroll)
 }

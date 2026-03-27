@@ -14,7 +14,8 @@ type StatusPanel struct {
 	user    string
 	host    string
 	online  bool
-	width int
+	errText string
+	width   int
 	height  int
 	focused bool
 	theme   *theme.Theme
@@ -31,7 +32,8 @@ func NewStatusPanel(project, user, host string) *StatusPanel {
 }
 
 func (s *StatusPanel) SetProject(project string) { s.project = project }
-func (s *StatusPanel) SetOnline(online bool) { s.online = online }
+func (s *StatusPanel) SetOnline(online bool)     { s.online = online }
+func (s *StatusPanel) SetError(err string)       { s.errText = err }
 func (s *StatusPanel) SetSize(w, h int)          { s.width = w; s.height = h }
 func (s *StatusPanel) SetFocused(focused bool)   { s.focused = focused }
 
@@ -60,5 +62,10 @@ func (s *StatusPanel) View() string {
 		email = email[:side+1] + "..." + email[len(email)-side:]
 	}
 	line := fmt.Sprintf("%s %s → %s", indicator, email, s.project)
+	if s.errText != "" {
+		errStyle := theme.StatusColor("").Render
+		errLine := " " + errStyle(components.TruncateEnd(s.errText, contentW-1))
+		line += "\n" + errLine
+	}
 	return components.RenderPanel("[1] Status", line, s.width, innerHeight, s.focused)
 }

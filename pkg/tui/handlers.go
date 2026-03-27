@@ -22,9 +22,12 @@ func (a *App) handleResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 // handleSearchChanged filters the active panel by query.
 func (a *App) handleSearchChanged(msg components.SearchChangedMsg) (tea.Model, tea.Cmd) {
-	if a.side == sideLeft && a.leftFocus == focusIssues {
+	switch {
+	case a.side == sideLeft && a.leftFocus == focusIssues:
 		a.issuesList.SetFilter(msg.Query)
-	} else if a.side == sideLeft && a.leftFocus == focusProjects {
+	case a.side == sideLeft && a.leftFocus == focusInfo:
+		a.infoPanel.SetFilter(msg.Query)
+	case a.side == sideLeft && a.leftFocus == focusProjects:
 		a.projectList.SetFilter(msg.Query)
 	}
 	return a, nil
@@ -33,14 +36,17 @@ func (a *App) handleSearchChanged(msg components.SearchChangedMsg) (tea.Model, t
 // handleSearchConfirmed finalizes search: selects the filtered item and loads data.
 func (a *App) handleSearchConfirmed() (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
-	if a.side == sideLeft && a.leftFocus == focusIssues {
+	switch {
+	case a.side == sideLeft && a.leftFocus == focusIssues:
 		selectedIssue := a.issuesList.SelectedIssue()
 		a.issuesList.ClearFilter()
 		if selectedIssue != nil {
 			a.issuesList.SelectByKey(selectedIssue.Key)
 			cmds = append(cmds, fetchIssueDetail(a.client, selectedIssue.Key))
 		}
-	} else if a.side == sideLeft && a.leftFocus == focusProjects {
+	case a.side == sideLeft && a.leftFocus == focusInfo:
+		a.infoPanel.SetFilter("")
+	case a.side == sideLeft && a.leftFocus == focusProjects:
 		if p := a.projectList.SelectedProject(); p != nil {
 			a.selectProject(p)
 			cmds = append(cmds, a.fetchActiveTab())
@@ -53,6 +59,7 @@ func (a *App) handleSearchConfirmed() (tea.Model, tea.Cmd) {
 // handleSearchCancelled clears search filter.
 func (a *App) handleSearchCancelled() (tea.Model, tea.Cmd) {
 	a.issuesList.SetFilter("")
+	a.infoPanel.SetFilter("")
 	a.projectList.SetFilter("")
 	return a, nil
 }
@@ -78,6 +85,8 @@ func (a *App) selectProject(p *jira.Project) {
 	a.issuesList.ClearActiveKey()
 	a.issuesList.InvalidateTabCache()
 	a.issueCache = make(map[string]*jira.Issue)
+	a.infoPanel.SetIssue(nil)
+	a.resolveBoardID()
 	if !a.demoMode {
 		go saveLastProject(p.Key)
 	}
@@ -91,6 +100,12 @@ func (a *App) routeToPanel(msg tea.Msg) tea.Cmd {
 		case focusIssues:
 			updated, cmd := a.issuesList.Update(msg)
 			a.issuesList = updated
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		case focusInfo:
+			updated, cmd := a.infoPanel.Update(msg)
+			a.infoPanel = updated
 			if cmd != nil {
 				cmds = append(cmds, cmd)
 			}

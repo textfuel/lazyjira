@@ -318,7 +318,11 @@ func (d *DemoClient) UpdateComment(_ context.Context, issueKey, commentID string
 	return fmt.Errorf("comment %s not found on %s", commentID, issueKey)
 }
 func (d *DemoClient) AssignIssue(_ context.Context, _ string, _ string) error { return nil }
-func (d *DemoClient) GetBoards(_ context.Context) ([]Board, error)            { return nil, nil }
+func (d *DemoClient) GetBoards(_ context.Context) ([]Board, error) {
+	return []Board{
+		{ID: 1, Name: "SHOP Board", Type: "scrum", ProjectKey: "SHOP"},
+	}, nil
+}
 func (d *DemoClient) GetBoardIssues(_ context.Context, _ int, _ string) ([]Issue, error) {
 	return nil, nil
 }
@@ -336,16 +340,38 @@ func (d *DemoClient) UpdateIssue(_ context.Context, issueKey string, fields map[
 		iss.Description = extractADFText(desc)
 	}
 	if p, ok := fields["priority"].(map[string]string); ok {
-		if iss.Priority == nil {
-			iss.Priority = &Priority{}
+		priorities, _ := d.GetPriorities(context.Background())
+		for _, pr := range priorities {
+			if pr.ID == p["id"] {
+				iss.Priority = &Priority{ID: pr.ID, Name: pr.Name, IconURL: pr.IconURL}
+				break
+			}
 		}
-		iss.Priority.ID = p["id"]
 	}
 	if v, ok := fields["assignee"]; ok {
 		if v == nil {
 			iss.Assignee = nil
 		} else if m, ok := v.(map[string]string); ok {
-			iss.Assignee = &User{AccountID: m["accountId"]}
+			users, _ := d.GetUsers(context.Background(), "")
+			for _, u := range users {
+				if u.AccountID == m["accountId"] {
+					iss.Assignee = &User{AccountID: u.AccountID, DisplayName: u.DisplayName, Email: u.Email, Active: u.Active}
+					break
+				}
+			}
+		}
+	}
+	if v, ok := fields["reporter"]; ok {
+		if v == nil {
+			iss.Reporter = nil
+		} else if m, ok := v.(map[string]string); ok {
+			users, _ := d.GetUsers(context.Background(), "")
+			for _, u := range users {
+				if u.AccountID == m["accountId"] {
+					iss.Reporter = &User{AccountID: u.AccountID, DisplayName: u.DisplayName, Email: u.Email, Active: u.Active}
+					break
+				}
+			}
 		}
 	}
 	if labels, ok := fields["labels"].([]string); ok {
@@ -364,10 +390,16 @@ func (d *DemoClient) UpdateIssue(_ context.Context, issueKey string, fields map[
 		}
 	}
 	if it, ok := fields["issuetype"].(map[string]string); ok {
-		if iss.IssueType == nil {
-			iss.IssueType = &IssueType{}
+		types, _ := d.GetIssueTypes(context.Background(), "")
+		for _, t := range types {
+			if t.ID == it["id"] {
+				iss.IssueType = &IssueType{ID: t.ID, Name: t.Name}
+				break
+			}
 		}
-		iss.IssueType.ID = it["id"]
+	}
+	if _, ok := fields["sprint"]; ok {
+		iss.Sprint = nil
 	}
 	iss.Updated = time.Now()
 	return nil
@@ -397,7 +429,29 @@ func (d *DemoClient) GetPriorities(_ context.Context) ([]Priority, error) {
 	}, nil
 }
 func (d *DemoClient) GetSprints(_ context.Context, _ int) ([]Sprint, error) {
-	return nil, nil
+	d.logRequest("GET", "/board/1/sprint")
+	return []Sprint{
+		{ID: 1, Name: "Sprint 23", State: "active"},
+		{ID: 2, Name: "Sprint 24", State: "future"},
+		{ID: 3, Name: "Sprint 25", State: "future"},
+	}, nil
+}
+
+func (d *DemoClient) MoveToSprint(_ context.Context, sprintID int, issueKey string) error {
+	d.logRequest("POST", fmt.Sprintf("/sprint/%d/issue", sprintID))
+	iss, ok := d.issueIndex[issueKey]
+	if !ok {
+		return fmt.Errorf("issue %s not found", issueKey)
+	}
+	sprints, _ := d.GetSprints(context.Background(), 0)
+	for i := range sprints {
+		if sprints[i].ID == sprintID {
+			iss.Sprint = &sprints[i]
+			break
+		}
+	}
+	iss.Updated = time.Now()
+	return nil
 }
 
 func (d *DemoClient) GetLabels(_ context.Context) ([]string, error) {

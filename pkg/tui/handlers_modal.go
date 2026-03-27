@@ -43,7 +43,7 @@ func (a *App) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	if err != nil {
 		cleanupEditor(msg.tempPath)
 		a.editTempPath = ""
-		a.err = err
+		a.statusPanel.SetError(err.Error())
 		return a, tea.Batch(cmds...)
 	}
 	if !changed {

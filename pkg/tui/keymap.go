@@ -24,6 +24,7 @@ const (
 	ActFocusDetail Action = "focusDetail"
 	ActFocusStatus Action = "focusStatus"
 	ActFocusIssues Action = "focusIssues"
+	ActFocusInfo   Action = "focusInfo"
 	ActFocusProj   Action = "focusProjects"
 	ActCopyURL     Action = "copyURL"
 	ActBrowser     Action = "browser"
@@ -31,7 +32,7 @@ const (
 	ActTransition  Action = "transition"
 	ActRefresh     Action = "refresh"
 	ActRefreshAll  Action = "refreshAll"
-	ActInfoTab         Action = "infoTab"
+	ActInfoTab     Action = "infoTab" // legacy: now focuses Info panel
 	ActEdit        Action = "edit"
 	ActComments    Action = "comments"
 	ActAddComment  Action = "addComment"
@@ -61,7 +62,8 @@ func DefaultKeymap() Keymap {
 		ActFocusDetail: {"0"},
 		ActFocusStatus: {"1"},
 		ActFocusIssues: {"2"},
-		ActFocusProj:   {"3"},
+		ActFocusInfo:   {"3"},
+		ActFocusProj:   {"4"},
 		ActCopyURL:     {"y"},
 		ActBrowser:     {"o"},
 		ActURLPicker:   {"u"},
@@ -101,6 +103,7 @@ func KeymapFromConfig(kcfg config.KeybindingConfig) Keymap {
 	set(ActFocusDetail, kcfg.Universal.FocusDetail)
 	set(ActFocusStatus, kcfg.Universal.FocusStatus)
 	set(ActFocusIssues, kcfg.Universal.FocusIssues)
+	set(ActFocusInfo, kcfg.Universal.FocusInfo)
 	set(ActFocusProj, kcfg.Universal.FocusProj)
 	set(ActJQLSearch, kcfg.Universal.JQLSearch)
 	// Issues (Select, Open, FocusRight are shared with Projects panel)

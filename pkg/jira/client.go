@@ -31,6 +31,7 @@ type ClientInterface interface {
 	GetComments(ctx context.Context, issueKey string) ([]Comment, error)
 	GetUsers(ctx context.Context, projectKey string) ([]User, error)
 	GetSprints(ctx context.Context, boardID int) ([]Sprint, error)
+	MoveToSprint(ctx context.Context, sprintID int, issueKey string) error
 	GetChangelog(ctx context.Context, issueKey string) ([]ChangelogEntry, error)
 	GetLabels(ctx context.Context) ([]string, error)
 	GetComponents(ctx context.Context, projectKey string) ([]Component, error)
@@ -101,6 +102,10 @@ func (c *Client) SetLogger(w io.Writer) { c.logger = w }
 func (c *Client) SetOnRequest(fn func(RequestLog)) { c.onRequest = fn }
 
 func (c *Client) do(ctx context.Context, method, path string, body any, result any) error {
+	return c.doWithBase(ctx, c.baseURL, method, path, body, result)
+}
+
+func (c *Client) doWithBase(ctx context.Context, baseURL, method, path string, body any, result any) error {
 	start := time.Now()
 
 	var reqBody io.Reader
@@ -112,7 +117,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 		reqBody = bytes.NewReader(data)
 	}
 
-	fullURL := c.baseURL + path
+	fullURL := baseURL + path
 
 	// Log request.
 	c.log("%s %s %s\n", start.Format("15:04:05"), method, fullURL)
@@ -292,13 +297,14 @@ func (c *Client) GetProjects(ctx context.Context) ([]Project, error) {
 	return projects, nil
 }
 
-// doAgile executes a GET request against the Jira Agile REST API.
+// doAgile executes a request against the Jira Agile REST API.
 func (c *Client) doAgile(ctx context.Context, path string, result any) error {
-	origBase := c.baseURL
-	c.baseURL = strings.Replace(c.baseURL, "/rest/api/3", "/rest/agile/1.0", 1)
-	err := c.do(ctx, http.MethodGet, path, nil, result)
-	c.baseURL = origBase
-	return err
+	return c.doAgileMethod(ctx, http.MethodGet, path, nil, result)
+}
+
+func (c *Client) doAgileMethod(ctx context.Context, method, path string, body, result any) error {
+	agileBase := strings.Replace(c.baseURL, "/rest/api/3", "/rest/agile/1.0", 1)
+	return c.doWithBase(ctx, agileBase, method, path, body, result)
 }
 
 func (c *Client) GetBoards(ctx context.Context) ([]Board, error) {
@@ -423,6 +429,16 @@ func (c *Client) GetSprints(ctx context.Context, boardID int) ([]Sprint, error) 
 		return nil, fmt.Errorf("get sprints for board %d: %w", boardID, err)
 	}
 	return raw.Values, nil
+}
+
+func (c *Client) MoveToSprint(ctx context.Context, sprintID int, issueKey string) error {
+	path := fmt.Sprintf("/sprint/%d/issue", sprintID)
+	body := map[string]any{"issues": []string{issueKey}}
+	err := c.doAgileMethod(ctx, http.MethodPost, path, body, nil)
+	if err != nil {
+		return fmt.Errorf("move %s to sprint %d: %w", issueKey, sprintID, err)
+	}
+	return nil
 }
 
 func (c *Client) GetLabels(ctx context.Context) ([]string, error) {

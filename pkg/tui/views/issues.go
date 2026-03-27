@@ -234,6 +234,45 @@ func (m *IssuesList) applyFilterKeepCursor() {
 	}
 }
 
+// FindInAnyTab checks all tab caches for the given key. Returns (tabIndex, true) if found.
+func (m *IssuesList) FindInAnyTab(key string) (int, bool) {
+	// Current tab first.
+	for _, issue := range m.issues {
+		if issue.Key == key {
+			return m.tab, true
+		}
+	}
+	// Other tabs.
+	for tab, issues := range m.tabCache {
+		if tab == m.tab {
+			continue
+		}
+		for _, issue := range issues {
+			if issue.Key == key {
+				return tab, true
+			}
+		}
+	}
+	return -1, false
+}
+
+// InjectIssue adds an issue to tab 0 (All) cache if not present in any tab.
+// Switches to tab 0 and refreshes display. Returns true if injected or already found.
+func (m *IssuesList) InjectIssue(issue jira.Issue) {
+	if m.tabCache == nil {
+		m.tabCache = make(map[int][]jira.Issue)
+	}
+	// Prepend to tab 0 cache.
+	cached := m.tabCache[0]
+	// Avoid duplicate.
+	for _, iss := range cached {
+		if iss.Key == issue.Key {
+			return
+		}
+	}
+	m.tabCache[0] = append([]jira.Issue{issue}, cached...)
+}
+
 // SelectByKey moves cursor to the issue with the given key. Returns true if found.
 func (m *IssuesList) SelectByKey(key string) bool {
 	for i, issue := range m.issues {
@@ -393,7 +432,7 @@ func (m *IssuesList) buildTitle() string {
 func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) string {
 	fields := m.fields
 	if len(fields) == 0 {
-		fields = []string{"key", "status", "summary"}
+		fields = []string{"key", fieldStatus, "summary"}
 	}
 
 	// Calculate fixed column widths.
@@ -406,7 +445,7 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		switch f {
 		case "key":
 			fixedWidth += m.keyColWidth
-		case "status":
+		case fieldStatus:
 			fixedWidth += 1 // single emoji char
 		case "priority":
 			fixedWidth += 8
@@ -435,7 +474,7 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 			parts = append(parts, padRight(issue.Key, m.keyColWidth))
 		case "summary":
 			parts = append(parts, components.TruncateEnd(issue.Summary, summaryWidth))
-		case "status":
+		case fieldStatus:
 			if selected {
 				parts = append(parts, statusEmojiPlain(issue.Status))
 			} else {

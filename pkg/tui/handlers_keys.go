@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"errors"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -61,13 +60,38 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case ActFocusRight:
+		// Cycle through left panels: status → issues → info → projects (lazygit-style).
 		if a.side == sideLeft {
-			a.side = sideRight
+			switch a.leftFocus {
+			case focusStatus:
+				a.leftFocus = focusIssues
+			case focusIssues:
+				a.leftFocus = focusInfo
+			case focusInfo:
+				a.leftFocus = focusProjects
+			case focusProjects:
+				a.leftFocus = focusStatus
+			}
 			a.updateFocusState()
 			return a, nil
 		}
 
 	case ActFocusLeft:
+		// Cycle through left panels in reverse: projects → info → issues → status.
+		if a.side == sideLeft {
+			switch a.leftFocus {
+			case focusStatus:
+				a.leftFocus = focusProjects
+			case focusIssues:
+				a.leftFocus = focusStatus
+			case focusInfo:
+				a.leftFocus = focusIssues
+			case focusProjects:
+				a.leftFocus = focusInfo
+			}
+			a.updateFocusState()
+			return a, nil
+		}
 		if a.side == sideRight {
 			a.side = sideLeft
 			a.updateFocusState()
@@ -81,23 +105,29 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.handleActionOpen()
 
 	case ActPrevTab:
-		if a.side == sideRight {
+		switch {
+		case a.side == sideRight:
 			a.detailView.PrevTab()
-		} else if a.side == sideLeft && a.leftFocus == focusIssues {
+		case a.side == sideLeft && a.leftFocus == focusIssues:
 			a.issuesList.PrevTab()
 			if !a.issuesList.HasCachedTab() {
 				return a, a.fetchActiveTab()
 			}
+		case a.side == sideLeft && a.leftFocus == focusInfo:
+			a.infoPanel.PrevTab()
 		}
 		return a, nil
 	case ActNextTab:
-		if a.side == sideRight {
+		switch {
+		case a.side == sideRight:
 			a.detailView.NextTab()
-		} else if a.side == sideLeft && a.leftFocus == focusIssues {
+		case a.side == sideLeft && a.leftFocus == focusIssues:
 			a.issuesList.NextTab()
 			if !a.issuesList.HasCachedTab() {
 				return a, a.fetchActiveTab()
 			}
+		case a.side == sideLeft && a.leftFocus == focusInfo:
+			a.infoPanel.NextTab()
 		}
 		return a, nil
 
@@ -119,6 +149,11 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if sel := a.issuesList.SelectedIssue(); sel != nil {
 			a.showCachedIssue(sel.Key)
 		}
+		a.updateFocusState()
+		return a, nil
+	case ActFocusInfo:
+		a.side = sideLeft
+		a.leftFocus = focusInfo
 		a.updateFocusState()
 		return a, nil
 	case ActFocusProj:
@@ -143,7 +178,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.handleActionURLPicker()
 
 	case ActTransition:
-		if a.side == sideLeft && a.leftFocus == focusIssues {
+		if a.side == sideLeft && (a.leftFocus == focusIssues || a.leftFocus == focusInfo) {
 			if sel := a.issuesList.SelectedIssue(); sel != nil {
 				*a.logFlag = true
 				return a, fetchTransitions(a.client, sel.Key)
@@ -190,6 +225,13 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
+	case ActInfoTab:
+		// "i" key — focus Info panel from anywhere.
+		a.side = sideLeft
+		a.leftFocus = focusInfo
+		a.updateFocusState()
+		return a, nil
+
 	case ActCreateBranch:
 		return a.handleActionCreateBranch()
 
@@ -225,7 +267,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, a.fetchActiveTab()
 
 	default:
-		// ActInfoTab and nav keys are handled by the focused panel below.
+		// Nav keys are handled by the focused panel below.
 		return nil, nil
 	}
 	return a, nil
@@ -241,6 +283,27 @@ func (a *App) handleActionSelect() (tea.Model, tea.Cmd) {
 			a.side = sideRight
 			a.updateFocusState()
 			return a, fetchIssueDetail(a.client, sel.Key)
+		}
+		return a, nil
+	case a.side == sideLeft && a.leftFocus == focusInfo:
+		// Space = make active in issues list + open detail.
+		if key := a.infoPanelSelectedKey(); key != "" {
+			// Find in any tab, or inject into All tab.
+			if tab, found := a.issuesList.FindInAnyTab(key); found {
+				if tab != a.issuesList.GetTabIndex() {
+					a.issuesList.SetTabIndex(tab)
+				}
+			} else if cached, ok := a.issueCache[key]; ok {
+				a.issuesList.InjectIssue(*cached)
+				a.issuesList.SetTabIndex(0)
+			}
+			a.issuesList.SelectByKey(key)
+			a.issuesList.SetActiveKey(key)
+			a.side = sideRight
+			a.leftFocus = focusIssues
+			a.updateFocusState()
+			a.showCachedIssue(key)
+			return a, fetchIssueDetail(a.client, key)
 		}
 		return a, nil
 	case a.side == sideLeft && a.leftFocus == focusProjects:
@@ -267,6 +330,16 @@ func (a *App) handleActionOpen() (tea.Model, tea.Cmd) {
 			return a, fetchIssueDetail(a.client, sel.Key)
 		}
 		return a, nil
+	case a.side == sideLeft && a.leftFocus == focusInfo:
+		// Enter = preview in detail (stay on [3]).
+		if key := a.infoPanelSelectedKey(); key != "" {
+			if cached, ok := a.issueCache[key]; ok {
+				a.detailView.SetIssue(cached)
+			} else {
+				return a, fetchIssueDetail(a.client, key)
+			}
+		}
+		return a, nil
 	case a.side == sideLeft && a.leftFocus == focusProjects:
 		if p := a.projectList.SelectedProject(); p != nil {
 			a.detailView.SetProject(p)
@@ -275,6 +348,14 @@ func (a *App) handleActionOpen() (tea.Model, tea.Cmd) {
 	}
 	// sideRight: let detail view handle expand via its Update.
 	return nil, nil
+}
+
+// infoPanelSelectedKey returns the issue key under cursor in Lnk/Sub tabs, or "".
+func (a *App) infoPanelSelectedKey() string {
+	if key := a.infoPanel.SelectedLinkKey(); key != "" {
+		return key
+	}
+	return a.infoPanel.SelectedSubtaskKey()
 }
 
 // handleActionURLPicker shows the URL picker modal.
@@ -328,6 +409,9 @@ func (a *App) handleActionEdit() (tea.Model, tea.Cmd) {
 		a.editContext = editCtx{kind: editSummary, issueKey: sel.Key}
 		return a, nil
 	}
+	if a.side == sideLeft && a.leftFocus == focusInfo {
+		return a.editInfoField(sel)
+	}
 	if a.side == sideRight && a.detailView.ActiveTab() == views.TabComments {
 		cmt := a.detailView.SelectedComment()
 		if cmt == nil {
@@ -341,9 +425,6 @@ func (a *App) handleActionEdit() (tea.Model, tea.Cmd) {
 		}
 		a.editContext = editCtx{kind: editCommentMod, issueKey: sel.Key, commentID: cmt.ID}
 		return a, launchEditor(md, ".md")
-	}
-	if a.side == sideRight && a.detailView.ActiveTab() == views.TabInfo {
-		return a.editInfoField(sel)
 	}
 	// Default: edit description.
 	cached := sel
@@ -366,7 +447,7 @@ func (a *App) handleActionCreateBranch() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	if a.gitRepoPath == "" {
-		a.err = errors.New("not a git repository")
+		a.statusPanel.SetError("not a git repository")
 		return a, nil
 	}
 	sel := a.issuesList.SelectedIssue()

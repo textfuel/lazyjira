@@ -38,6 +38,7 @@ func NewDemoServer() (*DemoServer, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/rest/api/3/", s.handle)
+	mux.HandleFunc("/rest/agile/1.0/", s.handleAgile)
 
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	go func() { _ = srv.Serve(ln) }()
@@ -252,61 +253,7 @@ func (s *DemoServer) handleUpdateIssue(w http.ResponseWriter, r *http.Request, k
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if summary, ok := body.Fields["summary"].(string); ok {
-		iss.Summary = summary
-	}
-	if desc, ok := body.Fields["description"]; ok && desc != nil {
-		iss.DescriptionADF = desc
-		iss.Description = extractADFText(desc)
-	}
-	if p, ok := body.Fields["priority"].(map[string]any); ok {
-		if iss.Priority == nil {
-			iss.Priority = &Priority{}
-		}
-		if id, ok := p["id"].(string); ok {
-			iss.Priority.ID = id
-		}
-	}
-	if v, exists := body.Fields["assignee"]; exists {
-		if v == nil {
-			iss.Assignee = nil
-		} else if m, ok := v.(map[string]any); ok {
-			if id, ok := m["accountId"].(string); ok {
-				iss.Assignee = &User{AccountID: id}
-			}
-		}
-	}
-	if labels, ok := body.Fields["labels"].([]any); ok {
-		iss.Labels = make([]string, 0, len(labels))
-		for _, l := range labels {
-			if s, ok := l.(string); ok {
-				iss.Labels = append(iss.Labels, s)
-			}
-		}
-	}
-	if comps, ok := body.Fields["components"].([]any); ok {
-		demoComps, _ := s.data.GetComponents(context.Background(), "")
-		nameMap := make(map[string]string)
-		for _, dc := range demoComps {
-			nameMap[dc.ID] = dc.Name
-		}
-		iss.Components = make([]Component, 0, len(comps))
-		for _, c := range comps {
-			if m, ok := c.(map[string]any); ok {
-				if id, ok := m["id"].(string); ok {
-					iss.Components = append(iss.Components, Component{ID: id, Name: nameMap[id]})
-				}
-			}
-		}
-	}
-	if it, ok := body.Fields["issuetype"].(map[string]any); ok {
-		if iss.IssueType == nil {
-			iss.IssueType = &IssueType{}
-		}
-		if id, ok := it["id"].(string); ok {
-			iss.IssueType.ID = id
-		}
-	}
+	s.applyFieldUpdates(iss, body.Fields)
 	iss.Updated = time.Now()
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -428,6 +375,147 @@ func (s *DemoServer) handleAutocompleteSuggestions(w http.ResponseWriter, r *htt
 		}
 	}
 	writeJSON(w, map[string]any{"results": results})
+}
+
+//nolint:gocognit
+func (s *DemoServer) applyFieldUpdates(iss *Issue, fields map[string]any) {
+	if summary, ok := fields["summary"].(string); ok {
+		iss.Summary = summary
+	}
+	if desc, ok := fields["description"]; ok && desc != nil {
+		iss.DescriptionADF = desc
+		iss.Description = extractADFText(desc)
+	}
+	if p, ok := fields["priority"].(map[string]any); ok {
+		if id, ok := p["id"].(string); ok {
+			priorities, _ := s.data.GetPriorities(context.Background())
+			for _, pr := range priorities {
+				if pr.ID == id {
+					iss.Priority = &Priority{ID: pr.ID, Name: pr.Name, IconURL: pr.IconURL}
+					break
+				}
+			}
+		}
+	}
+	s.applyPersonField(iss, fields, "assignee")
+	s.applyPersonField(iss, fields, "reporter")
+	if labels, ok := fields["labels"].([]any); ok {
+		iss.Labels = make([]string, 0, len(labels))
+		for _, l := range labels {
+			if str, ok := l.(string); ok {
+				iss.Labels = append(iss.Labels, str)
+			}
+		}
+	}
+	if comps, ok := fields["components"].([]any); ok {
+		demoComps, _ := s.data.GetComponents(context.Background(), "")
+		nameMap := make(map[string]string)
+		for _, dc := range demoComps {
+			nameMap[dc.ID] = dc.Name
+		}
+		iss.Components = make([]Component, 0, len(comps))
+		for _, c := range comps {
+			if m, ok := c.(map[string]any); ok {
+				if id, ok := m["id"].(string); ok {
+					iss.Components = append(iss.Components, Component{ID: id, Name: nameMap[id]})
+				}
+			}
+		}
+	}
+	if it, ok := fields["issuetype"].(map[string]any); ok {
+		if id, ok := it["id"].(string); ok {
+			types, _ := s.data.GetIssueTypes(context.Background(), "")
+			for _, t := range types {
+				if t.ID == id {
+					iss.IssueType = &IssueType{ID: t.ID, Name: t.Name}
+					break
+				}
+			}
+		}
+	}
+	if _, exists := fields["sprint"]; exists {
+		iss.Sprint = nil
+	}
+}
+
+func (s *DemoServer) applyPersonField(iss *Issue, fields map[string]any, fieldID string) {
+	v, exists := fields[fieldID]
+	if !exists {
+		return
+	}
+	setUser := func(u *User) {
+		if fieldID == "assignee" {
+			iss.Assignee = u
+		} else {
+			iss.Reporter = u
+		}
+	}
+	if v == nil {
+		setUser(nil)
+		return
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return
+	}
+	id, ok := m["accountId"].(string)
+	if !ok {
+		return
+	}
+	users, _ := s.data.GetUsers(context.Background(), "")
+	for _, u := range users {
+		if u.AccountID == id {
+			setUser(&User{AccountID: u.AccountID, DisplayName: u.DisplayName, Email: u.Email, Active: u.Active})
+			return
+		}
+	}
+}
+
+func (s *DemoServer) handleAgile(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/rest/agile/1.0")
+
+	switch {
+	case path == "/board":
+		boards, _ := s.data.GetBoards(context.Background())
+		result := make([]any, len(boards))
+		for i, b := range boards {
+			result[i] = map[string]any{
+				"id":       b.ID,
+				"name":     b.Name,
+				"type":     b.Type,
+				"location": map[string]string{"projectKey": b.ProjectKey},
+			}
+		}
+		writeJSON(w, map[string]any{"values": result})
+	case strings.HasSuffix(path, "/sprint"):
+		sprints, _ := s.data.GetSprints(context.Background(), 0)
+		result := make([]any, len(sprints))
+		for i, sp := range sprints {
+			result[i] = map[string]any{"id": sp.ID, "name": sp.Name, "state": sp.State}
+		}
+		writeJSON(w, map[string]any{"values": result})
+	case strings.Contains(path, "/sprint/") && strings.HasSuffix(path, "/issue"):
+		// POST /sprint/{id}/issue — move issue to sprint
+		seg := strings.TrimPrefix(path, "/sprint/")
+		seg = strings.TrimSuffix(seg, "/issue")
+		sprintID, _ := strconv.Atoi(seg)
+		var body struct {
+			Issues []string `json:"issues"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		for _, key := range body.Issues {
+			if err := s.data.MoveToSprint(context.Background(), sprintID, key); err != nil {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+		}
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		http.NotFound(w, r)
+	}
 }
 
 // --- JSON serialization helpers ---

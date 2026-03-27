@@ -15,6 +15,7 @@ type ModalItem struct {
 	Hint      string // shown below the list when this item is selected
 	Internal  bool   // true = handled in-app (e.g. Jira issue), styled differently
 	Separator bool   // true = non-selectable section header
+	Active    bool   // true = current value, shown with green * marker
 }
 
 // ModalSelectedMsg is sent when user picks an item.
@@ -535,6 +536,7 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 	lines = append(lines, "")
 
 	checkGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	activeMarker := checkGreen.Render("*")
 	sepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 	for i, item := range m.items {
 		if item.Separator {
@@ -564,15 +566,23 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 				lines = append(lines, style.Render("  "+text))
 			}
 		} else {
-			label := " " + TruncateMiddle(item.Label, contentW-3)
+			marker := " "
+			if item.Active {
+				marker = "*"
+			}
+			text := TruncateMiddle(item.Label, contentW-3)
 			style := lipgloss.NewStyle().Width(contentW)
 			switch {
 			case isCursor:
 				style = style.Bold(true).Background(lipgloss.Color("4"))
+				lines = append(lines, style.Render(marker+text))
+			case item.Active:
+				lines = append(lines, style.Render(activeMarker+text))
 			case item.Internal:
-				style = style.Foreground(lipgloss.Color("2"))
+				lines = append(lines, style.Render(lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(" "+text)))
+			default:
+				lines = append(lines, style.Render(" "+text))
 			}
-			lines = append(lines, style.Render(label))
 		}
 	}
 	return lines
