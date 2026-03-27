@@ -16,7 +16,6 @@ func (a *App) handleIssuesLoaded(msg issuesLoadedMsg) (tea.Model, tea.Cmd) {
 	a.statusPanel.SetError("")
 	*a.logFlag = false
 	a.statusPanel.SetOnline(true)
-	a.statusPanel.SetError("")
 	a.issuesList.SetIssuesForTab(msg.tab, msg.issues)
 
 	var cmds []tea.Cmd
@@ -56,7 +55,6 @@ func (a *App) handleIssueDetailLoaded(msg issueDetailLoadedMsg) (tea.Model, tea.
 	a.statusPanel.SetError("")
 	*a.logFlag = false
 	a.statusPanel.SetOnline(true)
-	a.statusPanel.SetError("")
 	a.issueCache[msg.issue.Key] = msg.issue
 	// Only update detail view if it's showing this issue (don't clobber preview of a different issue).
 	if a.detailView.IssueKey() == "" || a.detailView.IssueKey() == msg.issue.Key {

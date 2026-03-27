@@ -24,11 +24,12 @@ const (
 
 type InfoPanel struct {
 	components.ListBase
-	issue        *jira.Issue
-	customFields []config.CustomFieldConfig
-	filter       string
-	activeTab    InfoPanelTab
-	theme        *theme.Theme
+	issue           *jira.Issue
+	customFields    []config.CustomFieldConfig
+	filter          string
+	activeTab       InfoPanelTab
+	theme           *theme.Theme
+	filteredIndices []int // maps filtered cursor position → original data index; nil when no filter
 }
 
 func NewInfoPanel() *InfoPanel {
@@ -63,6 +64,7 @@ func (p *InfoPanel) SetCustomFields(fields []config.CustomFieldConfig) {
 
 func (p *InfoPanel) SetFilter(query string) {
 	p.filter = query
+	p.filteredIndices = nil
 }
 
 func (p *InfoPanel) Issue() *jira.Issue {
@@ -82,10 +84,23 @@ func (p *InfoPanel) SelectedInfoField() *InfoField {
 		return nil
 	}
 	fields := p.Fields()
-	if p.Cursor >= 0 && p.Cursor < len(fields) {
-		return &fields[p.Cursor]
+	idx := p.resolveOriginalIndex()
+	if idx >= 0 && idx < len(fields) {
+		return &fields[idx]
 	}
 	return nil
+}
+
+// resolveOriginalIndex maps the current cursor to the original data index,
+// accounting for active filter. Returns -1 if out of bounds.
+func (p *InfoPanel) resolveOriginalIndex() int {
+	if p.filteredIndices != nil {
+		if p.Cursor >= 0 && p.Cursor < len(p.filteredIndices) {
+			return p.filteredIndices[p.Cursor]
+		}
+		return -1
+	}
+	return p.Cursor
 }
 
 // SelectedLinkKey returns the issue key of the selected link, or "".
@@ -93,20 +108,25 @@ func (p *InfoPanel) SelectedLinkKey() string {
 	if p.issue == nil || p.activeTab != InfoTabLinks {
 		return ""
 	}
-	// Walk links to find the one at cursor.
+	target := p.resolveOriginalIndex()
+	if target < 0 {
+		return ""
+	}
+	// Walk links matching renderLinkRowPairs order (one row per direction).
 	idx := 0
 	for _, link := range p.issue.IssueLinks {
 		if link.Type == nil {
 			continue
 		}
-		if link.OutwardIssue != nil || link.InwardIssue != nil {
-			if idx == p.Cursor {
-				if link.OutwardIssue != nil {
-					return link.OutwardIssue.Key
-				}
-				if link.InwardIssue != nil {
-					return link.InwardIssue.Key
-				}
+		if link.OutwardIssue != nil {
+			if idx == target {
+				return link.OutwardIssue.Key
+			}
+			idx++
+		}
+		if link.InwardIssue != nil {
+			if idx == target {
+				return link.InwardIssue.Key
 			}
 			idx++
 		}
@@ -119,8 +139,9 @@ func (p *InfoPanel) SelectedSubtaskKey() string {
 	if p.issue == nil || p.activeTab != InfoTabSubtasks {
 		return ""
 	}
-	if p.Cursor >= 0 && p.Cursor < len(p.issue.Subtasks) {
-		return p.issue.Subtasks[p.Cursor].Key
+	idx := p.resolveOriginalIndex()
+	if idx >= 0 && idx < len(p.issue.Subtasks) {
+		return p.issue.Subtasks[idx].Key
 	}
 	return ""
 }
@@ -173,7 +194,13 @@ func (p *InfoPanel) tabItemCount() int {
 	case InfoTabLinks:
 		count := 0
 		for _, link := range p.issue.IssueLinks {
-			if link.Type != nil && (link.OutwardIssue != nil || link.InwardIssue != nil) {
+			if link.Type == nil {
+				continue
+			}
+			if link.OutwardIssue != nil {
+				count++
+			}
+			if link.InwardIssue != nil {
 				count++
 			}
 		}
@@ -220,13 +247,18 @@ func (p *InfoPanel) View() string {
 	if p.filter != "" {
 		q := strings.ToLower(p.filter)
 		var fs, fp []string
+		var indices []int
 		for i, row := range plain {
 			if strings.Contains(strings.ToLower(row), q) {
 				fs = append(fs, styled[i])
 				fp = append(fp, row)
+				indices = append(indices, i)
 			}
 		}
 		styled, plain = fs, fp
+		p.filteredIndices = indices
+	} else {
+		p.filteredIndices = nil
 	}
 
 	// Clamp cursor.
