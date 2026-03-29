@@ -30,6 +30,7 @@ Jira credentials can be set via environment variables. These always take priorit
 ## Default config
 
 Do not copy the entire thing into your config. Only add the settings you want to change.
+
 ```yaml
 jira:
     host: ""
@@ -105,8 +106,10 @@ Set `serverType` to connect to Jira Server or Data Center (uses REST API v2 inst
 
 ```yaml
 jira:
-    serverType: server  # "cloud" (default), "server", or "datacenter"
+  serverType: server
 ```
+
+Values: `cloud` (default), `server`, `datacenter`.
 
 Cloud uses email + API token (Basic auth). Server/Data Center uses a Personal Access Token (Bearer auth), no email needed.
 
@@ -116,12 +119,19 @@ For environments that require client certificates (mTLS) or a custom CA:
 
 ```yaml
 jira:
-    tls:
-        certFile: /path/to/client.crt  # client certificate PEM
-        keyFile:  /path/to/client.key  # client private key PEM
-        caFile:   /path/to/ca.pem      # custom CA bundle (optional)
-        insecure: false                # skip TLS verification (not recommended)
+  tls:
+    certFile: /path/to/client.crt
+    keyFile:  /path/to/client.key
+    caFile:   /path/to/ca.pem
+    insecure: false
 ```
+
+| Field | Description |
+|-------|-------------|
+| `certFile` | Client certificate PEM |
+| `keyFile` | Client private key PEM |
+| `caFile` | Custom CA bundle (optional) |
+| `insecure` | Skip TLS verification (not recommended) |
 
 All fields are optional. You can use `caFile` alone for custom CA without client certs. Environment variables `JIRA_TLS_CERT`, `JIRA_TLS_KEY`, `JIRA_TLS_CA`, `JIRA_TLS_INSECURE` also work.
 
