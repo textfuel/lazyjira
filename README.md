@@ -2,6 +2,10 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/github/go-mod/go-version/textfuel/lazyjira" alt="Go"></a>
   <a href="https://github.com/textfuel/lazyjira/releases"><img src="https://img.shields.io/github/v/release/textfuel/lazyjira" alt="Release"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <br>
+  <a href="https://github.com/textfuel/lazyjira/releases"><img src="https://img.shields.io/github/downloads/textfuel/lazyjira/total?label=downloads" alt="Downloads"></a>
+  <a href="https://formulae.brew.sh/formula/textfuel/tap/lazyjira"><img src="https://img.shields.io/homebrew/installs/dm/textfuel/tap/lazyjira?label=homebrew" alt="Homebrew"></a>
+  <a href="https://aur.archlinux.org/packages/lazyjira-git"><img src="https://img.shields.io/aur/votes/lazyjira-git?label=aur%20votes" alt="AUR votes"></a>
 </p>
 
 # lazyjira
