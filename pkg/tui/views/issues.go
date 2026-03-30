@@ -194,7 +194,7 @@ func (m *IssuesList) PatchIssue(updated *jira.Issue) {
 			patch(cached)
 		}
 	}
-	m.applyFilter()
+	m.applyFilterKeepCursor()
 }
 
 func (m *IssuesList) updateKeyColWidth(issues []jira.Issue) {

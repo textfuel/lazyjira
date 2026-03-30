@@ -47,8 +47,9 @@ func (s *SearchBar) Update(msg tea.Msg) (SearchBar, tea.Cmd) {
 			s.query = ""
 			return *s, func() tea.Msg { return SearchCancelledMsg{} }
 		case tea.KeyBackspace:
-			if len(s.query) > 0 {
-				s.query = s.query[:len(s.query)-1]
+			runes := []rune(s.query)
+			if len(runes) > 0 {
+				s.query = string(runes[:len(runes)-1])
 				q := s.query
 				return *s, func() tea.Msg { return SearchChangedMsg{Query: q} }
 			}

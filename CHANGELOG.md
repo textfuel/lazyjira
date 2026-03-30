@@ -7,6 +7,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Search backspace now correctly deletes multi-byte Unicode characters instead of producing broken glyphs
+- Issues list selection no longer jumps to top after confirming search
+
 ## [2.6.4] - 2026-03-30
 
 ### Fixed
