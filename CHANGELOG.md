@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.6.4] - 2026-03-30
+
 ### Fixed
 
 - Homebrew: switched back from Cask to Formula — Cask quarantines unsigned CLI binaries, causing macOS Gatekeeper to block execution
@@ -188,7 +190,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.6.3...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.6.4...HEAD
+[2.6.4]: https://github.com/textfuel/lazyjira/compare/v2.6.3...v2.6.4
 [2.6.3]: https://github.com/textfuel/lazyjira/compare/v2.6.2...v2.6.3
 [2.6.2]: https://github.com/textfuel/lazyjira/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/textfuel/lazyjira/compare/v2.6.0...v2.6.1
