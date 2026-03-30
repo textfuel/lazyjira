@@ -48,7 +48,9 @@ func (a *App) handleSearchConfirmed() (tea.Model, tea.Cmd) {
 		a.infoPanel.ClearFilter()
 	case a.side == sideLeft && a.leftFocus == focusProjects:
 		if p := a.projectList.SelectedProject(); p != nil {
-			a.selectProject(p)
+			if cmd := a.selectProject(p); cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 			cmds = append(cmds, a.fetchActiveTab())
 		}
 		a.projectList.SetFilter("")
@@ -77,7 +79,8 @@ func (a *App) handleAutoFetch() (tea.Model, tea.Cmd) {
 }
 
 // selectProject sets the active project, clearing issue state.
-func (a *App) selectProject(p *jira.Project) {
+// Returns a command to prefetch assignable users in background.
+func (a *App) selectProject(p *jira.Project) tea.Cmd {
 	a.projectKey = p.Key
 	a.projectID = p.ID
 	a.statusPanel.SetProject(p.Key)
@@ -90,6 +93,10 @@ func (a *App) selectProject(p *jira.Project) {
 	if !a.demoMode {
 		go saveLastProject(p.Key)
 	}
+	if _, ok := a.usersCache[p.Key]; !ok {
+		return prefetchUsers(p.Key)
+	}
+	return nil
 }
 
 // routeToPanel forwards input to the focused panel.

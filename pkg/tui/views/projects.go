@@ -81,7 +81,10 @@ func (p *ProjectList) pinActive(projects []jira.Project) []jira.Project {
 	return projects
 }
 
-func (p *ProjectList) SetActiveKey(key string) { p.activeKey = key }
+func (p *ProjectList) SetActiveKey(key string) {
+	p.activeKey = key
+	p.applyFilter()
+}
 
 func (p *ProjectList) ContentHeight() int {
 	return p.ListBase.ContentHeight(5)

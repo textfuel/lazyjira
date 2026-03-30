@@ -184,10 +184,10 @@ func (a *App) mouseClick(panel panelID, relY int, x int) (tea.Model, tea.Cmd) {
 		if dbl := a.projectList.ClickAt(relY); dbl {
 			// Double-click → select project (same as Enter).
 			if p := a.projectList.SelectedProject(); p != nil {
-				a.selectProject(p)
+				prefetch := a.selectProject(p)
 				a.leftFocus = focusIssues
 				a.updateFocusState()
-				return a, a.fetchActiveTab()
+				return a, tea.Batch(a.fetchActiveTab(), prefetch)
 			}
 		} else if p := a.projectList.SelectedProject(); p != nil {
 			a.detailView.SetProject(p)

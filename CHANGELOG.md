@@ -10,6 +10,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Assignee list: current user now always appears first, matched by account ID instead of email. Fixes cases where Jira Cloud hides emails due to privacy settings (#16)
+- Assignee modal now scrolls to keep the cursor visible when navigating long lists
+- Selected project now pins to the top of the projects list
+- Project keys that are reserved JQL words (like DO, IN, IS) no longer cause search errors
+
+### Added
+
+- Assignable users are cached per project and prefetched in background after project switch
 
 ## [2.6.5] - 2026-03-30
 

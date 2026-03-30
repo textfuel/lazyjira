@@ -496,13 +496,36 @@ func (m *Modal) viewSelectable() string {
 		popupH = maxH
 	}
 
-	// Pad lines to popupH.
-	for len(lines) < popupH {
-		lines = append(lines, "")
+	// Scroll so cursor stays visible
+	// First 2 lines are title + blank, items start at index 2
+	headerLines := 2
+	itemsH := popupH - headerLines
+	itemsH = max(itemsH, 1)
+	if m.cursor < m.offset {
+		m.offset = m.cursor
 	}
-	if len(lines) > popupH {
-		lines = lines[:popupH]
+	if m.cursor >= m.offset+itemsH {
+		m.offset = m.cursor - itemsH + 1
 	}
+	if m.offset < 0 {
+		m.offset = 0
+	}
+
+	// Build visible lines: header + scrolled items
+	itemLines := lines[headerLines:]
+	if m.offset < len(itemLines) {
+		itemLines = itemLines[m.offset:]
+	}
+	if len(itemLines) > itemsH {
+		itemLines = itemLines[:itemsH]
+	}
+	visible := make([]string, 0, popupH)
+	visible = append(visible, lines[:headerLines]...)
+	visible = append(visible, itemLines...)
+	for len(visible) < popupH {
+		visible = append(visible, "")
+	}
+	lines = visible
 
 	borderStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
 	bv := borderStyle.Render("│")

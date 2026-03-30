@@ -128,6 +128,7 @@ type App struct {
 	isCloud     bool
 	demoMode    bool
 	currentUser *jira.User
+	usersCache  map[string][]jira.User // project key -> assignable users
 	issueCache  map[string]*jira.Issue
 
 	// Git integration.
@@ -241,6 +242,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		isCloud:     cfg.Jira.IsCloud(),
 		demoMode:    authMethod == AuthDemo,
 		logFlag:     logFlag,
+		usersCache:  make(map[string][]jira.User),
 		issueCache:  make(map[string]*jira.Issue),
 	}
 	// Overlay stack: checked in priority order for input interception and rendering.
@@ -342,6 +344,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.handleBoardsLoaded(msg)
 	case sprintsLoadedMsg:
 		return a.handleSprintsLoaded(msg)
+	case prefetchUsersMsg:
+		// Only fetch if still on the same project and not cached yet
+		if msg.projectKey == a.projectKey {
+			if _, ok := a.usersCache[msg.projectKey]; !ok {
+				return a, fetchUsers(a.client, msg.projectKey, "")
+			}
+		}
+		return a, nil
 	case usersLoadedMsg:
 		return a.handleUsersLoaded(msg)
 	case labelsLoadedMsg:
@@ -521,6 +531,9 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 		}
 	case views.FieldPerson:
 		a.onSelect = a.makePersonSelectCallback(field.FieldID)
+		if cached, ok := a.usersCache[a.projectKey]; ok {
+			return a.handleUsersLoaded(usersLoadedMsg{users: cached, issueKey: sel.Key})
+		}
 		return a, fetchUsers(a.client, a.projectKey, sel.Key)
 	case views.FieldMultiSelect:
 		issueKey := sel.Key

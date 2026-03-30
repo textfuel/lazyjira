@@ -221,6 +221,9 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if sel := a.issuesList.SelectedIssue(); sel != nil {
 			*a.logFlag = true
 			a.onSelect = a.makePersonSelectCallback("assignee")
+			if cached, ok := a.usersCache[a.projectKey]; ok {
+				return a.handleUsersLoaded(usersLoadedMsg{users: cached, issueKey: sel.Key})
+			}
 			return a, fetchUsers(a.client, a.projectKey, sel.Key)
 		}
 		return a, nil
@@ -308,10 +311,10 @@ func (a *App) handleActionSelect() (tea.Model, tea.Cmd) {
 		return a, nil
 	case a.side == sideLeft && a.leftFocus == focusProjects:
 		if p := a.projectList.SelectedProject(); p != nil {
-			a.selectProject(p)
+			prefetch := a.selectProject(p)
 			a.leftFocus = focusIssues
 			a.updateFocusState()
-			return a, a.fetchActiveTab()
+			return a, tea.Batch(a.fetchActiveTab(), prefetch)
 		}
 		return a, nil
 	}

@@ -33,7 +33,9 @@ func (a *App) handleIssuesLoaded(msg issuesLoadedMsg) (tea.Model, tea.Cmd) {
 			projects := a.projectList.AllProjects()
 			for _, p := range projects {
 				if strings.EqualFold(p.Key, projectKey) {
-					a.selectProject(&p)
+					if cmd := a.selectProject(&p); cmd != nil {
+						cmds = append(cmds, cmd)
+					}
 					cmds = append(cmds, a.fetchActiveTab())
 					a.gitDetectedKey = ""
 					return a, tea.Batch(cmds...)
@@ -147,6 +149,14 @@ func (a *App) handlePrioritiesLoaded(msg prioritiesLoadedMsg) (tea.Model, tea.Cm
 
 // handleUsersLoaded shows the assignee/reporter picker modal.
 func (a *App) handleUsersLoaded(msg usersLoadedMsg) (tea.Model, tea.Cmd) {
+	// Cache users for this project
+	if a.projectKey != "" && len(msg.users) > 0 {
+		a.usersCache[a.projectKey] = msg.users
+	}
+	// Prefetch only caches, no modal
+	if msg.issueKey == "" {
+		return a, nil
+	}
 	sel := a.issuesList.SelectedIssue()
 	if sel == nil {
 		return a, nil
