@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.6.2] - 2026-03-30
+
 ### Fixed
 
 - Homebrew formula not updating since v2.4.0: switched goreleaser from `homebrew_casks` back to `brews`
@@ -176,7 +178,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.6.1...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.6.2...HEAD
+[2.6.2]: https://github.com/textfuel/lazyjira/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/textfuel/lazyjira/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/textfuel/lazyjira/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/textfuel/lazyjira/compare/v2.5.0...v2.5.1
