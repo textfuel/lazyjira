@@ -163,7 +163,7 @@ func (a *App) handleUsersLoaded(msg usersLoadedMsg) (tea.Model, tea.Cmd) {
 
 	var items []components.ModalItem
 
-	// 1. Current user ("me") — always first.
+	// Put current user first
 	if a.currentUser != nil {
 		meLabel := a.currentUser.DisplayName + " (me)"
 		meFound := false
@@ -179,10 +179,10 @@ func (a *App) handleUsersLoaded(msg usersLoadedMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// 2. Unassigned.
+	// Then unassigned option
 	items = append(items, components.ModalItem{ID: "", Label: "Unassigned", Active: currentAssigneeID == ""})
 
-	// 3. Current assignee (if different from me), then 4. everyone else.
+	// Then everyone else, skip current user since already added
 	for _, u := range msg.users {
 		if u.AccountID == myAccountID {
 			continue
