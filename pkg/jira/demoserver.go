@@ -314,7 +314,12 @@ func (s *DemoServer) handleCreateMeta(w http.ResponseWriter) {
 		{"fieldId": "labels", "name": "Labels", "required": false, "schema": map[string]string{"type": "array", "system": "labels"}},
 		{"fieldId": "components", "name": "Components", "required": false, "schema": map[string]string{"type": "array", "system": "components"}},
 	}
-	writeJSON(w, map[string]any{"values": fields})
+	writeJSON(w, map[string]any{
+		"startAt":    0,
+		"maxResults": len(fields),
+		"total":      len(fields),
+		"fields":     fields,
+	})
 }
 
 func (s *DemoServer) handleCreateIssue(w http.ResponseWriter, r *http.Request) {
