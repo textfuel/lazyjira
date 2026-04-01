@@ -33,6 +33,8 @@ func (s OverlayStack) Intercept(msg tea.Msg) (tea.Cmd, bool) {
 }
 
 // Render draws all visible overlays on top of bg, chained in stack order
+// multiple overlays may render at once but only one intercepts input at a time
+// use Pause and Resume on overlays to coordinate which one owns input
 func (s OverlayStack) Render(bg string, w, h int) string {
 	result := bg
 	for _, o := range s {

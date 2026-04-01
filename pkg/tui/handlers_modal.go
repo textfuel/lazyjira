@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -35,6 +36,9 @@ func (a *App) handleChecklistConfirmed(msg components.ChecklistConfirmedMsg) (te
 // handleModalCancelled clears modal callbacks
 func (a *App) handleModalCancelled() (tea.Model, tea.Cmd) {
 	a.createForm.Resume()
+	if !a.createForm.IsVisible() {
+		a.createCtx = createCtx{}
+	}
 	a.onSelect = nil
 	a.onChecklist = nil
 	return a, nil
@@ -56,8 +60,12 @@ func (a *App) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 			return a, tea.Batch(cmds...)
 		}
 		content = strings.TrimSpace(content)
-		if content != "" {
-			a.createForm.SetFieldValue(idx, content, content)
+		if changed && content != "" {
+			var val any = content
+			if a.isCloud {
+				val = views.MarkdownToADF(content)
+			}
+			a.createForm.SetFieldValue(idx, val, content)
 		}
 		return a, tea.Batch(cmds...)
 	}
@@ -157,7 +165,12 @@ func (a *App) handleCreateFormEditExternal(msg components.CreateFormEditExternal
 	}
 	a.editContext = editCtx{kind: editCreateDesc, fieldIndex: msg.FieldIndex}
 	content := ""
-	if field.DisplayValue != "" {
+	if field.Value != nil {
+		if _, isStr := field.Value.(string); !isStr {
+			content = views.ADFToMarkdown(field.Value)
+		}
+	}
+	if content == "" && field.DisplayValue != "" {
 		content = field.DisplayValue
 	}
 	return a, launchEditor(content, ".md")
@@ -209,7 +222,8 @@ func (a *App) handleCreateFormPicker(msg components.CreateFormPickerMsg) (tea.Mo
 		case fldSprint:
 			if a.boardID != 0 {
 				a.onSelect = func(item components.ModalItem) tea.Cmd {
-					a.createForm.SetFieldValue(idx, map[string]string{"id": item.ID}, item.Label)
+					sprintID, _ := strconv.Atoi(item.ID)
+					a.createForm.SetFieldValue(idx, sprintID, item.Label)
 					return nil
 				}
 				return a, fetchSprints(a.client, a.boardID)
@@ -343,12 +357,6 @@ func (a *App) handleCreateFormUserChecklist(field *components.CreateFormField, i
 func (a *App) handleCreateFormSubmit(msg components.CreateFormSubmitMsg) (tea.Model, tea.Cmd) {
 	msg.Fields["project"] = map[string]string{"key": a.createCtx.projectKey}
 	msg.Fields["issuetype"] = map[string]string{"id": a.createCtx.issueTypeID}
-	// Cloud requires ADF for description
-	if a.isCloud {
-		if desc, ok := msg.Fields["description"].(string); ok && desc != "" {
-			msg.Fields["description"] = views.MarkdownToADF(desc)
-		}
-	}
 	a.createForm.SetLoading(true)
 	*a.logFlag = true
 	return a, createIssue(a.client, msg.Fields)

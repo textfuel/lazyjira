@@ -227,10 +227,6 @@ func (c *Client) doWithBase(ctx context.Context, baseURL, method, path string, b
 	}
 
 	if result != nil && len(respBody) > 0 {
-		// log raw body for createmeta to help debug missing fields
-		if strings.Contains(path, "createmeta") {
-			c.log("  RAW: %s\n", string(respBody))
-		}
 		if err := json.Unmarshal(respBody, result); err != nil {
 			return fmt.Errorf("decode response for %s %s: %w", method, path, err)
 		}
@@ -474,9 +470,10 @@ func (c *Client) getCreateMetaCloud(ctx context.Context, projectKey, issueTypeID
 
 	basePath := "/issue/createmeta/" + url.PathEscape(projectKey) + "/issuetypes/" + url.PathEscape(issueTypeID)
 
+	const maxPages = 20
 	var allRaw []rawField
 	startAt := 0
-	for {
+	for range maxPages {
 		var raw struct {
 			StartAt    int        `json:"startAt"`
 			MaxResults int        `json:"maxResults"`
@@ -489,9 +486,6 @@ func (c *Client) getCreateMetaCloud(ctx context.Context, projectKey, issueTypeID
 			return nil, fmt.Errorf("get create meta: %w", err)
 		}
 		c.log("  createmeta: startAt=%d total=%d got=%d\n", raw.StartAt, raw.Total, len(raw.Fields))
-		for _, f := range raw.Fields {
-			c.log("    field: %s (%s) system=%s type=%s\n", f.FieldID, f.Name, f.Schema.System, f.Schema.Type)
-		}
 		allRaw = append(allRaw, raw.Fields...)
 		if len(allRaw) >= raw.Total || len(raw.Fields) == 0 {
 			break

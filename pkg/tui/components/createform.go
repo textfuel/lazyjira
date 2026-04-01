@@ -683,7 +683,7 @@ func (f *CreateForm) submitForm() (tea.Cmd, bool) {
 	// validate required fields
 	hasErrors := false
 	for i := range f.allFields {
-		if f.allFields[i].Required && f.allFields[i].DisplayValue == "" {
+		if f.allFields[i].Required && f.allFields[i].DisplayValue == "" && f.allFields[i].Value == nil {
 			f.allFields[i].HasError = true
 			hasErrors = true
 		}
@@ -703,8 +703,6 @@ func (f *CreateForm) submitForm() (tea.Cmd, bool) {
 	for _, fld := range f.allFields {
 		if fld.Value != nil {
 			fieldsMap[fld.FieldID] = fld.Value
-		} else if fld.DisplayValue != "" {
-			fieldsMap[fld.FieldID] = fld.DisplayValue
 		}
 	}
 	return func() tea.Msg { return CreateFormSubmitMsg{Fields: fieldsMap} }, true

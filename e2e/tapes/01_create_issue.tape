@@ -54,10 +54,10 @@ Sleep 200ms
 Enter
 Sleep 300ms
 
-# move to assignee, edit with enter
+# move to assignee, edit with e
 Type "j"
 Sleep 200ms
-Enter
+Type "e"
 Sleep 300ms
 
 # pick Alice Chen
@@ -68,10 +68,10 @@ Sleep 200ms
 Enter
 Sleep 300ms
 
-# move to labels, edit with space
+# move to labels, edit with e
 Type "j"
 Sleep 200ms
-Space
+Type "e"
 Sleep 300ms
 
 # toggle two labels
