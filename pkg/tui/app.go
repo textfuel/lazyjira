@@ -400,6 +400,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case issueCreatedMsg:
 		return a.handleIssueCreated(msg)
 	case createErrorMsg:
+		a.createForm.Resume()
 		a.createForm.SetError(msg.err.Error())
 		return a, nil
 	case issueUpdatedMsg:
@@ -472,6 +473,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.statusPanel.SetError(msg.err.Error())
 		return a, nil
 	case errorMsg:
+		a.createForm.Resume()
 		errText := msg.err.Error()
 		a.statusPanel.SetError(errText)
 		// Show error modal so the user sees what went wrong
