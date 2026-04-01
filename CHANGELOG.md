@@ -7,6 +7,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Text wrapping now measures display width of Unicode and emoji instead of counting bytes. Panels no longer overflow with multi-byte characters
+- Info panel field values truncated by visual width instead of byte length
+- ADF list markers use correct display width for indentation
+- Stripped carriage returns from wiki markup and ADF text to prevent terminal corruption with Jira Server line endings
+
 ## [2.6.6] - 2026-03-30
 
 ### Fixed
