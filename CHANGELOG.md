@@ -18,6 +18,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Config: `gui.prefillFromTab` option (default true)
 - e2e test tape for issue creation flow
 
+### Fixed
+
+- ADF code blocks now wrap long lines instead of breaking the panel border
+- ADF headings wrap to fit panel width
+
 ## [2.6.8] - 2026-04-01
 
 ### Fixed
