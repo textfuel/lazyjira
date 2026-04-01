@@ -7,6 +7,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Create issues from TUI (n key in issues panel): two-phase overlay with type picker and field form
+- Configurable issue tabs with JQL templates and {{.ProjectKey}}/{{.UserEmail}} placeholders
+- Create form prefills fields from active tab JQL (e.g. assignee from "Mine" tab)
+- Duplicate issue (d key): prefills all fields from the source issue
+- Custom field support in create form (select, multiselect, text, number)
+- Demo mode: issue creation with in-memory data, create metadata endpoint
+- Config: `gui.prefillFromTab` option (default true)
+- e2e test tape for issue creation flow
+
 ## [2.6.8] - 2026-04-01
 
 ### Fixed
