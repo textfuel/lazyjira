@@ -32,6 +32,8 @@ All keybindings can be remapped in `config.yml` under the `keybinding` section.
 | `u` | Pick URL from description |
 | `y` | Copy issue URL |
 | `b` | Create branch from issue |
+| `n` | Create new issue |
+| `ctrl+n` | Duplicate issue |
 | `s` | JQL search |
 | `x` | Close JQL tab |
 

@@ -166,7 +166,10 @@ Press `?` inside the app for all keybindings.
 - [x] Git integration, create branches from issues, open issue from current branch
 - [x] Jira Server and Data Center support
 - [x] Client certificate authentication (mTLS)
-- [ ] Create issues
+- [x] Create issues
+- [ ] Create subtasks from TUI
+- [ ] Link issues (add/remove issue links)
+- [ ] CLI mode (non-interactive commands for scripting and automation)
 - [ ] Robust issue type changer (handle subtask/parent unlinking, field validation)
 - [ ] Clickable hyperlinks in terminal (OSC 8) for URLs in descriptions and comments
 - [ ] Theming, borders, date format, language and other GUI options

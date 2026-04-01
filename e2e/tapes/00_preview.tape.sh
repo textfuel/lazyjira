@@ -34,7 +34,7 @@ Type "i"
 Sleep 100ms
 
 # Browse fields, edit labels
-@down 3
+@down 6
 @edit
 @wait 200
 @down 3

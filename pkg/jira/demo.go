@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -404,8 +405,118 @@ func (d *DemoClient) UpdateIssue(_ context.Context, issueKey string, fields map[
 	iss.Updated = time.Now()
 	return nil
 }
-func (d *DemoClient) CreateIssue(_ context.Context, _, _, _, _ string) (*Issue, error) {
-	return nil, nil
+func (d *DemoClient) CreateIssue(_ context.Context, fields map[string]any) (*Issue, error) {
+	d.logRequest("POST", "/issue")
+	projectKey := "DEMO"
+	if p := demoFieldStr(fields, "project", "key"); p != "" {
+		projectKey = p
+	}
+	total := 0
+	for _, v := range d.issues {
+		total += len(v)
+	}
+	iss := &Issue{
+		ID:      strconv.Itoa(1000 + total),
+		Key:     fmt.Sprintf("%s-%d", projectKey, 100+total),
+		Status:  &Status{ID: "1", Name: "To Do", CategoryKey: "new"},
+		Created: time.Now(),
+		Updated: time.Now(),
+	}
+	if s, ok := fields["summary"].(string); ok {
+		iss.Summary = s
+	}
+	if desc := fields["description"]; desc != nil {
+		switch d := desc.(type) {
+		case string:
+			iss.Description = d
+		default:
+			iss.DescriptionADF = desc
+			iss.Description = extractADFText(desc)
+		}
+	}
+	if id := demoFieldStr(fields, "issuetype", "id"); id != "" {
+		types, _ := d.GetIssueTypes(context.Background(), "")
+		for _, t := range types {
+			if t.ID == id {
+				iss.IssueType = &IssueType{ID: t.ID, Name: t.Name}
+				break
+			}
+		}
+	}
+	if id := demoFieldStr(fields, "priority", "id"); id != "" {
+		priorities, _ := d.GetPriorities(context.Background())
+		for _, pr := range priorities {
+			if pr.ID == id {
+				iss.Priority = &Priority{ID: pr.ID, Name: pr.Name}
+				break
+			}
+		}
+	}
+	if aid := demoFieldStr(fields, "assignee", "accountId"); aid != "" {
+		users, _ := d.GetUsers(context.Background(), "")
+		for _, u := range users {
+			if u.AccountID == aid {
+				iss.Assignee = &User{AccountID: u.AccountID, DisplayName: u.DisplayName, Email: u.Email, Active: u.Active}
+				break
+			}
+		}
+	}
+	if v, ok := fields["labels"]; ok {
+		if arr, ok := v.([]any); ok {
+			for _, item := range arr {
+				if s, ok := item.(string); ok {
+					iss.Labels = append(iss.Labels, s)
+				}
+			}
+		}
+	}
+	if v, ok := fields["components"]; ok {
+		if arr, ok := v.([]any); ok {
+			demoComps, _ := d.GetComponents(context.Background(), "")
+			nameMap := make(map[string]string)
+			for _, dc := range demoComps {
+				nameMap[dc.ID] = dc.Name
+			}
+			for _, item := range arr {
+				if m, ok := item.(map[string]any); ok {
+					id, _ := m["id"].(string)
+					iss.Components = append(iss.Components, Component{ID: id, Name: nameMap[id]})
+				}
+			}
+		}
+	}
+	d.addIssue(projectKey, iss)
+	return iss, nil
+}
+
+// demoFieldStr extracts a string value from a nested map field
+// handles both map[string]string and map[string]any
+func demoFieldStr(fields map[string]any, field, key string) string {
+	v, ok := fields[field]
+	if !ok {
+		return ""
+	}
+	switch m := v.(type) {
+	case map[string]string:
+		return m[key]
+	case map[string]any:
+		s, _ := m[key].(string)
+		return s
+	}
+	return ""
+}
+
+func (d *DemoClient) GetCreateMeta(_ context.Context, _, _ string) ([]CreateMetaField, error) {
+	d.logRequest("GET", "/issue/createmeta")
+	return []CreateMetaField{
+		{FieldID: "summary", Name: "Summary", Required: true, Schema: CreateMetaSchema{Type: "string", System: "summary"}},
+		{FieldID: "description", Name: "Description", Required: false, Schema: CreateMetaSchema{Type: "string", System: "description"}},
+		{FieldID: "priority", Name: "Priority", Required: false, Schema: CreateMetaSchema{Type: "priority", System: "priority"},
+			AllowedValues: []CreateMetaValue{{ID: "1", Name: "Critical"}, {ID: "2", Name: "High"}, {ID: "3", Name: "Medium"}, {ID: "4", Name: "Low"}}},
+		{FieldID: "assignee", Name: "Assignee", Required: false, Schema: CreateMetaSchema{Type: "user", System: "assignee"}},
+		{FieldID: "labels", Name: "Labels", Required: false, Schema: CreateMetaSchema{Type: "array", System: "labels"}},
+		{FieldID: "components", Name: "Components", Required: false, Schema: CreateMetaSchema{Type: "array", System: "components"}},
+	}, nil
 }
 func (d *DemoClient) GetMyself(_ context.Context) (*User, error) {
 	d.logRequest("GET", "/myself")
