@@ -13,6 +13,7 @@ import (
 	"github.com/textfuel/lazyjira/pkg/config"
 	"github.com/textfuel/lazyjira/pkg/git"
 	"github.com/textfuel/lazyjira/pkg/jira"
+	"github.com/textfuel/lazyjira/pkg/tui/views"
 )
 
 // Git message types
@@ -217,9 +218,11 @@ type issueCreatedMsg struct{ issue *jira.Issue }
 type createErrorMsg struct{ err error }
 
 type customFieldOptionsMsg struct {
-	issueKey string
-	fieldID  string
-	options  []jira.CreateMetaValue
+	issueKey  string
+	fieldID   string
+	fieldName string
+	fieldType views.InfoFieldType
+	options   []jira.CreateMetaValue
 }
 
 func updateIssueField(client jira.ClientInterface, issueKey, field string, value any) tea.Cmd {
@@ -263,18 +266,19 @@ func fetchCreateMeta(client jira.ClientInterface, projectKey, issueTypeID string
 	}
 }
 
-func fetchCustomFieldOptions(client jira.ClientInterface, projectKey, issueTypeID, issueKey, fieldID string) tea.Cmd {
+func fetchCustomFieldOptions(client jira.ClientInterface, projectKey, issueTypeID string, info customFieldOptionsMsg) tea.Cmd {
 	return func() tea.Msg {
-		fields, err := client.GetCreateMeta(context.Background(), projectKey, issueTypeID)
+		meta, err := client.GetCreateMeta(context.Background(), projectKey, issueTypeID)
 		if err != nil {
 			return errorMsg{err: err}
 		}
-		for _, f := range fields {
-			if f.FieldID == fieldID {
-				return customFieldOptionsMsg{issueKey: issueKey, fieldID: fieldID, options: f.AllowedValues}
+		for _, f := range meta {
+			if f.FieldID == info.fieldID {
+				info.options = f.AllowedValues
+				return info
 			}
 		}
-		return customFieldOptionsMsg{issueKey: issueKey, fieldID: fieldID}
+		return info
 	}
 }
 

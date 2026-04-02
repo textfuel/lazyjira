@@ -284,7 +284,7 @@ func (a *App) handleIssueAction(action Action) (tea.Model, tea.Cmd, bool) {
 	case ActAssignee:
 		if sel := a.issuesList.SelectedIssue(); sel != nil {
 			*a.logFlag = true
-			a.onSelect = a.makePersonSelectCallback("assignee")
+			a.onSelect = a.makePersonSelectCallback(sel.Key, "assignee")
 			if cached, ok := a.usersCache[a.projectKey]; ok {
 				m, cmd := a.handleUsersLoaded(usersLoadedMsg{users: cached, issueKey: sel.Key})
 				return m, cmd, true

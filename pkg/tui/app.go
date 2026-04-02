@@ -568,17 +568,10 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 			a.statusPanel.SetError("no agile board found for this project")
 			return a, nil
 		default:
-			return a.fetchCustomFieldOptionsForEdit(sel, field.FieldID)
+			return a.fetchCustomFieldOptionsForEdit(sel, field)
 		}
 	case views.FieldPerson:
-		if isCustomField(field.FieldID) {
-			a.onSelect = a.makeCustomFieldPersonCallback(sel.Key, field.FieldID)
-			if cached, ok := a.usersCache[a.projectKey]; ok {
-				return a.handleUsersLoaded(usersLoadedMsg{users: cached, issueKey: sel.Key})
-			}
-			return a, fetchUsers(a.client, a.projectKey, sel.Key)
-		}
-		a.onSelect = a.makePersonSelectCallback(field.FieldID)
+		a.onSelect = a.makePersonSelectCallback(sel.Key, field.FieldID)
 		if cached, ok := a.usersCache[a.projectKey]; ok {
 			return a.handleUsersLoaded(usersLoadedMsg{users: cached, issueKey: sel.Key})
 		}
@@ -606,7 +599,7 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 			return a, fetchComponents(a.client, a.projectKey)
 		default:
 			if isCustomField(field.FieldID) {
-				return a.fetchCustomFieldOptionsForEdit(sel, field.FieldID)
+				return a.fetchCustomFieldOptionsForEdit(sel, field)
 			}
 		}
 	case views.FieldSingleText:
@@ -643,20 +636,16 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 }
 
 
-func (a *App) makePersonSelectCallback(fieldID string) onSelectFunc {
+func (a *App) makePersonSelectCallback(issueKey, fieldID string) onSelectFunc {
 	return func(item components.ModalItem) tea.Cmd {
-		sel := a.issuesList.SelectedIssue()
-		if sel == nil {
-			return nil
-		}
 		if item.ID == "" {
-			return updateIssueField(a.client, sel.Key, fieldID, nil)
+			return updateIssueField(a.client, issueKey, fieldID, nil)
 		}
 		key := fldName
 		if a.isCloud {
 			key = fldAccountID
 		}
-		return updateIssueField(a.client, sel.Key, fieldID, map[string]string{key: item.ID})
+		return updateIssueField(a.client, issueKey, fieldID, map[string]string{key: item.ID})
 	}
 }
 
@@ -670,32 +659,33 @@ func isCustomField(fieldID string) bool {
 	return strings.HasPrefix(fieldID, "customfield_")
 }
 
-func (a *App) fetchCustomFieldOptionsForEdit(sel *jira.Issue, fieldID string) (tea.Model, tea.Cmd) {
+func (a *App) fetchCustomFieldOptionsForEdit(sel *jira.Issue, field *views.InfoField) (tea.Model, tea.Cmd) {
 	if sel.IssueType == nil {
 		a.statusPanel.SetError("issue type unknown")
 		return a, nil
 	}
-	return a, fetchCustomFieldOptions(a.client, a.projectKey, sel.IssueType.ID, sel.Key, fieldID)
+	info := customFieldOptionsMsg{
+		issueKey:  sel.Key,
+		fieldID:   field.FieldID,
+		fieldName: field.Name,
+		fieldType: field.Type,
+	}
+	return a, fetchCustomFieldOptions(a.client, a.projectKey, sel.IssueType.ID, info)
 }
 
 func (a *App) handleCustomFieldOptions(msg customFieldOptionsMsg) (tea.Model, tea.Cmd) {
-	field := a.infoPanel.SelectedInfoField()
-	if field == nil {
-		return a, nil
-	}
-
 	items := make([]components.ModalItem, 0, len(msg.options))
 	for _, v := range msg.options {
 		items = append(items, components.ModalItem{ID: v.ID, Label: v.Name})
 	}
 
 	if len(items) == 0 {
-		a.inputModal.Show("Edit "+field.Name, field.Value)
+		a.inputModal.Show("Edit "+msg.fieldName, "")
 		a.editContext = editCtx{kind: editField, issueKey: msg.issueKey, fieldID: msg.fieldID}
 		return a, nil
 	}
 
-	switch field.Type {
+	switch msg.fieldType {
 	case views.FieldMultiSelect:
 		a.onChecklist = func(selected []components.ModalItem) tea.Cmd {
 			vals := make([]map[string]string, 0, len(selected))
@@ -716,25 +706,12 @@ func (a *App) handleCustomFieldOptions(msg customFieldOptionsMsg) (tea.Model, te
 				}
 			}
 		}
-		a.modal.ShowChecklist(field.Name, items, preselected)
+		a.modal.ShowChecklist(msg.fieldName, items, preselected)
 	default:
 		a.onSelect = a.makeFieldSelectCallback(msg.issueKey, msg.fieldID)
-		a.modal.Show(field.Name, items)
+		a.modal.Show(msg.fieldName, items)
 	}
 	return a, nil
-}
-
-func (a *App) makeCustomFieldPersonCallback(issueKey, fieldID string) onSelectFunc {
-	return func(item components.ModalItem) tea.Cmd {
-		if item.ID == "" {
-			return updateIssueField(a.client, issueKey, fieldID, nil)
-		}
-		key := fldAccountID
-		if !a.isCloud {
-			key = fldName
-		}
-		return updateIssueField(a.client, issueKey, fieldID, map[string]string{key: item.ID})
-	}
 }
 
 func (a *App) renderHelpOverlay(base string) string {

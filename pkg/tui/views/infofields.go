@@ -216,9 +216,7 @@ func detectFieldTypeFromValue(v any) InfoFieldType {
 			return FieldSingleSelect
 		}
 	case []any:
-		if len(val) > 0 {
-			return FieldMultiSelect
-		}
+		return FieldMultiSelect
 	}
 	return FieldSingleText
 }
