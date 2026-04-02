@@ -23,7 +23,7 @@ const (
 	TabHistory
 )
 
-// MainMode controls what the right panel displays.
+// MainMode controls what the right panel displays
 type MainMode int
 
 const (
@@ -32,7 +32,7 @@ const (
 	ModeProject
 )
 
-// SplashInfo holds data for the splash/status screen.
+// SplashInfo holds data for the splash/status screen
 type SplashInfo struct {
 	Version    string
 	AuthMethod string
@@ -48,13 +48,13 @@ const (
 	noneLabelUpper  = "None"
 )
 
-// ExpandBlockMsg is sent when user wants to expand a collapsed block.
+// ExpandBlockMsg is sent when user wants to expand a collapsed block
 type ExpandBlockMsg struct {
 	Title string
 	Lines []string
 }
 
-// NavigateIssueMsg is sent when user activates a block linked to a Jira issue.
+// NavigateIssueMsg is sent when user activates a block linked to a Jira issue
 type NavigateIssueMsg struct {
 	Key string
 }
@@ -77,14 +77,14 @@ type DetailView struct {
 	theme        *theme.Theme
 }
 
-// SetCustomFields sets the list of custom fields to display in the Info tab.
+// SetCustomFields sets the list of custom fields to display in the Info tab
 func (d *DetailView) SetCustomFields(fields []config.CustomFieldConfig) { d.customFields = fields }
 
 func NewDetailView() *DetailView {
 	return &DetailView{theme: theme.Default, mode: ModeIssue}
 }
 
-// IssueKey returns the key of the currently displayed issue, or "".
+// IssueKey returns the key of the currently displayed issue, or ""
 func (d *DetailView) IssueKey() string {
 	if d.issue != nil && d.mode == ModeIssue {
 		return d.issue.Key
@@ -106,7 +106,7 @@ func (d *DetailView) SetIssue(issue *jira.Issue) {
 	}
 }
 
-// UpdateIssueData stores issue data without changing mode (for background updates).
+// UpdateIssueData stores issue data without changing mode (for background updates)
 func (d *DetailView) UpdateIssueData(issue *jira.Issue) {
 	prevKey := ""
 	if d.issue != nil {
@@ -202,7 +202,7 @@ func (d *DetailView) visibleTabs() []DetailTab {
 	return tabs
 }
 
-// ClickTab switches tab based on x position in the title bar.
+// ClickTab switches tab based on x position in the title bar
 func (d *DetailView) ClickTab(x int) {
 	if d.issue == nil {
 		return
@@ -262,7 +262,7 @@ func (d *DetailView) ScrollBy(delta int) {
 }
 
 // ClickItem selects a list item. Double-click on truncated block expands it.
-// Returns an ExpandBlockMsg if double-click on truncated block, nil otherwise.
+// Returns an ExpandBlockMsg if double-click on truncated block, nil otherwise
 func (d *DetailView) ClickItem(relY int) tea.Cmd {
 	if !d.IsListTab() || d.issue == nil {
 		return nil
@@ -1033,13 +1033,13 @@ func renderDiff(from, to string, maxWidth int) []string {
 	return lines
 }
 
-// URLGroup is a named group of URLs for the URL picker.
+// URLGroup is a named group of URLs for the URL picker
 type URLGroup struct {
 	Section string
 	URLs    []string
 }
 
-// ExtractURLs returns URLs found in the issue, grouped by source.
+// ExtractURLs returns URLs found in the issue, grouped by source
 func ExtractURLs(issue *jira.Issue, host string) []URLGroup {
 	if issue == nil {
 		return nil
@@ -1136,8 +1136,8 @@ func findURLs(text string) []string {
 	return urls
 }
 
-// cleanWikiMarkup strips Jira wiki markup from changelog values.
-// Handles: [~accountid:...], {code:lang}...{code}, [text|url], etc.
+// cleanWikiMarkup strips Jira wiki markup from changelog values
+// handles patterns like [~accountid:...], {code:lang}...{code}, [text|url]
 func cleanWikiMarkup(s string) string {
 	if s == "" {
 		return s
@@ -1245,8 +1245,8 @@ func wrapText(text string, width int) []string {
 	return lines
 }
 
-// wikiToPlain converts Jira wiki markup to plain text with basic formatting.
-// Handles: *bold* -> bold, [text|url] -> text (url), {code}...{code} -> ..., h1-h6.
+// wikiToPlain converts Jira wiki markup to plain text with basic formatting
+// handles *bold*, [text|url], {code}...{code} blocks, and h1 through h6 headings
 var (
 	wikiLinkRe     = regexp.MustCompile(`\[([^|\]]+)\|([^\]]+)\]`)
 	wikiPlainLinkRe = regexp.MustCompile(`\[([^\]|]+)\]`)

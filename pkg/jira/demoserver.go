@@ -13,16 +13,16 @@ import (
 	"time"
 )
 
-// DemoServer serves a fake Jira REST API v3 backed by in-memory demo data.
-// Use with a real jira.Client for full-stack demo and testing.
+// DemoServer serves a fake Jira REST API v3 backed by in-memory demo data
+// Use with a real jira.Client for full-stack demo and testing
 type DemoServer struct {
 	data     *DemoClient
 	listener net.Listener
 	URL      string
 }
 
-// NewDemoServer starts an HTTP server on a random port and returns the server.
-// Call Close() when done.
+// NewDemoServer starts an HTTP server on a random port and returns the server
+// Call Close() when done
 func NewDemoServer() (*DemoServer, error) {
 	var lc net.ListenConfig
 	ln, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
@@ -46,7 +46,7 @@ func NewDemoServer() (*DemoServer, error) {
 	return s, nil
 }
 
-// Close stops the demo server.
+// Close stops the demo server
 func (s *DemoServer) Close() error {
 	return s.listener.Close()
 }

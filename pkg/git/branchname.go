@@ -81,15 +81,10 @@ func Sanitize(name string, asciiOnly bool) string {
 	return name
 }
 
-// SanitizeSummary converts an issue summary to a branch-name-friendly slug.
+// SanitizeSummary converts an issue summary to a branch-name-friendly slug
 func SanitizeSummary(summary string, asciiOnly bool) string {
-	// Lowercase.
 	s := strings.ToLower(summary)
-
-	// Replace spaces with hyphens.
 	s = strings.ReplaceAll(s, " ", "-")
-
-	// Remove chars not suitable for branch names.
 	s = invalidChars.ReplaceAllString(s, "")
 	s = strings.Map(func(r rune) rune {
 		if r == '/' || r == '(' || r == ')' || r == '\'' || r == '"' || r == ',' || r == ';' || r == '!' || r == '&' || r == '=' || r == '+' || r == '#' || r == '{' || r == '}' || r == '@' {
@@ -108,7 +103,6 @@ func SanitizeSummary(summary string, asciiOnly bool) string {
 		s = b.String()
 	}
 
-	// Collapse hyphens.
 	s = multiHyphens.ReplaceAllString(s, "-")
 	s = strings.Trim(s, "-.")
 
@@ -116,7 +110,7 @@ func SanitizeSummary(summary string, asciiOnly bool) string {
 }
 
 // ExtractIssueKey extracts the first Jira issue key from a branch name.
-// Returns "" for main/master/develop/dev or if no key is found.
+// Returns an empty string for main/master/develop/dev or if no key is found.
 func ExtractIssueKey(branchName string) string {
 	if skipBranches[strings.ToLower(branchName)] {
 		return ""

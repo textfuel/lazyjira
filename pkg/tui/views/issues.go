@@ -330,7 +330,7 @@ func (m *IssuesList) applyFilter() {
 	m.SetItemCount(len(m.issues))
 }
 
-// ContentHeight returns natural height: items + 2 borders with minimum 7
+// ContentHeight returns natural height of items plus 2 borders with a minimum of 7
 func (m *IssuesList) ContentHeight() int {
 	return m.ListBase.ContentHeight(7)
 }

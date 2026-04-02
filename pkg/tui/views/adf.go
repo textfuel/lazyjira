@@ -449,8 +449,8 @@ func hardWrapLine(line string, width int) []string {
 	return result
 }
 
-// highlightCode applies syntax highlighting using chroma.
-// Falls back to plain text if language is unknown or highlighting fails.
+// highlightCode applies syntax highlighting using chroma
+// falls back to plain text if language is unknown or highlighting fails
 func highlightCode(code, lang string) string {
 	if lang == "" {
 		return code
@@ -475,8 +475,8 @@ func highlightCode(code, lang string) string {
 	return strings.TrimRight(buf.String(), "\n")
 }
 
-// extractADFURLs recursively extracts all URLs from an ADF document.
-// Finds URLs in link marks, inlineCard nodes, and plain text.
+// extractADFURLs recursively extracts all URLs from an ADF document
+// finds URLs in link marks, inlineCard nodes, and plain text
 //
 //nolint:gocognit // recursive ADF walker with multiple node types
 func extractADFURLs(node any) []string {

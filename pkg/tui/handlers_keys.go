@@ -11,7 +11,7 @@ import (
 )
 
 // handleKeyMsg dispatches keyboard actions.
-// Returns (nil, nil) if the key was not handled and should be forwarded to the focused panel.
+// Returns (nil, nil) if the key was not handled and should be forwarded to the focused panel
 //
 //nolint:gocognit // action dispatch with context-dependent behavior
 func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -316,7 +316,7 @@ func (a *App) startCreateIssue() (tea.Model, tea.Cmd) {
 }
 
 // handleActionSelect handles space/enter on the left panel.
-// Returns nil model on sideRight so the key falls through to the detail panel.
+// Returns nil model on sideRight so the key falls through to the detail panel
 func (a *App) handleActionSelect() (tea.Model, tea.Cmd) {
 	switch {
 	case a.side == sideLeft && a.leftFocus == focusIssues:
@@ -365,7 +365,7 @@ func (a *App) handleActionSelect() (tea.Model, tea.Cmd) {
 }
 
 // handleActionOpen handles l/enter to preview without full select.
-// Returns nil model on sideRight so the key falls through to the detail panel.
+// Returns nil model on sideRight so the key falls through to the detail panel
 func (a *App) handleActionOpen() (tea.Model, tea.Cmd) {
 	switch {
 	case a.side == sideLeft && a.leftFocus == focusIssues:
