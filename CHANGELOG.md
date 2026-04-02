@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-04-02
+
 ### Changed
 
 - Space key disabled in issues panel. Enter is the only way to open issue detail (#25)
@@ -256,7 +258,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.7.1...HEAD
+[2.7.1]: https://github.com/textfuel/lazyjira/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/textfuel/lazyjira/compare/v2.6.8...v2.7.0
 [2.6.8]: https://github.com/textfuel/lazyjira/compare/v2.6.7...v2.6.8
 [2.6.7]: https://github.com/textfuel/lazyjira/compare/v2.6.6...v2.6.7
