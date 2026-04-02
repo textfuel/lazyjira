@@ -9,9 +9,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Disabled space key in issues panel, enter is now the only way to open issue detail (#25)
-- Enter in projects panel now selects project (same as space)
-- Double-click, git branch detection, and issue creation no longer mark issue as active
+- Space key disabled in issues panel. Enter is the only way to open issue detail (#25)
+- Enter in projects panel now selects the project, same as space
+- Double-click, git branch detection and issue creation no longer mark issue as active
+
+### Fixed
+
+- Detail panel updates when switching issue tabs with `[]`
+- Detail panel shows first issue after selecting a project instead of staying on project preview
+- Projects list limited to 100 items on Jira Cloud. Now fetches all projects with pagination
 
 ## [2.7.0] - 2026-04-01
 

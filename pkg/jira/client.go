@@ -345,11 +345,21 @@ func (c *Client) AssignIssue(ctx context.Context, issueKey, accountID string) er
 func (c *Client) GetProjects(ctx context.Context) ([]Project, error) {
 	var raw []projectResponse
 	if c.isCloud {
-		err := c.do(ctx, http.MethodGet, "/project/search?maxResults=100", nil, &struct {
-			Values *[]projectResponse `json:"values"`
-		}{Values: &raw})
-		if err != nil {
-			return nil, fmt.Errorf("get projects: %w", err)
+		startAt := 0
+		for {
+			var page struct {
+				Values []projectResponse `json:"values"`
+				Total  int               `json:"total"`
+			}
+			path := fmt.Sprintf("/project/search?startAt=%d&maxResults=50", startAt)
+			if err := c.do(ctx, http.MethodGet, path, nil, &page); err != nil {
+				return nil, fmt.Errorf("get projects: %w", err)
+			}
+			raw = append(raw, page.Values...)
+			if len(raw) >= page.Total || len(page.Values) == 0 {
+				break
+			}
+			startAt = len(raw)
 		}
 	} else {
 		err := c.do(ctx, http.MethodGet, "/project", nil, &raw)

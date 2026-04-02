@@ -16,6 +16,20 @@ func (a *App) showCachedIssue(key string) {
 	}
 }
 
+func (a *App) previewSelectedIssue() {
+	sel := a.issuesList.SelectedIssue()
+	if sel == nil {
+		return
+	}
+	if cached, ok := a.issueCache[sel.Key]; ok {
+		a.detailView.SetIssue(cached)
+		a.infoPanel.SetIssue(cached)
+	} else {
+		a.detailView.SetIssue(sel)
+		a.infoPanel.SetIssue(sel)
+	}
+}
+
 // extractIssueKey checks if a URL points to our Jira and extracts the issue key.
 // e.g. https://didlogic.atlassian.net/browse/DR-13819 → "DR-13819"
 func (a *App) extractIssueKey(url string) string {

@@ -28,6 +28,9 @@ func (a *App) handleIssuesLoaded(msg issuesLoadedMsg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, prefetchIssue(a.client, issue.Key))
 		}
 	}
+	if msg.tab == a.issuesList.GetTabIndex() {
+		a.previewSelectedIssue()
+	}
 	if a.gitDetectedKey != "" {
 		detectedKey := a.gitDetectedKey
 		projectKey := strings.SplitN(detectedKey, "-", 2)[0]
