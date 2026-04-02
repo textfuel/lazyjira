@@ -156,12 +156,7 @@ func (a *App) mouseClick(panel panelID, relY int, x int) (tea.Model, tea.Cmd) {
 				return a, a.fetchActiveTab()
 			}
 		} else if dbl := a.issuesList.ClickAt(relY); dbl {
-			// Double-click → open issue (same as Enter).
-			if sel := a.issuesList.SelectedIssue(); sel != nil {
-				a.side = sideRight
-				a.updateFocusState()
-				return a, fetchIssueDetail(a.client, sel.Key)
-			}
+			return a.openIssueDetail()
 		} else if sel := a.issuesList.SelectedIssue(); sel != nil {
 			a.showCachedIssue(sel.Key)
 		}
