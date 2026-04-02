@@ -144,8 +144,9 @@ type App struct {
 	isCloud     bool
 	demoMode    bool
 	currentUser *jira.User
-	usersCache  map[string][]jira.User
-	issueCache  map[string]*jira.Issue
+	usersCache      map[string][]jira.User
+	issueCache      map[string]*jira.Issue
+	createMetaCache map[string][]jira.CreateMetaField
 	createCtx   createCtx
 
 	gitRepoPath    string
@@ -259,8 +260,9 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		isCloud:     cfg.Jira.IsCloud(),
 		demoMode:    authMethod == AuthDemo,
 		logFlag:     logFlag,
-		usersCache:  make(map[string][]jira.User),
-		issueCache:  make(map[string]*jira.Issue),
+		usersCache:      make(map[string][]jira.User),
+		issueCache:      make(map[string]*jira.Issue),
+		createMetaCache: make(map[string][]jira.CreateMetaField),
 	}
 	isCloud := cfg.Jira.IsCloud()
 	app.createForm.SetDescRenderer(func(text string, width int) []string {
@@ -676,10 +678,25 @@ func (a *App) fetchCustomFieldOptionsForEdit(sel *jira.Issue, field *views.InfoF
 		fieldType:    field.Type,
 		currentValue: field.Value,
 	}
+	cacheKey := a.projectKey + ":" + sel.IssueType.ID
+	if cached, ok := a.createMetaCache[cacheKey]; ok {
+		for _, f := range cached {
+			if f.FieldID == field.FieldID {
+				info.options = f.AllowedValues
+				info.schemaType = f.Schema.Type
+				info.schemaItems = f.Schema.Items
+				break
+			}
+		}
+		return a.handleCustomFieldOptions(info)
+	}
 	return a, fetchCustomFieldOptions(a.client, a.projectKey, sel.IssueType.ID, info)
 }
 
 func (a *App) handleCustomFieldOptions(msg customFieldOptionsMsg) (tea.Model, tea.Cmd) {
+	if len(msg.allFields) > 0 && msg.issueTypeID != "" {
+		a.createMetaCache[a.projectKey+":"+msg.issueTypeID] = msg.allFields
+	}
 	if a.isPersonSchema(msg.schemaType, msg.schemaItems) {
 		a.onSelect = a.makePersonSelectCallback(msg.issueKey, msg.fieldID)
 		if cached, ok := a.usersCache[a.projectKey]; ok {

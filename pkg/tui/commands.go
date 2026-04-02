@@ -226,6 +226,8 @@ type customFieldOptionsMsg struct {
 	schemaType   string
 	schemaItems  string
 	options      []jira.CreateMetaValue
+	allFields    []jira.CreateMetaField
+	issueTypeID  string
 }
 
 func updateIssueField(client jira.ClientInterface, issueKey, field string, value any) tea.Cmd {
@@ -275,6 +277,8 @@ func fetchCustomFieldOptions(client jira.ClientInterface, projectKey, issueTypeI
 		if err != nil {
 			return errorMsg{err: err}
 		}
+		info.allFields = meta
+		info.issueTypeID = issueTypeID
 		for _, f := range meta {
 			if f.FieldID == info.fieldID {
 				info.options = f.AllowedValues

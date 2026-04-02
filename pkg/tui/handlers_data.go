@@ -411,6 +411,10 @@ func (a *App) handleBatchPrefetched(msg batchPrefetchedMsg) (tea.Model, tea.Cmd)
 func (a *App) handleCreateFormTypeSelected(msg components.CreateFormTypeSelectedMsg) (tea.Model, tea.Cmd) {
 	a.createCtx.issueTypeID = msg.TypeID
 	a.createCtx.issueTypeName = msg.TypeName
+	cacheKey := a.createCtx.projectKey + ":" + msg.TypeID
+	if cached, ok := a.createMetaCache[cacheKey]; ok {
+		return a.handleCreateMetaLoaded(createMetaLoadedMsg{fields: cached})
+	}
 	a.createForm.SetLoading(true)
 	*a.logFlag = true
 	return a, fetchCreateMeta(a.client, a.createCtx.projectKey, msg.TypeID)
@@ -418,6 +422,10 @@ func (a *App) handleCreateFormTypeSelected(msg components.CreateFormTypeSelected
 
 // handleCreateMetaLoaded builds form fields from metadata
 func (a *App) handleCreateMetaLoaded(msg createMetaLoadedMsg) (tea.Model, tea.Cmd) {
+	cacheKey := a.createCtx.projectKey + ":" + a.createCtx.issueTypeID
+	if _, ok := a.createMetaCache[cacheKey]; !ok {
+		a.createMetaCache[cacheKey] = msg.fields
+	}
 	fields := a.buildCreateFields(msg.fields)
 
 	if a.cfg.GUI.ShouldPrefillFromTab() {
