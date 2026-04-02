@@ -25,7 +25,7 @@ func (t TLSConfig) HasCustomTLS() bool {
 
 // BuildHTTPClient creates an *http.Client with the configured TLS settings
 func (t TLSConfig) BuildHTTPClient() (*http.Client, error) {
-	tlsCfg := &tls.Config{} //nolint:gosec // InsecureSkipVerify is opt-in by user
+	tlsCfg := &tls.Config{} //nolint:gosec
 
 	if t.CertFile != "" && t.KeyFile != "" {
 		cert, err := tls.LoadX509KeyPair(t.CertFile, t.KeyFile)

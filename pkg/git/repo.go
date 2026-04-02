@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"strings"
 )
@@ -23,7 +24,11 @@ func CurrentBranch(dir string) (string, error) {
 	cmd := exec.CommandContext(context.Background(), "git", "-C", dir, "symbolic-ref", "--short", "HEAD")
 	out, err := cmd.Output()
 	if err != nil {
-		return "", nil //nolint:nilerr
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return "", nil
+		}
+		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
 }

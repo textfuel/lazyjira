@@ -806,48 +806,13 @@ func (r *issueResponse) toIssue() Issue {
 }
 
 // extractADFText recursively extracts plain text from an Atlassian Document Format node
-//
-//nolint:gocognit
 func extractADFText(v any) string {
 	switch node := v.(type) {
 	case map[string]any:
 		nodeType, _ := node["type"].(string)
 
-		switch nodeType {
-		case "text":
-			if text, ok := node["text"].(string); ok {
-				return text
-			}
-		case "mention":
-			if attrs, ok := node["attrs"].(map[string]any); ok {
-				if text, ok := attrs["text"].(string); ok {
-					return "\x00MENTION:" + text + "\x00"
-				}
-			}
-		case "emoji":
-			if attrs, ok := node["attrs"].(map[string]any); ok {
-				if shortName, ok := attrs["shortName"].(string); ok {
-					return shortName
-				}
-			}
-		case "hardBreak":
-			return "\n"
-		case "inlineCard":
-			if attrs, ok := node["attrs"].(map[string]any); ok {
-				if url, ok := attrs["url"].(string); ok {
-					return url
-				}
-			}
-		case "listItem":
-			if content, ok := node["content"].([]any); ok {
-				var parts []string
-				for _, child := range content {
-					if text := extractADFText(child); text != "" {
-						parts = append(parts, text)
-					}
-				}
-				return "• " + strings.Join(parts, "")
-			}
+		if text := adfNodeText(node, nodeType); text != "" {
+			return text
 		}
 
 		if content, ok := node["content"].([]any); ok {
@@ -875,6 +840,49 @@ func extractADFText(v any) string {
 
 	case string:
 		return node
+	}
+	return ""
+}
+
+func adfAttrString(node map[string]any, key string) string {
+	if attrs, ok := node["attrs"].(map[string]any); ok {
+		if val, ok := attrs[key].(string); ok {
+			return val
+		}
+	}
+	return ""
+}
+
+func adfNodeText(node map[string]any, nodeType string) string {
+	switch nodeType {
+	case "text":
+		if text, ok := node["text"].(string); ok {
+			return text
+		}
+	case "mention":
+		if text := adfAttrString(node, "text"); text != "" {
+			return "\x00MENTION:" + text + "\x00"
+		}
+	case "emoji":
+		if shortName := adfAttrString(node, "shortName"); shortName != "" {
+			return shortName
+		}
+	case "hardBreak":
+		return "\n"
+	case "inlineCard":
+		if url := adfAttrString(node, "url"); url != "" {
+			return url
+		}
+	case "listItem":
+		if content, ok := node["content"].([]any); ok {
+			var parts []string
+			for _, child := range content {
+				if text := extractADFText(child); text != "" {
+					parts = append(parts, text)
+				}
+			}
+			return "• " + strings.Join(parts, "")
+		}
 	}
 	return ""
 }

@@ -125,7 +125,7 @@ func (a *App) helpBarItems() []components.HelpItem {
 			{Key: "enter", Description: "submit"},
 			{Key: "esc", Description: "cancel"},
 		}
-		switch a.createForm.FocusedPanel() { //nolint:exhaustive // summary has no extra hints
+		switch a.createForm.FocusedPanel() { //nolint:exhaustive
 		case components.CreatePanelFields:
 			items = append(items,
 				components.HelpItem{Key: "e", Description: "edit"},

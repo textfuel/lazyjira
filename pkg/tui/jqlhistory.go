@@ -17,7 +17,7 @@ const (
 // Returns empty slice on error or missing file
 func LoadJQLHistory() []string {
 	path := filepath.Join(config.ConfigDir(), jqlHistoryFile)
-	data, err := os.ReadFile(path) //nolint:gosec // path is constructed from trusted config dir constant
+	data, err := os.ReadFile(path) //nolint:gosec
 	if err != nil {
 		return nil
 	}

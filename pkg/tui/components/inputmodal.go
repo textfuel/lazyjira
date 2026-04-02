@@ -56,7 +56,6 @@ func (m *InputModal) SetSize(w, h int) {
 	m.height = h
 }
 
-//nolint:gocognit
 func (m *InputModal) Update(msg tea.Msg) (InputModal, tea.Cmd) {
 	if !m.visible {
 		return *m, nil
@@ -66,95 +65,102 @@ func (m *InputModal) Update(msg tea.Msg) (InputModal, tea.Cmd) {
 			m.focusInput = !m.focusInput
 			return *m, nil
 		}
-
 		if !m.focusInput {
-			switch msg.Type {
-			case tea.KeyEnter:
-				if m.hintCursor >= 0 && m.hintCursor < len(m.hints) {
-					m.visible = false
-					text := m.hints[m.hintCursor]
-					return *m, func() tea.Msg { return InputConfirmedMsg{Text: text} }
-				}
-			case tea.KeyEsc:
-				m.visible = false
-				return *m, func() tea.Msg { return InputCancelledMsg{} }
-			case tea.KeyDown:
-				if m.hintCursor < len(m.hints)-1 {
-					m.hintCursor++
-				}
-			case tea.KeyUp:
-				if m.hintCursor > 0 {
-					m.hintCursor--
-				}
-			default:
-				switch msg.String() {
-				case "q":
-					m.visible = false
-					return *m, func() tea.Msg { return InputCancelledMsg{} }
-				case "j":
-					if m.hintCursor < len(m.hints)-1 {
-						m.hintCursor++
-					}
-				case "k":
-					if m.hintCursor > 0 {
-						m.hintCursor--
-					}
-				}
-			}
-			return *m, nil
+			return m.handleHintKeys(msg)
 		}
+		return m.handleTextInput(msg)
+	}
+	return *m, nil
+}
 
-		switch msg.Type {
-		case tea.KeyEnter:
+func (m *InputModal) handleHintKeys(msg tea.KeyMsg) (InputModal, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter:
+		if m.hintCursor >= 0 && m.hintCursor < len(m.hints) {
 			m.visible = false
-			text := string(m.text)
+			text := m.hints[m.hintCursor]
 			return *m, func() tea.Msg { return InputConfirmedMsg{Text: text} }
-		case tea.KeyEsc:
+		}
+	case tea.KeyEsc:
+		m.visible = false
+		return *m, func() tea.Msg { return InputCancelledMsg{} }
+	case tea.KeyDown:
+		if m.hintCursor < len(m.hints)-1 {
+			m.hintCursor++
+		}
+	case tea.KeyUp:
+		if m.hintCursor > 0 {
+			m.hintCursor--
+		}
+	default:
+		switch msg.String() {
+		case "q":
 			m.visible = false
 			return *m, func() tea.Msg { return InputCancelledMsg{} }
-		case tea.KeyBackspace:
-			if m.cursor > 0 {
-				m.text = append(m.text[:m.cursor-1], m.text[m.cursor:]...)
-				m.cursor--
+		case "j":
+			if m.hintCursor < len(m.hints)-1 {
+				m.hintCursor++
 			}
-		case tea.KeyDelete:
-			if m.cursor < len(m.text) {
-				m.text = append(m.text[:m.cursor], m.text[m.cursor+1:]...)
+		case "k":
+			if m.hintCursor > 0 {
+				m.hintCursor--
 			}
-		case tea.KeyLeft:
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case tea.KeyRight:
-			if m.cursor < len(m.text) {
-				m.cursor++
-			}
-		case tea.KeyHome, tea.KeyCtrlA:
-			m.cursor = 0
-		case tea.KeyEnd, tea.KeyCtrlE:
-			m.cursor = len(m.text)
-		case tea.KeyCtrlU:
-			m.text = m.text[m.cursor:]
-			m.cursor = 0
-		case tea.KeyCtrlK:
-			m.text = m.text[:m.cursor]
-		case tea.KeySpace:
-			newText := make([]rune, 0, len(m.text)+1)
-			newText = append(newText, m.text[:m.cursor]...)
-			newText = append(newText, ' ')
-			newText = append(newText, m.text[m.cursor:]...)
-			m.text = newText
-			m.cursor++
-		case tea.KeyRunes:
-			runes := msg.Runes
-			newText := make([]rune, 0, len(m.text)+len(runes))
-			newText = append(newText, m.text[:m.cursor]...)
-			newText = append(newText, runes...)
-			newText = append(newText, m.text[m.cursor:]...)
-			m.text = newText
-			m.cursor += len(runes)
-		default:
 		}
+	}
+	return *m, nil
+}
+
+func (m *InputModal) handleTextInput(msg tea.KeyMsg) (InputModal, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter:
+		m.visible = false
+		text := string(m.text)
+		return *m, func() tea.Msg { return InputConfirmedMsg{Text: text} }
+	case tea.KeyEsc:
+		m.visible = false
+		return *m, func() tea.Msg { return InputCancelledMsg{} }
+	case tea.KeyBackspace:
+		if m.cursor > 0 {
+			m.text = append(m.text[:m.cursor-1], m.text[m.cursor:]...)
+			m.cursor--
+		}
+	case tea.KeyDelete:
+		if m.cursor < len(m.text) {
+			m.text = append(m.text[:m.cursor], m.text[m.cursor+1:]...)
+		}
+	case tea.KeyLeft:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyRight:
+		if m.cursor < len(m.text) {
+			m.cursor++
+		}
+	case tea.KeyHome, tea.KeyCtrlA:
+		m.cursor = 0
+	case tea.KeyEnd, tea.KeyCtrlE:
+		m.cursor = len(m.text)
+	case tea.KeyCtrlU:
+		m.text = m.text[m.cursor:]
+		m.cursor = 0
+	case tea.KeyCtrlK:
+		m.text = m.text[:m.cursor]
+	case tea.KeySpace:
+		newText := make([]rune, 0, len(m.text)+1)
+		newText = append(newText, m.text[:m.cursor]...)
+		newText = append(newText, ' ')
+		newText = append(newText, m.text[m.cursor:]...)
+		m.text = newText
+		m.cursor++
+	case tea.KeyRunes:
+		runes := msg.Runes
+		newText := make([]rune, 0, len(m.text)+len(runes))
+		newText = append(newText, m.text[:m.cursor]...)
+		newText = append(newText, runes...)
+		newText = append(newText, m.text[m.cursor:]...)
+		m.text = newText
+		m.cursor += len(runes)
+	default:
 	}
 	return *m, nil
 }

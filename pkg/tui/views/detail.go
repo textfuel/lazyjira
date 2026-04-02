@@ -339,7 +339,6 @@ func (d *DetailView) ListCursorDown() {
 	}
 }
 
-//nolint:gocognit // tab+key routing is inherently branchy
 func (d *DetailView) Update(msg tea.Msg) (*DetailView, tea.Cmd) {
 	if !d.focused {
 		return d, nil
@@ -347,66 +346,85 @@ func (d *DetailView) Update(msg tea.Msg) (*DetailView, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.String() {
 		case "j", "down":
-			if count := d.listTabItemCount(); count > 0 {
-				if d.listCursor < count-1 {
-					d.listCursor++
-				} else {
-					d.listCursor = 0
-				}
-			} else {
-				d.scrollY++
-			}
+			d.handleCursorDown()
 		case "k", "up":
-			if count := d.listTabItemCount(); count > 0 {
-				if d.listCursor > 0 {
-					d.listCursor--
-				} else {
-					d.listCursor = count - 1
-				}
-			} else if d.scrollY > 0 {
-				d.scrollY--
-			}
+			d.handleCursorUp()
 		case "tab":
 			d.NextTab()
 			d.scrollY = 0
 			d.listCursor = 0
 		case "ctrl+d":
-			if count := d.listTabItemCount(); count > 0 {
-				d.listCursor += d.visibleRows() / 2
-				if d.listCursor >= count {
-					d.listCursor = count - 1
-				}
-			} else {
-				d.scrollY += d.visibleRows() / 2
-			}
+			d.handleHalfPageDown()
 		case "ctrl+u":
-			if d.listTabItemCount() > 0 {
-				d.listCursor -= d.visibleRows() / 2
-				if d.listCursor < 0 {
-					d.listCursor = 0
-				}
-			} else {
-				d.scrollY -= d.visibleRows() / 2
-				if d.scrollY < 0 {
-					d.scrollY = 0
-				}
-			}
+			d.handleHalfPageUp()
 		case "enter", " ":
-			if d.IsListTab() && d.listCursor >= 0 && d.listCursor < len(d.blocks) {
-				// Navigate to linked issue if block has an associated key.
-				if d.listCursor < len(d.blockKeys) && d.blockKeys[d.listCursor] != "" {
-					key := d.blockKeys[d.listCursor]
-					return d, func() tea.Msg {
-						return NavigateIssueMsg{Key: key}
-					}
-				}
-				// Otherwise expand selected block if it's truncated.
-				block := d.blocks[d.listCursor]
-				if len(block) > maxBlockLines {
-					return d, func() tea.Msg {
-						return ExpandBlockMsg{Title: "Details", Lines: block}
-					}
-				}
+			return d.handleActivation()
+		}
+	}
+	return d, nil
+}
+
+func (d *DetailView) handleCursorDown() {
+	if count := d.listTabItemCount(); count > 0 {
+		if d.listCursor < count-1 {
+			d.listCursor++
+		} else {
+			d.listCursor = 0
+		}
+	} else {
+		d.scrollY++
+	}
+}
+
+func (d *DetailView) handleCursorUp() {
+	if count := d.listTabItemCount(); count > 0 {
+		if d.listCursor > 0 {
+			d.listCursor--
+		} else {
+			d.listCursor = count - 1
+		}
+	} else if d.scrollY > 0 {
+		d.scrollY--
+	}
+}
+
+func (d *DetailView) handleHalfPageDown() {
+	if count := d.listTabItemCount(); count > 0 {
+		d.listCursor += d.visibleRows() / 2
+		if d.listCursor >= count {
+			d.listCursor = count - 1
+		}
+	} else {
+		d.scrollY += d.visibleRows() / 2
+	}
+}
+
+func (d *DetailView) handleHalfPageUp() {
+	if d.listTabItemCount() > 0 {
+		d.listCursor -= d.visibleRows() / 2
+		if d.listCursor < 0 {
+			d.listCursor = 0
+		}
+	} else {
+		d.scrollY -= d.visibleRows() / 2
+		if d.scrollY < 0 {
+			d.scrollY = 0
+		}
+	}
+}
+
+func (d *DetailView) handleActivation() (*DetailView, tea.Cmd) {
+	if d.IsListTab() && d.listCursor >= 0 && d.listCursor < len(d.blocks) {
+		if d.listCursor < len(d.blockKeys) && d.blockKeys[d.listCursor] != "" {
+			key := d.blockKeys[d.listCursor]
+			return d, func() tea.Msg {
+				return NavigateIssueMsg{Key: key}
+			}
+		}
+		block := d.blocks[d.listCursor]
+		if len(block) > maxBlockLines {
+			return d, func() tea.Msg {
+				return ExpandBlockMsg{Title: "Details", Lines: block}
 			}
 		}
 	}
@@ -418,107 +436,29 @@ func (d *DetailView) visibleRows() int {
 	return max(d.height-2, 1)
 }
 
-//nolint:gocognit // will be refactored in Phase 5
 func (d *DetailView) View() string {
 	contentWidth, innerH := components.PanelDimensions(d.width, d.height)
 
-	// Splash mode.
 	if d.mode == ModeSplash {
 		return d.renderSplash(contentWidth, innerH)
 	}
-
-	// Project mode.
 	if d.mode == ModeProject && d.project != nil {
 		return d.renderProjectView(contentWidth, innerH)
 	}
 
 	visible := d.visibleRows()
 
-	// Issue mode.
 	if d.issue == nil {
 		title := "[0] Detail"
 		placeholder := lipgloss.NewStyle().Foreground(theme.ColorGray).Render("Select an issue to view details")
 		return components.RenderPanel(title, placeholder, d.width, innerH, d.focused)
 	}
 
-	// Build title: [0] KEY - Tab - Tab - Tab
 	title := d.buildTitle(contentWidth)
 
-	// Content: list tabs return blocks per item, text tabs return flat lines.
 	var contentLines []string
-
 	if count := d.listTabItemCount(); count > 0 {
-		// List tab — render blocks, highlight selected.
-		// Subtract 1 for the list bar/space prefix added below.
-		blockWidth := contentWidth - 1
-		blocks := d.renderActiveTabBlocks(blockWidth)
-
-		// Clamp cursor.
-		if d.listCursor >= len(blocks) {
-			d.listCursor = len(blocks) - 1
-		}
-		if d.listCursor < 0 {
-			d.listCursor = 0
-		}
-
-		// Store full blocks for expand + navigation keys.
-		d.blocks = blocks
-		d.blockKeys = d.buildBlockKeys(blocks)
-
-		// Flatten blocks — truncate long ones, blue bar on selected.
-		bar := lipgloss.NewStyle().Foreground(theme.ColorBlue).Render("▎")
-		ellipsis := lipgloss.NewStyle().Foreground(theme.ColorGray).Render("    ...")
-		sep := strings.Repeat("─", blockWidth)
-		for i, block := range blocks {
-			// Truncate long blocks.
-			displayBlock := block
-			truncated := false
-			if len(block) > maxBlockLines {
-				displayBlock = block[:maxBlockLines]
-				truncated = true
-			}
-			for _, line := range displayBlock {
-				if i == d.listCursor && d.focused {
-					contentLines = append(contentLines, bar+line)
-				} else {
-					contentLines = append(contentLines, " "+line)
-				}
-			}
-			if truncated {
-				if i == d.listCursor && d.focused {
-					contentLines = append(contentLines, bar+ellipsis)
-				} else {
-					contentLines = append(contentLines, " "+ellipsis)
-				}
-			}
-			if i < len(blocks)-1 {
-				contentLines = append(contentLines, " "+sep)
-			}
-		}
-
-		// Auto-scroll: account for truncated block sizes.
-		displayBlockHeight := func(block []string) int {
-			h := len(block)
-			if h > maxBlockLines {
-				h = maxBlockLines + 1 // +1 for "..."
-			}
-			return h
-		}
-		lineStart := 0
-		for i := 0; i < d.listCursor && i < len(blocks); i++ {
-			lineStart += displayBlockHeight(blocks[i]) + 1 // +1 for separator
-		}
-		margin := 1
-		if visible <= 3 {
-			margin = 0
-		}
-		if lineStart-margin < d.scrollY {
-			d.scrollY = lineStart - margin
-		}
-		blockEnd := lineStart + displayBlockHeight(blocks[d.listCursor])
-		if blockEnd+margin > d.scrollY+visible {
-			d.scrollY = blockEnd + margin - visible
-		}
+		contentLines = d.renderBlockList(contentWidth, visible)
 	} else {
 		switch d.activeTab {
 		case TabDetails:
@@ -528,7 +468,94 @@ func (d *DetailView) View() string {
 		}
 	}
 
-	// Apply scroll for text tabs — don't scroll past the last line.
+	contentLines = d.clampAndSliceScroll(contentLines, visible)
+
+	body := strings.Join(contentLines, "\n")
+
+	footer := ""
+	if count := d.listTabItemCount(); count > 0 {
+		footer = fmt.Sprintf("%d of %d", d.listCursor+1, count)
+	}
+	totalLines := len(contentLines)
+	scroll := &components.ScrollInfo{Total: totalLines, Visible: visible, Offset: d.scrollY}
+	return components.RenderPanelFull(title, footer, body, d.width, innerH, d.focused, scroll)
+}
+
+func (d *DetailView) renderBlockList(contentWidth, visible int) []string {
+	blockWidth := contentWidth - 1
+	blocks := d.renderActiveTabBlocks(blockWidth)
+
+	if d.listCursor >= len(blocks) {
+		d.listCursor = len(blocks) - 1
+	}
+	if d.listCursor < 0 {
+		d.listCursor = 0
+	}
+
+	d.blocks = blocks
+	d.blockKeys = d.buildBlockKeys(blocks)
+
+	bar := lipgloss.NewStyle().Foreground(theme.ColorBlue).Render("▎")
+	ellipsis := lipgloss.NewStyle().Foreground(theme.ColorGray).Render("    ...")
+	sep := strings.Repeat("─", blockWidth)
+
+	var lines []string
+	for i, block := range blocks {
+		displayBlock := block
+		truncated := false
+		if len(block) > maxBlockLines {
+			displayBlock = block[:maxBlockLines]
+			truncated = true
+		}
+		for _, line := range displayBlock {
+			if i == d.listCursor && d.focused {
+				lines = append(lines, bar+line)
+			} else {
+				lines = append(lines, " "+line)
+			}
+		}
+		if truncated {
+			if i == d.listCursor && d.focused {
+				lines = append(lines, bar+ellipsis)
+			} else {
+				lines = append(lines, " "+ellipsis)
+			}
+		}
+		if i < len(blocks)-1 {
+			lines = append(lines, " "+sep)
+		}
+	}
+
+	d.autoScrollToBlock(blocks, visible)
+	return lines
+}
+
+func (d *DetailView) autoScrollToBlock(blocks [][]string, visible int) {
+	displayBlockHeight := func(block []string) int {
+		h := len(block)
+		if h > maxBlockLines {
+			h = maxBlockLines + 1
+		}
+		return h
+	}
+	lineStart := 0
+	for i := 0; i < d.listCursor && i < len(blocks); i++ {
+		lineStart += displayBlockHeight(blocks[i]) + 1
+	}
+	margin := 1
+	if visible <= 3 {
+		margin = 0
+	}
+	if lineStart-margin < d.scrollY {
+		d.scrollY = lineStart - margin
+	}
+	blockEnd := lineStart + displayBlockHeight(blocks[d.listCursor])
+	if blockEnd+margin > d.scrollY+visible {
+		d.scrollY = blockEnd + margin - visible
+	}
+}
+
+func (d *DetailView) clampAndSliceScroll(contentLines []string, visible int) []string {
 	maxScroll := max(len(contentLines)-visible, 0)
 	if d.scrollY > maxScroll {
 		d.scrollY = maxScroll
@@ -545,16 +572,7 @@ func (d *DetailView) View() string {
 	if len(scrolled) > visible {
 		scrolled = scrolled[:visible]
 	}
-
-	body := strings.Join(scrolled, "\n")
-
-	footer := ""
-	if count := d.listTabItemCount(); count > 0 {
-		footer = fmt.Sprintf("%d of %d", d.listCursor+1, count)
-	}
-	totalLines := len(contentLines)
-	scroll := &components.ScrollInfo{Total: totalLines, Visible: visible, Offset: d.scrollY}
-	return components.RenderPanelFull(title, footer, body, d.width, innerH, d.focused, scroll)
+	return scrolled
 }
 
 type tabLabel struct {
@@ -712,7 +730,7 @@ func (d *DetailView) buildBlockKeys(blocks [][]string) []string {
 
 // renderActiveTabBlocks dispatches block rendering to the current tab.
 func (d *DetailView) renderActiveTabBlocks(width int) [][]string {
-	switch d.activeTab { //nolint:exhaustive // TabDetails is text-based, not block-based
+	switch d.activeTab { //nolint:exhaustive
 	case TabComments:
 		return d.renderCommentBlocks(width)
 	case TabHistory:

@@ -12,43 +12,69 @@ import (
 
 // handleKeyMsg dispatches keyboard actions.
 // Returns (nil, nil) if the key was not handled and should be forwarded to the focused panel
-//
-//nolint:gocognit // action dispatch with context-dependent behavior
 func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	a.helpBar.SetStatusMsg("")
 
 	if a.showHelp {
-		bindings := a.ContextBindings()
-		switch msg.String() {
-		case "j", "down":
-			if a.helpCursor < len(bindings)-1 {
-				a.helpCursor++
-			}
-		case "k", "up":
-			if a.helpCursor > 0 {
-				a.helpCursor--
-			}
-		case "esc", "q", "?":
-			a.showHelp = false
-		}
-		return a, nil
+		return a.handleHelpKeys(msg)
 	}
 
-	var cmds []tea.Cmd
 	action := a.keymap.Match(msg.String())
-	switch action {
+
+	switch action { //nolint:exhaustive
 	case ActQuit:
 		return a, tea.Quit
-
 	case ActHelp:
 		a.showHelp = true
 		a.helpCursor = 0
 		return a, nil
-
 	case ActSearch:
 		a.searchBar.Activate()
 		return a, nil
+	case ActSelect:
+		return a.handleActionSelect()
+	case ActOpen:
+		return a.handleActionOpen()
+	case ActURLPicker:
+		return a.handleActionURLPicker()
+	case ActEdit:
+		return a.handleActionEdit()
+	case ActCreateBranch:
+		return a.handleActionCreateBranch()
+	}
 
+	if m, cmd, ok := a.handleFocusAction(action); ok {
+		return m, cmd
+	}
+	if m, cmd, ok := a.handleTabAction(action); ok {
+		return m, cmd
+	}
+	if m, cmd, ok := a.handleIssueAction(action); ok {
+		return m, cmd
+	}
+
+	return nil, nil
+}
+
+func (a *App) handleHelpKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	bindings := a.ContextBindings()
+	switch msg.String() {
+	case "j", "down":
+		if a.helpCursor < len(bindings)-1 {
+			a.helpCursor++
+		}
+	case "k", "up":
+		if a.helpCursor > 0 {
+			a.helpCursor--
+		}
+	case "esc", "q", "?":
+		a.showHelp = false
+	}
+	return a, nil
+}
+
+func (a *App) handleFocusAction(action Action) (tea.Model, tea.Cmd, bool) {
+	switch action { //nolint:exhaustive
 	case ActSwitchPanel:
 		if a.side == sideLeft {
 			a.side = sideRight
@@ -56,7 +82,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.side = sideLeft
 		}
 		a.updateFocusState()
-		return a, nil
+		return a, nil, true
 
 	case ActFocusRight:
 		if a.side == sideLeft {
@@ -71,7 +97,7 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.leftFocus = focusStatus
 			}
 			a.updateFocusState()
-			return a, nil
+			return a, nil, true
 		}
 
 	case ActFocusLeft:
@@ -87,51 +113,18 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.leftFocus = focusInfo
 			}
 			a.updateFocusState()
-			return a, nil
+			return a, nil, true
 		}
 		if a.side == sideRight {
 			a.side = sideLeft
 			a.updateFocusState()
-			return a, nil
+			return a, nil, true
 		}
-
-	case ActSelect:
-		return a.handleActionSelect()
-
-	case ActOpen:
-		return a.handleActionOpen()
-
-	case ActPrevTab:
-		switch {
-		case a.side == sideRight:
-			a.detailView.PrevTab()
-		case a.side == sideLeft && a.leftFocus == focusIssues:
-			a.issuesList.PrevTab()
-			if !a.issuesList.HasCachedTab() {
-				return a, a.fetchActiveTab()
-			}
-		case a.side == sideLeft && a.leftFocus == focusInfo:
-			a.infoPanel.PrevTab()
-		}
-		return a, nil
-	case ActNextTab:
-		switch {
-		case a.side == sideRight:
-			a.detailView.NextTab()
-		case a.side == sideLeft && a.leftFocus == focusIssues:
-			a.issuesList.NextTab()
-			if !a.issuesList.HasCachedTab() {
-				return a, a.fetchActiveTab()
-			}
-		case a.side == sideLeft && a.leftFocus == focusInfo:
-			a.infoPanel.NextTab()
-		}
-		return a, nil
 
 	case ActFocusDetail:
 		a.side = sideRight
 		a.updateFocusState()
-		return a, nil
+		return a, nil, true
 
 	case ActFocusStatus:
 		a.side = sideLeft
@@ -139,7 +132,8 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.splashInfo.Project = a.projectKey
 		a.detailView.SetSplash(a.splashInfo)
 		a.updateFocusState()
-		return a, nil
+		return a, nil, true
+
 	case ActFocusIssues:
 		a.side = sideLeft
 		a.leftFocus = focusIssues
@@ -147,104 +141,61 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.showCachedIssue(sel.Key)
 		}
 		a.updateFocusState()
-		return a, nil
-	case ActFocusInfo:
+		return a, nil, true
+
+	case ActFocusInfo, ActInfoTab:
 		a.side = sideLeft
 		a.leftFocus = focusInfo
 		a.updateFocusState()
-		return a, nil
+		return a, nil, true
+
 	case ActFocusProj:
 		a.side = sideLeft
 		a.leftFocus = focusProjects
 		a.updateFocusState()
-		return a, nil
+		return a, nil, true
+	}
+	return nil, nil, false
+}
 
-	case ActCopyURL:
-		if sel := a.issuesList.SelectedIssue(); sel != nil {
-			copyToClipboard(a.cfg.Jira.Host + "/browse/" + sel.Key)
+func (a *App) handleTabAction(action Action) (tea.Model, tea.Cmd, bool) {
+	switch action { //nolint:exhaustive
+	case ActPrevTab:
+		switch {
+		case a.side == sideRight:
+			a.detailView.PrevTab()
+		case a.side == sideLeft && a.leftFocus == focusIssues:
+			a.issuesList.PrevTab()
+			if !a.issuesList.HasCachedTab() {
+				return a, a.fetchActiveTab(), true
+			}
+		case a.side == sideLeft && a.leftFocus == focusInfo:
+			a.infoPanel.PrevTab()
 		}
-		return a, nil
+		return a, nil, true
 
-	case ActBrowser:
-		if sel := a.issuesList.SelectedIssue(); sel != nil && (a.leftFocus == focusIssues || a.side == sideRight) {
-			openBrowser(a.cfg.Jira.Host + "/browse/" + sel.Key)
+	case ActNextTab:
+		switch {
+		case a.side == sideRight:
+			a.detailView.NextTab()
+		case a.side == sideLeft && a.leftFocus == focusIssues:
+			a.issuesList.NextTab()
+			if !a.issuesList.HasCachedTab() {
+				return a, a.fetchActiveTab(), true
+			}
+		case a.side == sideLeft && a.leftFocus == focusInfo:
+			a.infoPanel.NextTab()
 		}
-		return a, nil
+		return a, nil, true
 
-	case ActURLPicker:
-		return a.handleActionURLPicker()
-
-	case ActTransition:
-		if a.side == sideLeft && (a.leftFocus == focusIssues || a.leftFocus == focusInfo) {
-			if sel := a.issuesList.SelectedIssue(); sel != nil {
-				*a.logFlag = true
-				return a, fetchTransitions(a.client, sel.Key)
+	case ActCloseJQLTab:
+		if a.side == sideLeft && a.leftFocus == focusIssues && a.issuesList.IsJQLTab() {
+			a.issuesList.RemoveJQLTab()
+			if !a.issuesList.HasCachedTab() {
+				return a, a.fetchActiveTab(), true
 			}
 		}
-		return a, nil
-
-	case ActComments:
-		sel := a.issuesList.SelectedIssue()
-		if sel == nil {
-			return a, nil
-		}
-		a.side = sideRight
-		a.detailView.SetActiveTab(views.TabComments)
-		a.updateFocusState()
-		if _, ok := a.issueCache[sel.Key]; !ok {
-			return a, fetchIssueDetail(a.client, sel.Key)
-		}
-		return a, nil
-
-	case ActDuplicateIssue:
-		if a.side == sideLeft && a.leftFocus == focusIssues {
-			return a.startDuplicateIssue()
-		}
-		return a, nil
-
-	case ActCreateIssue:
-		return a.startCreateIssue()
-
-	case ActNew:
-		if a.side == sideLeft && a.leftFocus == focusIssues && a.projectKey != "" {
-			return a.startCreateIssue()
-		}
-		sel := a.issuesList.SelectedIssue()
-		if sel == nil || a.side != sideRight || a.detailView.ActiveTab() != views.TabComments {
-			return a, nil
-		}
-		a.editContext = editCtx{kind: editCommentNew, issueKey: sel.Key}
-		return a, launchEditor("", ".md")
-
-	case ActEdit:
-		return a.handleActionEdit()
-
-	case ActPriority:
-		if sel := a.issuesList.SelectedIssue(); sel != nil {
-			*a.logFlag = true
-			return a, fetchPriorities(a.client)
-		}
-		return a, nil
-
-	case ActAssignee:
-		if sel := a.issuesList.SelectedIssue(); sel != nil {
-			*a.logFlag = true
-			a.onSelect = a.makePersonSelectCallback("assignee")
-			if cached, ok := a.usersCache[a.projectKey]; ok {
-				return a.handleUsersLoaded(usersLoadedMsg{users: cached, issueKey: sel.Key})
-			}
-			return a, fetchUsers(a.client, a.projectKey, sel.Key)
-		}
-		return a, nil
-
-	case ActInfoTab:
-		a.side = sideLeft
-		a.leftFocus = focusInfo
-		a.updateFocusState()
-		return a, nil
-
-	case ActCreateBranch:
-		return a.handleActionCreateBranch()
+		return a, nil, true
 
 	case ActJQLSearch:
 		history := LoadJQLHistory()
@@ -253,34 +204,104 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			prefill = "project = " + a.projectKey + " AND "
 		}
 		a.jqlModal.Show(prefill, history)
+		var cmds []tea.Cmd
 		if a.jqlFields == nil {
 			cmds = append(cmds, fetchJQLAutocompleteData(a.client))
 		}
-		return a, tea.Batch(cmds...)
+		return a, tea.Batch(cmds...), true
+	}
+	return nil, nil, false
+}
 
-	case ActCloseJQLTab:
-		if a.side == sideLeft && a.leftFocus == focusIssues && a.issuesList.IsJQLTab() {
-			a.issuesList.RemoveJQLTab()
-			if !a.issuesList.HasCachedTab() {
-				return a, a.fetchActiveTab()
+func (a *App) handleIssueAction(action Action) (tea.Model, tea.Cmd, bool) {
+	switch action { //nolint:exhaustive
+	case ActCopyURL:
+		if sel := a.issuesList.SelectedIssue(); sel != nil {
+			copyToClipboard(a.cfg.Jira.Host + "/browse/" + sel.Key)
+		}
+		return a, nil, true
+
+	case ActBrowser:
+		if sel := a.issuesList.SelectedIssue(); sel != nil && (a.leftFocus == focusIssues || a.side == sideRight) {
+			openBrowser(a.cfg.Jira.Host + "/browse/" + sel.Key)
+		}
+		return a, nil, true
+
+	case ActTransition:
+		if a.side == sideLeft && (a.leftFocus == focusIssues || a.leftFocus == focusInfo) {
+			if sel := a.issuesList.SelectedIssue(); sel != nil {
+				*a.logFlag = true
+				return a, fetchTransitions(a.client, sel.Key), true
 			}
 		}
-		return a, nil
+		return a, nil, true
+
+	case ActComments:
+		sel := a.issuesList.SelectedIssue()
+		if sel == nil {
+			return a, nil, true
+		}
+		a.side = sideRight
+		a.detailView.SetActiveTab(views.TabComments)
+		a.updateFocusState()
+		if _, ok := a.issueCache[sel.Key]; !ok {
+			return a, fetchIssueDetail(a.client, sel.Key), true
+		}
+		return a, nil, true
+
+	case ActDuplicateIssue:
+		if a.side == sideLeft && a.leftFocus == focusIssues {
+			m, cmd := a.startDuplicateIssue()
+			return m, cmd, true
+		}
+		return a, nil, true
+
+	case ActCreateIssue:
+		m, cmd := a.startCreateIssue()
+		return m, cmd, true
+
+	case ActNew:
+		if a.side == sideLeft && a.leftFocus == focusIssues && a.projectKey != "" {
+			m, cmd := a.startCreateIssue()
+			return m, cmd, true
+		}
+		sel := a.issuesList.SelectedIssue()
+		if sel == nil || a.side != sideRight || a.detailView.ActiveTab() != views.TabComments {
+			return a, nil, true
+		}
+		a.editContext = editCtx{kind: editCommentNew, issueKey: sel.Key}
+		return a, launchEditor("", ".md"), true
+
+	case ActPriority:
+		if sel := a.issuesList.SelectedIssue(); sel != nil {
+			*a.logFlag = true
+			return a, fetchPriorities(a.client), true
+		}
+		return a, nil, true
+
+	case ActAssignee:
+		if sel := a.issuesList.SelectedIssue(); sel != nil {
+			*a.logFlag = true
+			a.onSelect = a.makePersonSelectCallback("assignee")
+			if cached, ok := a.usersCache[a.projectKey]; ok {
+				m, cmd := a.handleUsersLoaded(usersLoadedMsg{users: cached, issueKey: sel.Key})
+				return m, cmd, true
+			}
+			return a, fetchUsers(a.client, a.projectKey, sel.Key), true
+		}
+		return a, nil, true
 
 	case ActRefresh:
 		if sel := a.issuesList.SelectedIssue(); sel != nil {
 			*a.logFlag = true
-			return a, fetchIssueDetail(a.client, sel.Key)
+			return a, fetchIssueDetail(a.client, sel.Key), true
 		}
-		return a, nil
+		return a, nil, true
 
 	case ActRefreshAll:
-		return a, a.fetchActiveTab()
-
-	default:
-		return nil, nil
+		return a, a.fetchActiveTab(), true
 	}
-	return a, nil
+	return nil, nil, false
 }
 
 func (a *App) startDuplicateIssue() (tea.Model, tea.Cmd) {

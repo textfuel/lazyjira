@@ -1170,7 +1170,7 @@ Content-Type: application/json
 // plat3ADF returns a rich ADF document for the PLAT-3 demo issue
 // Showcases headings, bold, code blocks, lists, blockquote, rule, inline code, links
 //
-//nolint:funlen // demo data generator
+//nolint:funlen
 func plat3ADF() any {
 	text := func(t string) map[string]any {
 		return map[string]any{"type": "text", "text": t}

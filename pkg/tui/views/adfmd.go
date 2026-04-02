@@ -52,7 +52,7 @@ func adfToMarkdown(node any) string {
 	return strings.Join(parts, "\n\n")
 }
 
-//nolint:gocognit // ADF block dispatcher complexity is inherent to the format
+//nolint:gocognit
 func blockToMarkdown(node any, indent int) string {
 	block, ok := node.(map[string]any)
 	if !ok {
@@ -310,7 +310,6 @@ func opaqueMarker(node map[string]any) string {
 	return fmt.Sprintf("<!-- adf:%s %s -->", nodeType, string(data))
 }
 
-//nolint:gocognit,funlen // Markdown parser state machine is inherently complex
 func markdownToADF(md string) any {
 	lines := strings.Split(md, "\n")
 	var blocks []any
@@ -318,8 +317,9 @@ func markdownToADF(md string) any {
 
 	for i < len(lines) {
 		line := lines[i]
+		trimmed := strings.TrimSpace(line)
 
-		if strings.HasPrefix(strings.TrimSpace(line), "<!-- adf:") {
+		if strings.HasPrefix(trimmed, "<!-- adf:") {
 			if node := restoreOpaqueMarker(line); node != nil {
 				blocks = append(blocks, node)
 				i++
@@ -327,31 +327,15 @@ func markdownToADF(md string) any {
 			}
 		}
 
-		trimmed := strings.TrimSpace(line)
-		if lang, ok := strings.CutPrefix(trimmed, "```"); ok {
-			var codeLines []string
-			i++
-			for i < len(lines) {
-				if strings.TrimSpace(lines[i]) == "```" {
-					i++
-					break
-				}
-				codeLines = append(codeLines, lines[i])
-				i++
-			}
-			blocks = append(blocks, map[string]any{
-				"type":    "codeBlock",
-				"attrs":   map[string]any{"language": lang},
-				"content": []any{map[string]any{"type": "text", "text": strings.Join(codeLines, "\n")}},
-			})
+		if block, ok := tryParseCodeBlock(lines, &i, trimmed); ok {
+			blocks = append(blocks, block)
 			continue
 		}
 
 		if m := headingRe.FindStringSubmatch(line); m != nil {
-			level := float64(len(m[1]))
 			blocks = append(blocks, map[string]any{
 				"type":    "heading",
-				"attrs":   map[string]any{"level": level},
+				"attrs":   map[string]any{"level": float64(len(m[1]))},
 				"content": parseInline(m[2]),
 			})
 			i++
@@ -364,33 +348,13 @@ func markdownToADF(md string) any {
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, "> ") {
-			var quoteLines []string
-			for i < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[i]), "> ") {
-				quoteLines = append(quoteLines, strings.TrimPrefix(strings.TrimSpace(lines[i]), "> "))
-				i++
-			}
-			inner := markdownToADF(strings.Join(quoteLines, "\n"))
-			innerDoc, _ := inner.(map[string]any)
-			innerContent, _ := innerDoc["content"].([]any)
-			blocks = append(blocks, map[string]any{
-				"type":    "blockquote",
-				"content": innerContent,
-			})
+		if block, ok := tryParseBlockquote(lines, &i, trimmed); ok {
+			blocks = append(blocks, block)
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, "|") && strings.Contains(trimmed[1:], "|") {
-			var tableLines []string
-			for i < len(lines) {
-				tl := strings.TrimSpace(lines[i])
-				if !strings.HasPrefix(tl, "|") {
-					break
-				}
-				tableLines = append(tableLines, tl)
-				i++
-			}
-			blocks = append(blocks, parseTable(tableLines))
+		if block, ok := tryParseTable(lines, &i, trimmed); ok {
+			blocks = append(blocks, block)
 			continue
 		}
 
@@ -398,7 +362,6 @@ func markdownToADF(md string) any {
 			blocks = append(blocks, parseList(lines, &i, "bullet"))
 			continue
 		}
-
 		if orderedListRe.MatchString(trimmed) {
 			blocks = append(blocks, parseList(lines, &i, "ordered"))
 			continue
@@ -409,26 +372,7 @@ func markdownToADF(md string) any {
 			continue
 		}
 
-		var paraLines []string
-		for i < len(lines) {
-			pl := lines[i]
-			ptrimmed := strings.TrimSpace(pl)
-			if ptrimmed == "" || strings.HasPrefix(ptrimmed, "#") || strings.HasPrefix(ptrimmed, "```") ||
-				strings.HasPrefix(ptrimmed, "> ") || strings.HasPrefix(ptrimmed, "- ") ||
-				orderedListRe.MatchString(ptrimmed) || strings.HasPrefix(ptrimmed, "|") ||
-				ptrimmed == "---" || ptrimmed == "***" || ptrimmed == "___" ||
-				strings.HasPrefix(ptrimmed, "<!-- adf:") {
-				break
-			}
-			paraLines = append(paraLines, pl)
-			i++
-		}
-		text := strings.Join(paraLines, "\n")
-		inlineContent := parseInlineWithHardBreaks(text)
-		blocks = append(blocks, map[string]any{
-			"type":    "paragraph",
-			"content": inlineContent,
-		})
+		blocks = append(blocks, parseParagraph(lines, &i))
 	}
 
 	return map[string]any{
@@ -436,6 +380,88 @@ func markdownToADF(md string) any {
 		"version": float64(1),
 		"content": blocks,
 	}
+}
+
+func tryParseCodeBlock(lines []string, i *int, trimmed string) (any, bool) {
+	lang, ok := strings.CutPrefix(trimmed, "```")
+	if !ok {
+		return nil, false
+	}
+	var codeLines []string
+	*i++
+	for *i < len(lines) {
+		if strings.TrimSpace(lines[*i]) == "```" {
+			*i++
+			break
+		}
+		codeLines = append(codeLines, lines[*i])
+		*i++
+	}
+	return map[string]any{
+		"type":    "codeBlock",
+		"attrs":   map[string]any{"language": lang},
+		"content": []any{map[string]any{"type": "text", "text": strings.Join(codeLines, "\n")}},
+	}, true
+}
+
+func tryParseBlockquote(lines []string, i *int, trimmed string) (any, bool) {
+	if !strings.HasPrefix(trimmed, "> ") {
+		return nil, false
+	}
+	var quoteLines []string
+	for *i < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[*i]), "> ") {
+		quoteLines = append(quoteLines, strings.TrimPrefix(strings.TrimSpace(lines[*i]), "> "))
+		*i++
+	}
+	inner := markdownToADF(strings.Join(quoteLines, "\n"))
+	innerDoc, _ := inner.(map[string]any)
+	innerContent, _ := innerDoc["content"].([]any)
+	return map[string]any{
+		"type":    "blockquote",
+		"content": innerContent,
+	}, true
+}
+
+func tryParseTable(lines []string, i *int, trimmed string) (any, bool) {
+	if !strings.HasPrefix(trimmed, "|") || !strings.Contains(trimmed[1:], "|") {
+		return nil, false
+	}
+	var tableLines []string
+	for *i < len(lines) {
+		tl := strings.TrimSpace(lines[*i])
+		if !strings.HasPrefix(tl, "|") {
+			break
+		}
+		tableLines = append(tableLines, tl)
+		*i++
+	}
+	return parseTable(tableLines), true
+}
+
+func parseParagraph(lines []string, i *int) any {
+	var paraLines []string
+	for *i < len(lines) {
+		pl := lines[*i]
+		ptrimmed := strings.TrimSpace(pl)
+		if isBlockBreak(ptrimmed) {
+			break
+		}
+		paraLines = append(paraLines, pl)
+		*i++
+	}
+	text := strings.Join(paraLines, "\n")
+	return map[string]any{
+		"type":    "paragraph",
+		"content": parseInlineWithHardBreaks(text),
+	}
+}
+
+func isBlockBreak(trimmed string) bool {
+	return trimmed == "" || strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "```") ||
+		strings.HasPrefix(trimmed, "> ") || strings.HasPrefix(trimmed, "- ") ||
+		orderedListRe.MatchString(trimmed) || strings.HasPrefix(trimmed, "|") ||
+		trimmed == "---" || trimmed == "***" || trimmed == "___" ||
+		strings.HasPrefix(trimmed, "<!-- adf:")
 }
 
 var (
@@ -454,7 +480,6 @@ func parseInline(text string) []any {
 	return parseInlineWithHardBreaks(text)
 }
 
-//nolint:gocognit,funlen // inline Markdown parser with multiple mark types
 func parseInlineWithHardBreaks(text string) []any {
 	segments := strings.Split(text, "  \n")
 	var result []any
@@ -472,104 +497,77 @@ func parseInlineWithHardBreaks(text string) []any {
 	return result
 }
 
-//nolint:gocognit,funlen // inline parser with nested regex matching
+type inlineRule struct {
+	re    *regexp.Regexp
+	build func(text string, loc []int, sub []string) (start, end int, node any, ok bool)
+}
+
+var inlineRules = []inlineRule{
+	{mentionRe, func(_ string, loc []int, sub []string) (int, int, any, bool) {
+		return loc[0], loc[1], map[string]any{
+			"type":  "mention",
+			"attrs": map[string]any{"text": "@" + sub[1], "id": sub[2]},
+		}, true
+	}},
+	{linkRe, func(text string, loc []int, sub []string) (int, int, any, bool) {
+		if strings.HasPrefix(text[loc[0]:], "[@") {
+			return 0, 0, nil, false
+		}
+		return loc[0], loc[1], map[string]any{
+			"type": "text", "text": sub[1],
+			"marks": []any{map[string]any{"type": "link", "attrs": map[string]any{"href": sub[2]}}},
+		}, true
+	}},
+	{boldRe, markRule("strong")},
+	{codeRe, markRule("code")},
+	{strikeRe, markRule("strike")},
+	{underlineRe, markRule("underline")},
+	{italicRe, func(text string, loc []int, sub []string) (int, int, any, bool) {
+		actualStart := strings.Index(text[loc[0]:], "*"+sub[1]+"*")
+		if actualStart < 0 {
+			return 0, 0, nil, false
+		}
+		actualStart += loc[0]
+		actualEnd := actualStart + len("*"+sub[1]+"*")
+		return actualStart, actualEnd, map[string]any{
+			"type": "text", "text": sub[1],
+			"marks": []any{map[string]any{"type": "em"}},
+		}, true
+	}},
+}
+
+func markRule(markType string) func(string, []int, []string) (int, int, any, bool) {
+	return func(_ string, loc []int, sub []string) (int, int, any, bool) {
+		return loc[0], loc[1], map[string]any{
+			"type": "text", "text": sub[1],
+			"marks": []any{map[string]any{"type": markType}},
+		}, true
+	}
+}
+
 func parseInlineSegment(text string) []any {
 	if text == "" {
 		return nil
 	}
 
-	type match struct {
+	type inlineMatch struct {
 		start, end int
 		node       any
 	}
 
-	var earliest *match
-
-	if m := mentionRe.FindStringIndex(text); m != nil {
-		sub := mentionRe.FindStringSubmatch(text)
-		earliest = &match{m[0], m[1], map[string]any{
-			"type": "mention",
-			"attrs": map[string]any{
-				"text": "@" + sub[1],
-				"id":   sub[2],
-			},
-		}}
-	}
-
-	if m := linkRe.FindStringIndex(text); m != nil {
-		if !strings.HasPrefix(text[m[0]:], "[@") {
-			sub := linkRe.FindStringSubmatch(text)
-			node := map[string]any{
-				"type": "text",
-				"text": sub[1],
-				"marks": []any{map[string]any{
-					"type":  "link",
-					"attrs": map[string]any{"href": sub[2]},
-				}},
-			}
-			if earliest == nil || m[0] < earliest.start {
-				earliest = &match{m[0], m[1], node}
-			}
+	var earliest *inlineMatch
+	for _, rule := range inlineRules {
+		loc := rule.re.FindStringIndex(text)
+		if loc == nil {
+			continue
 		}
-	}
-
-	if m := boldRe.FindStringIndex(text); m != nil {
-		sub := boldRe.FindStringSubmatch(text)
-		node := map[string]any{
-			"type": "text", "text": sub[1],
-			"marks": []any{map[string]any{"type": "strong"}},
+		sub := rule.re.FindStringSubmatch(text)
+		start, end, node, ok := rule.build(text, loc, sub)
+		if !ok {
+			continue
 		}
-		if earliest == nil || m[0] < earliest.start {
-			earliest = &match{m[0], m[1], node}
-		}
-	}
-
-	if m := codeRe.FindStringIndex(text); m != nil {
-		sub := codeRe.FindStringSubmatch(text)
-		node := map[string]any{
-			"type": "text", "text": sub[1],
-			"marks": []any{map[string]any{"type": "code"}},
-		}
-		if earliest == nil || m[0] < earliest.start {
-			earliest = &match{m[0], m[1], node}
-		}
-	}
-
-	if m := strikeRe.FindStringIndex(text); m != nil {
-		sub := strikeRe.FindStringSubmatch(text)
-		node := map[string]any{
-			"type": "text", "text": sub[1],
-			"marks": []any{map[string]any{"type": "strike"}},
-		}
-		if earliest == nil || m[0] < earliest.start {
-			earliest = &match{m[0], m[1], node}
-		}
-	}
-
-	if m := underlineRe.FindStringIndex(text); m != nil {
-		sub := underlineRe.FindStringSubmatch(text)
-		node := map[string]any{
-			"type": "text", "text": sub[1],
-			"marks": []any{map[string]any{"type": "underline"}},
-		}
-		if earliest == nil || m[0] < earliest.start {
-			earliest = &match{m[0], m[1], node}
-		}
-	}
-
-	if m := italicRe.FindStringIndex(text); m != nil {
-		sub := italicRe.FindStringSubmatch(text)
-		actualStart := strings.Index(text[m[0]:], "*"+sub[1]+"*")
-		if actualStart >= 0 {
-			actualStart += m[0]
-			actualEnd := actualStart + len("*"+sub[1]+"*")
-			node := map[string]any{
-				"type": "text", "text": sub[1],
-				"marks": []any{map[string]any{"type": "em"}},
-			}
-			if earliest == nil || actualStart < earliest.start {
-				earliest = &match{actualStart, actualEnd, node}
-			}
+		if earliest == nil || start < earliest.start {
+			earliest = &inlineMatch{start, end, node}
 		}
 	}
 

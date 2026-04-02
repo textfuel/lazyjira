@@ -220,8 +220,6 @@ func (f *CreateForm) SetSize(w, h int) {
 }
 
 // Intercept handles keyboard and mouse input for the 3-panel form
-//
-//nolint:gocognit // 3-panel input routing with inline text editing
 func (f *CreateForm) Intercept(msg tea.Msg) (tea.Cmd, bool) {
 	if !f.visible || f.paused {
 		return nil, false
@@ -246,7 +244,7 @@ func (f *CreateForm) Intercept(msg tea.Msg) (tea.Cmd, bool) {
 		return f.interceptFilter(km)
 	}
 
-	switch km.Type { //nolint:exhaustive // only tab keys handled here
+	switch km.Type { //nolint:exhaustive
 	case tea.KeyTab:
 		f.focusedPanel = CreatePanel((int(f.focusedPanel) + 1) % createPanelCount)
 		return nil, true
@@ -267,7 +265,7 @@ func (f *CreateForm) Intercept(msg tea.Msg) (tea.Cmd, bool) {
 }
 
 func (f *CreateForm) interceptMouse(mm tea.MouseMsg) (tea.Cmd, bool) {
-	switch mm.Button { //nolint:exhaustive // only wheel and click
+	switch mm.Button { //nolint:exhaustive
 	case tea.MouseButtonWheelUp:
 		f.scrollFocused(-3)
 		return nil, true
@@ -455,7 +453,7 @@ func (f *CreateForm) interceptFilter(msg tea.KeyMsg) (tea.Cmd, bool) {
 }
 
 func (f *CreateForm) interceptSummary(msg tea.KeyMsg) (tea.Cmd, bool) {
-	switch msg.Type { //nolint:exhaustive // only relevant keys handled
+	switch msg.Type { //nolint:exhaustive
 	case tea.KeyEnter:
 		return f.submitForm()
 	case tea.KeyEsc:

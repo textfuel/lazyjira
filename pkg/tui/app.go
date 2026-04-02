@@ -614,7 +614,7 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 		body = views.MarkdownToADF(mdContent)
 	}
 
-	switch ctx.kind { //nolint:exhaustive // only editor-based kinds handled here
+	switch ctx.kind { //nolint:exhaustive
 	case editDesc:
 		return updateIssueField(a.client, ctx.issueKey, "description", body)
 	case editCommentNew:

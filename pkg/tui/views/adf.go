@@ -41,7 +41,7 @@ type adfRenderer struct {
 	lines []string
 }
 
-//nolint:gocognit // ADF block dispatcher complexity is inherent to the format
+//nolint:gocognit
 func (r *adfRenderer) renderBlock(node any, indent int) {
 	block, ok := node.(map[string]any)
 	if !ok {
@@ -476,57 +476,57 @@ func highlightCode(code, lang string) string {
 }
 
 // extractADFURLs recursively extracts all URLs from an ADF document
-// finds URLs in link marks, inlineCard nodes, and plain text
-//
-//nolint:gocognit // recursive ADF walker with multiple node types
 func extractADFURLs(node any) []string {
-	var urls []string
 	switch v := node.(type) {
 	case map[string]any:
-		nodeType, _ := v["type"].(string)
-
-		// inlineCard: {"type":"inlineCard","attrs":{"url":"..."}}
-		if nodeType == "inlineCard" {
-			if attrs, ok := v["attrs"].(map[string]any); ok {
-				if u, ok := attrs["url"].(string); ok {
-					urls = append(urls, u)
-				}
-			}
-		}
-
-		// text with link mark: {"type":"text","marks":[{"type":"link","attrs":{"href":"..."}}]}
-		if marks, ok := v["marks"].([]any); ok {
-			for _, m := range marks {
-				if mark, ok := m.(map[string]any); ok {
-					if mt, _ := mark["type"].(string); mt == "link" {
-						if attrs, ok := mark["attrs"].(map[string]any); ok {
-							if href, ok := attrs["href"].(string); ok {
-								urls = append(urls, href)
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Also find plain-text URLs in text nodes.
-		if nodeType == "text" {
-			if text, ok := v["text"].(string); ok {
-				urls = append(urls, findURLs(text)...)
-			}
-		}
-
-		// Recurse into content.
+		urls := extractNodeURLs(v)
 		if content, ok := v["content"].([]any); ok {
 			for _, child := range content {
 				urls = append(urls, extractADFURLs(child)...)
 			}
 		}
-
+		return urls
 	case []any:
+		var urls []string
 		for _, child := range v {
 			urls = append(urls, extractADFURLs(child)...)
 		}
+		return urls
 	}
+	return nil
+}
+
+func extractNodeURLs(node map[string]any) []string {
+	var urls []string
+	nodeType, _ := node["type"].(string)
+
+	if nodeType == "inlineCard" {
+		if attrs, ok := node["attrs"].(map[string]any); ok {
+			if u, ok := attrs["url"].(string); ok {
+				urls = append(urls, u)
+			}
+		}
+	}
+
+	if marks, ok := node["marks"].([]any); ok {
+		for _, m := range marks {
+			if mark, ok := m.(map[string]any); ok {
+				if mt, _ := mark["type"].(string); mt == "link" {
+					if attrs, ok := mark["attrs"].(map[string]any); ok {
+						if href, ok := attrs["href"].(string); ok {
+							urls = append(urls, href)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if nodeType == "text" {
+		if text, ok := node["text"].(string); ok {
+			urls = append(urls, findURLs(text)...)
+		}
+	}
+
 	return urls
 }
