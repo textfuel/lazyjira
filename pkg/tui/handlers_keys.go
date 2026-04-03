@@ -338,9 +338,10 @@ func (a *App) startCreateIssue() (tea.Model, tea.Cmd) {
 	return a, fetchIssueTypes(a.client, a.projectID)
 }
 
-// handleActionSelect handles space on the info and projects panels
 func (a *App) handleActionSelect() (tea.Model, tea.Cmd) {
 	switch {
+	case a.side == sideLeft && a.leftFocus == focusIssues:
+		return a.openIssueDetail()
 	case a.side == sideLeft && a.leftFocus == focusInfo:
 		if a.infoPanel.ActiveTab() == views.InfoTabFields {
 			if sel := a.issuesList.SelectedIssue(); sel != nil {
@@ -355,7 +356,6 @@ func (a *App) handleActionSelect() (tea.Model, tea.Cmd) {
 	return nil, nil
 }
 
-// handleActionOpen handles enter on the left panel
 func (a *App) handleActionOpen() (tea.Model, tea.Cmd) {
 	switch {
 	case a.side == sideLeft && a.leftFocus == focusIssues:
@@ -367,7 +367,7 @@ func (a *App) handleActionOpen() (tea.Model, tea.Cmd) {
 			}
 			return a, nil
 		}
-		return a.navigateToLinkedIssue()
+		return a.openLinkedIssueDetail()
 	case a.side == sideLeft && a.leftFocus == focusProjects:
 		return a.openProject()
 	}
@@ -393,6 +393,17 @@ func (a *App) openProject() (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
+func (a *App) openLinkedIssueDetail() (tea.Model, tea.Cmd) {
+	key := a.infoPanelSelectedKey()
+	if key == "" {
+		return a, nil
+	}
+	a.side = sideRight
+	a.updateFocusState()
+	a.showCachedIssue(key)
+	return a, fetchIssueDetail(a.client, key)
+}
+
 func (a *App) navigateToLinkedIssue() (tea.Model, tea.Cmd) {
 	key := a.infoPanelSelectedKey()
 	if key == "" {
@@ -407,8 +418,6 @@ func (a *App) navigateToLinkedIssue() (tea.Model, tea.Cmd) {
 		a.issuesList.SetTabIndex(0)
 	}
 	a.issuesList.SelectByKey(key)
-	a.issuesList.SetActiveKey(key)
-	a.side = sideRight
 	a.leftFocus = focusIssues
 	a.updateFocusState()
 	a.showCachedIssue(key)

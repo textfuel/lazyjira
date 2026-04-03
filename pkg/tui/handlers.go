@@ -85,7 +85,6 @@ func (a *App) selectProject(p *jira.Project) tea.Cmd {
 	a.projectID = p.ID
 	a.statusPanel.SetProject(p.Key)
 	a.projectList.SetActiveKey(p.Key)
-	a.issuesList.ClearActiveKey()
 	a.issuesList.InvalidateTabCache()
 	a.issueCache = make(map[string]*jira.Issue)
 	a.infoPanel.SetIssue(nil)
