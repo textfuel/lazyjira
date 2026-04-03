@@ -624,7 +624,7 @@ func (a *App) buildCreateFields(meta []jira.CreateMetaField) []components.Create
 	}
 
 	cfgNames := make(map[string]string)
-	for _, cf := range a.cfg.CustomFields {
+	for _, cf := range a.cfg.Fields {
 		cfgNames[cf.ID] = cf.Name
 	}
 

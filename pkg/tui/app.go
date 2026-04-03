@@ -226,14 +226,18 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		Project:    projectKey,
 	}
 
-	if len(cfg.CustomFields) > 0 {
-		ids := make([]string, len(cfg.CustomFields))
-		for i, cf := range cfg.CustomFields {
-			ids[i] = cf.ID
+	if len(cfg.Fields) > 0 {
+		var customIDs []string
+		for _, f := range cfg.Fields {
+			if isCustomField(f.ID) {
+				customIDs = append(customIDs, f.ID)
+			}
 		}
-		client.SetCustomFields(ids)
-		detailView.SetCustomFields(cfg.CustomFields)
-		infoPanel.SetCustomFields(cfg.CustomFields)
+		if len(customIDs) > 0 {
+			client.SetCustomFields(customIDs)
+		}
+		detailView.SetFields(cfg.Fields)
+		infoPanel.SetFields(cfg.Fields)
 	}
 
 	app := &App{
@@ -666,10 +670,10 @@ func isCustomField(fieldID string) bool {
 	return strings.HasPrefix(fieldID, "customfield_")
 }
 
-func (a *App) customFieldEditorEnabled(fieldID string) bool {
-	for _, cf := range a.cfg.CustomFields {
-		if cf.ID == fieldID {
-			return cf.Editor
+func (a *App) fieldEditorEnabled(fieldID string) bool {
+	for _, f := range a.cfg.Fields {
+		if f.ID == fieldID {
+			return f.Editor
 		}
 	}
 	return false
@@ -686,7 +690,7 @@ func (a *App) fetchCustomFieldOptionsForEdit(sel *jira.Issue, field *views.InfoF
 		fieldName:    field.Name,
 		fieldType:    field.Type,
 		currentValue: field.Value,
-		useEditor:    a.customFieldEditorEnabled(field.FieldID),
+		useEditor:    a.fieldEditorEnabled(field.FieldID),
 	}
 	cacheKey := a.projectKey + ":" + sel.IssueType.ID
 	if cached, ok := a.createMetaCache[cacheKey]; ok {

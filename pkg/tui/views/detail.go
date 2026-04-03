@@ -70,15 +70,14 @@ type DetailView struct {
 	blocks       [][]string
 	blockKeys    []string // issue key per block (empty if not navigable)
 	dblClick     components.DblClickDetector
-	customFields []config.CustomFieldConfig
+	fields []config.FieldConfig
 	width        int
 	height       int
 	focused      bool
 	theme        *theme.Theme
 }
 
-// SetCustomFields sets the list of custom fields to display in the Info tab
-func (d *DetailView) SetCustomFields(fields []config.CustomFieldConfig) { d.customFields = fields }
+func (d *DetailView) SetFields(fields []config.FieldConfig) { d.fields = fields }
 
 func NewDetailView() *DetailView {
 	return &DetailView{theme: theme.Default, mode: ModeIssue}
