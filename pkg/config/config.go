@@ -15,9 +15,9 @@ type Config struct {
 	IssueTabs    []IssueTabConfig    `yaml:"issueTabs"`
 	Cache        CacheConfig         `yaml:"cache"`
 	Refresh      RefreshConfig       `yaml:"refresh"`
-	Fields           []FieldConfig `yaml:"fields"`
-	DeprecatedFields []FieldConfig `yaml:"customFields,omitempty"`
-	Git          GitConfig           `yaml:"git"`
+	Fields           []FieldConfig      `yaml:"fields"`
+	DeprecatedFields []FieldConfig      `yaml:"customFields,omitempty"`
+	Git              GitConfig          `yaml:"git"`
 }
 
 type GitConfig struct {
@@ -44,10 +44,8 @@ type FieldConfig struct {
 	ID     string `yaml:"id"`
 	Name   string `yaml:"name"`
 	Type   string `yaml:"type"`
-	Multiline bool `yaml:"multiline"`
+	Multiline bool   `yaml:"multiline"`
 }
-
-type CustomFieldConfig = FieldConfig
 
 type KeybindingConfig struct {
 	Universal UniversalKeys `yaml:"universal"`

@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/config"
 	"github.com/textfuel/lazyjira/pkg/jira"
 	"github.com/textfuel/lazyjira/pkg/tui/components"
 	"github.com/textfuel/lazyjira/pkg/tui/theme"
@@ -70,14 +69,11 @@ type DetailView struct {
 	blocks       [][]string
 	blockKeys    []string // issue key per block (empty if not navigable)
 	dblClick     components.DblClickDetector
-	fields []config.FieldConfig
 	width        int
 	height       int
 	focused      bool
 	theme        *theme.Theme
 }
-
-func (d *DetailView) SetFields(fields []config.FieldConfig) { d.fields = fields }
 
 func NewDetailView() *DetailView {
 	return &DetailView{theme: theme.Default, mode: ModeIssue}

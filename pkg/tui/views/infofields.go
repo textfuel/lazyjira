@@ -87,7 +87,6 @@ var builtinFieldMap = func() map[string]builtinFieldDef {
 
 var defaultFieldIDs = []string{"status", "priority", "assignee", "reporter", "issuetype", "sprint"}
 
-// InfoFieldType determines which editor to use for a field
 type InfoFieldType int
 
 const (
@@ -98,7 +97,6 @@ const (
 	FieldMultiText
 )
 
-// InfoField represents an editable field in the Info panel
 type InfoField struct {
 	Name    string
 	FieldID string
@@ -163,22 +161,20 @@ func infoFieldCount(issue *jira.Issue, cfgFields []config.FieldConfig) int {
 	return len(buildInfoFields(issue, cfgFields))
 }
 
-func renderInfoRows(issue *jira.Issue, cfgFields []config.FieldConfig, th *theme.Theme, maxWidth int) []string {
-	return renderInfoRowsImpl(issue, cfgFields, th, maxWidth)
+func renderInfoRowPairs(issue *jira.Issue, cfgFields []config.FieldConfig, th *theme.Theme, maxWidth int) (styled, plain []string) {
+	fields := buildInfoFields(issue, cfgFields)
+	styled = renderFieldRows(fields, issue, th, maxWidth)
+	plain = renderFieldRows(fields, issue, nil, maxWidth)
+	return
 }
 
-func renderInfoRowsPlain(issue *jira.Issue, cfgFields []config.FieldConfig, maxWidth int) []string {
-	return renderInfoRowsImpl(issue, cfgFields, nil, maxWidth)
-}
+var noneStyle = lipgloss.NewStyle().Foreground(theme.ColorGray)
 
-func renderInfoRowsImpl(issue *jira.Issue, cfgFields []config.FieldConfig, th *theme.Theme, maxWidth int) []string {
-	if issue == nil {
+func renderFieldRows(fields []InfoField, issue *jira.Issue, th *theme.Theme, maxWidth int) []string {
+	if len(fields) == 0 {
 		return nil
 	}
 	styled := th != nil
-	noneStyle := lipgloss.NewStyle().Foreground(theme.ColorGray)
-
-	fields := buildInfoFields(issue, cfgFields)
 
 	labelW := 0
 	for _, f := range fields {
@@ -228,8 +224,8 @@ func renderInfoRowsImpl(issue *jira.Issue, cfgFields []config.FieldConfig, th *t
 		}
 
 		label := " " + f.Name + ":"
-		for lipgloss.Width(label) < labelW {
-			label += " "
+		if pad := labelW - lipgloss.Width(label); pad > 0 {
+			label += strings.Repeat(" ", pad)
 		}
 		rows = append(rows, label+val)
 	}

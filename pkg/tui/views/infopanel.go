@@ -371,10 +371,7 @@ func (p *InfoPanel) renderTabRows(width int) (styled, plain []string) {
 }
 
 func (p *InfoPanel) renderFieldRowPairs() (styled, plain []string) {
-	w := p.Width - 2
-	styled = renderInfoRows(p.issue, p.fields, p.theme, w)
-	plain = renderInfoRowsPlain(p.issue, p.fields, w)
-	return
+	return renderInfoRowPairs(p.issue, p.fields, p.theme, p.Width-2)
 }
 
 func (p *InfoPanel) renderLinkRowPairs(width int) (styled, plain []string) {

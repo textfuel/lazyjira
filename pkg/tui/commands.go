@@ -229,6 +229,7 @@ type customFieldOptionsMsg struct {
 	options       []jira.CreateMetaValue
 	allFields     []jira.CreateMetaField
 	issueTypeID   string
+	projectKey    string
 	fieldNotFound bool
 }
 
@@ -281,6 +282,7 @@ func fetchCustomFieldOptions(client jira.ClientInterface, projectKey, issueTypeI
 		}
 		info.allFields = meta
 		info.issueTypeID = issueTypeID
+		info.projectKey = projectKey
 		for _, f := range meta {
 			if f.FieldID == info.fieldID {
 				info.options = f.AllowedValues

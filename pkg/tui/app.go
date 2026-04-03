@@ -236,7 +236,6 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		if len(customIDs) > 0 {
 			client.SetCustomFields(customIDs)
 		}
-		detailView.SetFields(cfg.Fields)
 		infoPanel.SetFields(cfg.Fields)
 	}
 
@@ -731,8 +730,8 @@ func (a *App) fetchCustomFieldOptionsForEdit(sel *jira.Issue, field *views.InfoF
 }
 
 func (a *App) handleCustomFieldOptions(msg customFieldOptionsMsg) (tea.Model, tea.Cmd) {
-	if len(msg.allFields) > 0 && msg.issueTypeID != "" {
-		a.createMetaCache[a.projectKey+":"+msg.issueTypeID] = msg.allFields
+	if len(msg.allFields) > 0 && msg.issueTypeID != "" && msg.projectKey != "" {
+		a.createMetaCache[msg.projectKey+":"+msg.issueTypeID] = msg.allFields
 	}
 	if msg.fieldNotFound {
 		a.statusPanel.SetError("field not available for editing")
