@@ -625,24 +625,25 @@ func (c *Client) GetMyself(ctx context.Context) (*User, error) {
 }
 
 func (c *Client) GetUsers(ctx context.Context, projectKey string) ([]User, error) {
-	var raw []userResponse
+	const batchSize = 100
+	const maxPages = 50
+	var all []userResponse
 	startAt := 0
-	const pageSize = 100
-	for {
+	for range maxPages {
 		var page []userResponse
 		path := fmt.Sprintf("/user/assignable/search?project=%s&startAt=%d&maxResults=%d",
-			projectKey, startAt, pageSize)
+			url.QueryEscape(projectKey), startAt, batchSize)
 		if err := c.do(ctx, http.MethodGet, path, nil, &page); err != nil {
 			return nil, fmt.Errorf("get users for project %s: %w", projectKey, err)
 		}
-		raw = append(raw, page...)
-		if len(page) < pageSize {
+		all = append(all, page...)
+		if len(page) < batchSize {
 			break
 		}
-		startAt += len(page)
+		startAt = len(all)
 	}
-	users := make([]User, len(raw))
-	for i, ru := range raw {
+	users := make([]User, len(all))
+	for i, ru := range all {
 		users[i] = ru.toUser()
 	}
 	return users, nil
