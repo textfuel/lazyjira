@@ -5,16 +5,17 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/pkg/tui/theme"
 )
 
 // JQL syntax highlighting colors (matching Jira Cloud JQL editor).
-var (
-	jqlFieldStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("4")) // blue
-	jqlKeywordStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("5")) // magenta/purple
-	jqlOperatorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("2")) // green
-	jqlStringStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("3")) // yellow for quoted strings
-	jqlDefaultStyle  = lipgloss.NewStyle()
-)
+// These are functions so they pick up the active theme's colors.
+func jqlFieldStyle() lipgloss.Style    { return lipgloss.NewStyle().Foreground(theme.ColorBlue) }
+func jqlKeywordStyle() lipgloss.Style  { return lipgloss.NewStyle().Foreground(lipgloss.Color("5")) }
+func jqlOperatorStyle() lipgloss.Style { return lipgloss.NewStyle().Foreground(theme.ColorGreen) }
+func jqlStringStyle() lipgloss.Style   { return lipgloss.NewStyle().Foreground(theme.ColorYellow) }
+func jqlDefaultStyle() lipgloss.Style  { return lipgloss.NewStyle() }
 
 // JQL operators (word-based).
 var jqlWordOperators = map[string]bool{
@@ -69,7 +70,7 @@ func HighlightJQL(runes []rune) []StyledSegment {
 			}
 			segments = append(segments, StyledSegment{
 				Text:  string(runes[i:j]),
-				Style: jqlStringStyle,
+				Style: jqlStringStyle(),
 			})
 			i = j
 			continue
@@ -83,7 +84,7 @@ func HighlightJQL(runes []rune) []StyledSegment {
 			}
 			segments = append(segments, StyledSegment{
 				Text:  string(runes[i:j]),
-				Style: jqlDefaultStyle,
+				Style: jqlDefaultStyle(),
 			})
 			i = j
 			continue
@@ -93,7 +94,7 @@ func HighlightJQL(runes []rune) []StyledSegment {
 		if r == '(' || r == ')' || r == ',' {
 			segments = append(segments, StyledSegment{
 				Text:  string(r),
-				Style: jqlDefaultStyle,
+				Style: jqlDefaultStyle(),
 			})
 			i++
 			continue
@@ -103,7 +104,7 @@ func HighlightJQL(runes []rune) []StyledSegment {
 		if r == '=' || r == '>' || r == '<' || r == '~' {
 			segments = append(segments, StyledSegment{
 				Text:  string(r),
-				Style: jqlOperatorStyle,
+				Style: jqlOperatorStyle(),
 			})
 			i++
 			continue
@@ -111,7 +112,7 @@ func HighlightJQL(runes []rune) []StyledSegment {
 		if r == '!' && i+1 < n && (runes[i+1] == '=' || runes[i+1] == '~') {
 			segments = append(segments, StyledSegment{
 				Text:  string(runes[i : i+2]),
-				Style: jqlOperatorStyle,
+				Style: jqlOperatorStyle(),
 			})
 			i += 2
 			continue
@@ -128,7 +129,7 @@ func HighlightJQL(runes []rune) []StyledSegment {
 			// Single unrecognized char.
 			segments = append(segments, StyledSegment{
 				Text:  string(r),
-				Style: jqlDefaultStyle,
+				Style: jqlDefaultStyle(),
 			})
 			i++
 			continue
@@ -151,10 +152,10 @@ func HighlightJQL(runes []rune) []StyledSegment {
 // classifyJQLWord determines the style for a word token based on context.
 func classifyJQLWord(wordLower, fullText string, pos int) lipgloss.Style {
 	if jqlKeywords[wordLower] {
-		return jqlKeywordStyle
+		return jqlKeywordStyle()
 	}
 	if jqlWordOperators[wordLower] {
-		return jqlOperatorStyle
+		return jqlOperatorStyle()
 	}
 
 	// Check if this looks like a field name:
@@ -162,7 +163,7 @@ func classifyJQLWord(wordLower, fullText string, pos int) lipgloss.Style {
 	// 2. Starts with "customfield_"
 	// 3. Appears before an operator (heuristic: followed by space+operator or space+keyword)
 	if jqlKnownFields[wordLower] || strings.HasPrefix(wordLower, "customfield_") {
-		return jqlFieldStyle
+		return jqlFieldStyle()
 	}
 
 	// Heuristic: if preceded by an operator or at start, likely a value (default).
@@ -171,19 +172,19 @@ func classifyJQLWord(wordLower, fullText string, pos int) lipgloss.Style {
 	afterLower := strings.ToLower(after)
 	for op := range jqlSymbolOperators {
 		if strings.HasPrefix(after, op) {
-			return jqlFieldStyle
+			return jqlFieldStyle()
 		}
 	}
 	for op := range jqlWordOperators {
 		if strings.HasPrefix(afterLower, op+" ") || strings.HasPrefix(afterLower, op+"(") || afterLower == op {
-			return jqlFieldStyle
+			return jqlFieldStyle()
 		}
 	}
 
 	// Functions like currentUser(), now().
 	if strings.HasSuffix(wordLower, "()") {
-		return jqlDefaultStyle
+		return jqlDefaultStyle()
 	}
 
-	return jqlDefaultStyle
+	return jqlDefaultStyle()
 }

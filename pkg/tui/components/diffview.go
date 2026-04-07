@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/pkg/tui/theme"
 )
 
 // DiffConfirmedMsg is sent when user confirms the diff (Enter)
@@ -159,9 +161,9 @@ func computeUnifiedDiff(oldText, newText string) []string {
 	oldLines := strings.Split(oldText, "\n")
 	newLines := strings.Split(newText, "\n")
 
-	addStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
-	delStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-	ctxStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	addStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen)
+	delStyle := lipgloss.NewStyle().Foreground(theme.ColorRed)
+	ctxStyle := lipgloss.NewStyle().Foreground(theme.ColorGray)
 
 	// Simple LCS-based diff.
 	lcs := computeLCS(oldLines, newLines)
