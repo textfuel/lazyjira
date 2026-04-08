@@ -384,33 +384,54 @@ func (c *Client) doAgileMethod(ctx context.Context, method, path string, body, r
 }
 
 func (c *Client) GetBoards(ctx context.Context) ([]Board, error) {
-	var raw struct {
-		Values []boardResponse `json:"values"`
+	const batchSize = 100
+	const maxPages = 50
+	var all []boardResponse
+	startAt := 0
+	for range maxPages {
+		var page struct {
+			Values []boardResponse `json:"values"`
+			IsLast bool            `json:"isLast"`
+		}
+		path := fmt.Sprintf("/board?startAt=%d&maxResults=%d", startAt, batchSize)
+		if err := c.doAgile(ctx, path, &page); err != nil {
+			return nil, fmt.Errorf("get boards: %w", err)
+		}
+		all = append(all, page.Values...)
+		if page.IsLast || len(page.Values) < batchSize {
+			break
+		}
+		startAt = len(all)
 	}
-	err := c.doAgile(ctx, "/board?maxResults=100", &raw)
-	if err != nil {
-		return nil, fmt.Errorf("get boards: %w", err)
-	}
-	boards := make([]Board, len(raw.Values))
-	for i, rb := range raw.Values {
+	boards := make([]Board, len(all))
+	for i, rb := range all {
 		boards[i] = rb.toBoard()
 	}
 	return boards, nil
 }
 
 func (c *Client) GetBoardIssues(ctx context.Context, boardID int, jql string) ([]Issue, error) {
-	path := fmt.Sprintf("/board/%d/issue?maxResults=50", boardID)
-	if jql != "" {
-		path += "&jql=" + jql
+	const batchSize = 50
+	const maxPages = 50
+	var all []issueResponse
+	startAt := 0
+	for range maxPages {
+		var page searchResponse
+		path := fmt.Sprintf("/board/%d/issue?startAt=%d&maxResults=%d", boardID, startAt, batchSize)
+		if jql != "" {
+			path += "&jql=" + url.QueryEscape(jql)
+		}
+		if err := c.doAgile(ctx, path, &page); err != nil {
+			return nil, fmt.Errorf("get board %d issues: %w", boardID, err)
+		}
+		all = append(all, page.Issues...)
+		if len(page.Issues) < batchSize {
+			break
+		}
+		startAt = len(all)
 	}
-
-	var raw searchResponse
-	err := c.doAgile(ctx, path, &raw)
-	if err != nil {
-		return nil, fmt.Errorf("get board %d issues: %w", boardID, err)
-	}
-	issues := make([]Issue, len(raw.Issues))
-	for i, ri := range raw.Issues {
+	issues := make([]Issue, len(all))
+	for i, ri := range all {
 		issues[i] = ri.toIssue()
 	}
 	return issues, nil
@@ -584,15 +605,27 @@ func (c *Client) GetComments(ctx context.Context, issueKey string) ([]Comment, e
 
 func (c *Client) GetChangelog(ctx context.Context, issueKey string) ([]ChangelogEntry, error) {
 	if c.isCloud {
-		var raw struct {
-			Values []changelogResponse `json:"values"`
+		const batchSize = 100
+		const maxPages = 50
+		var all []changelogResponse
+		startAt := 0
+		for range maxPages {
+			var page struct {
+				Values []changelogResponse `json:"values"`
+				Total  int                 `json:"total"`
+			}
+			path := fmt.Sprintf("/issue/%s/changelog?startAt=%d&maxResults=%d", issueKey, startAt, batchSize)
+			if err := c.do(ctx, http.MethodGet, path, nil, &page); err != nil {
+				return nil, fmt.Errorf("get changelog for %s: %w", issueKey, err)
+			}
+			all = append(all, page.Values...)
+			if len(all) >= page.Total || len(page.Values) < batchSize {
+				break
+			}
+			startAt = len(all)
 		}
-		err := c.do(ctx, http.MethodGet, "/issue/"+issueKey+"/changelog?maxResults=100", nil, &raw)
-		if err != nil {
-			return nil, fmt.Errorf("get changelog for %s: %w", issueKey, err)
-		}
-		entries := make([]ChangelogEntry, len(raw.Values))
-		for i, rc := range raw.Values {
+		entries := make([]ChangelogEntry, len(all))
+		for i, rc := range all {
 			entries[i] = rc.toChangelogEntry()
 		}
 		return entries, nil
@@ -650,15 +683,26 @@ func (c *Client) GetUsers(ctx context.Context, projectKey string) ([]User, error
 }
 
 func (c *Client) GetSprints(ctx context.Context, boardID int) ([]Sprint, error) {
-	var raw struct {
-		Values []Sprint `json:"values"`
+	const batchSize = 50
+	const maxPages = 50
+	var all []Sprint
+	startAt := 0
+	for range maxPages {
+		var page struct {
+			Values []Sprint `json:"values"`
+			IsLast bool     `json:"isLast"`
+		}
+		path := fmt.Sprintf("/board/%d/sprint?startAt=%d&maxResults=%d", boardID, startAt, batchSize)
+		if err := c.doAgile(ctx, path, &page); err != nil {
+			return nil, fmt.Errorf("get sprints for board %d: %w", boardID, err)
+		}
+		all = append(all, page.Values...)
+		if page.IsLast || len(page.Values) < batchSize {
+			break
+		}
+		startAt = len(all)
 	}
-	path := fmt.Sprintf("/board/%d/sprint?maxResults=50", boardID)
-	err := c.doAgile(ctx, path, &raw)
-	if err != nil {
-		return nil, fmt.Errorf("get sprints for board %d: %w", boardID, err)
-	}
-	return raw.Values, nil
+	return all, nil
 }
 
 func (c *Client) MoveToSprint(ctx context.Context, sprintID int, issueKey string) error {
@@ -672,14 +716,26 @@ func (c *Client) MoveToSprint(ctx context.Context, sprintID int, issueKey string
 }
 
 func (c *Client) GetLabels(ctx context.Context) ([]string, error) {
-	var raw struct {
-		Values []string `json:"values"`
+	const batchSize = 1000
+	const maxPages = 20
+	var all []string
+	startAt := 0
+	for range maxPages {
+		var page struct {
+			Values []string `json:"values"`
+			Total  int      `json:"total"`
+		}
+		path := fmt.Sprintf("/label?startAt=%d&maxResults=%d", startAt, batchSize)
+		if err := c.do(ctx, http.MethodGet, path, nil, &page); err != nil {
+			return nil, fmt.Errorf("get labels: %w", err)
+		}
+		all = append(all, page.Values...)
+		if len(all) >= page.Total || len(page.Values) < batchSize {
+			break
+		}
+		startAt = len(all)
 	}
-	err := c.do(ctx, http.MethodGet, "/label?maxResults=1000", nil, &raw)
-	if err != nil {
-		return nil, fmt.Errorf("get labels: %w", err)
-	}
-	return raw.Values, nil
+	return all, nil
 }
 
 func (c *Client) GetComponents(ctx context.Context, projectKey string) ([]Component, error) {
