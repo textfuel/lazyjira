@@ -173,3 +173,45 @@ func TestLoad_ProjectsAcceptsStringShorthand(t *testing.T) {
 		t.Errorf("Projects[1] = %+v, want {Key:DATA BoardID:7}", cfg.Projects[1])
 	}
 }
+
+func TestValidateConverter(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"empty defaults to builtin", "", false},
+		{"explicit builtin", ConverterBuiltin, false},
+		{"adf-converter", ConverterAdfConverter, false},
+		{"unknown value errors", "foo", true},
+		{"typo errors", "adfconverter", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateConverter(tc.value)
+			if tc.wantErr && err == nil {
+				t.Errorf("validateConverter(%q) = nil, want error", tc.value)
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("validateConverter(%q) = %v, want nil", tc.value, err)
+			}
+			if tc.wantErr && err != nil && !strings.Contains(err.Error(), tc.value) {
+				t.Errorf("error %q should include the bad value %q", err.Error(), tc.value)
+			}
+		})
+	}
+}
+
+func TestLoad_RejectsUnknownConverter(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CONFIG_DIR", dir)
+	cfgYAML := "converter: not-a-real-converter\n"
+	if err := os.WriteFile(filepath.Join(dir, "config.yml"), []byte(cfgYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() with unknown converter should error")
+	} else if !strings.Contains(err.Error(), "not-a-real-converter") {
+		t.Errorf("error should name the invalid value, got: %v", err)
+	}
+}

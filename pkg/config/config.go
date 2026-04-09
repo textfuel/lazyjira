@@ -1,11 +1,28 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
+
+// Valid values for Config.Converter. Empty string is treated as ConverterBuiltin.
+const (
+	ConverterBuiltin      = "builtin"
+	ConverterAdfConverter = "adf-converter"
+)
+
+func validateConverter(value string) error {
+	switch value {
+	case "", ConverterBuiltin, ConverterAdfConverter:
+		return nil
+	default:
+		return fmt.Errorf("unknown converter %q; valid: %q (default), %q, %q",
+			value, "", ConverterBuiltin, ConverterAdfConverter)
+	}
+}
 
 type Config struct {
 	Jira             JiraConfig            `yaml:"jira"`
@@ -20,6 +37,7 @@ type Config struct {
 	DeprecatedFields []FieldConfig         `yaml:"customFields,omitempty"`
 	Git              GitConfig             `yaml:"git"`
 	CustomCommands   []CustomCommandConfig `yaml:"customCommands"`
+	Converter        string                `yaml:"converter"`
 }
 
 type CustomCommandConfig struct {
@@ -350,6 +368,10 @@ func Load() (*Config, error) {
 	}
 
 	if _, err := cfg.ResolveCustomCommands(); err != nil {
+		return nil, err
+	}
+
+	if err := validateConverter(cfg.Converter); err != nil {
 		return nil, err
 	}
 
