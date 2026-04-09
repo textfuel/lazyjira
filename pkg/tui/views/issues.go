@@ -35,8 +35,10 @@ type IssuesList struct {
 	userEmail   string
 	keyColWidth int
 	fields      []string
-	theme       *theme.Theme
-	jqlQuery    string
+	theme        *theme.Theme
+	typeIcons    map[string]string
+	typeIconCols int
+	jqlQuery     string
 	jqlTabIdx   int
 }
 
@@ -44,7 +46,17 @@ func NewIssuesList() *IssuesList {
 	return &IssuesList{theme: theme.Default, jqlTabIdx: -1}
 }
 
-func (m *IssuesList) SetFields(fields []string)            { m.fields = fields }
+func (m *IssuesList) SetFields(fields []string) { m.fields = fields }
+func (m *IssuesList) SetTypeIcons(icons map[string]string) {
+	m.typeIcons = icons
+	max := 0
+	for _, icon := range icons {
+		if w := lipgloss.Width(icon); w > max {
+			max = w
+		}
+	}
+	m.typeIconCols = max
+}
 func (m *IssuesList) SetTabs(tabs []config.IssueTabConfig) { m.tabs = tabs }
 func (m *IssuesList) SetUserEmail(email string)            { m.userEmail = email }
 func (m *IssuesList) ActiveTab() config.IssueTabConfig {
@@ -419,6 +431,8 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		fields = []string{"key", fieldStatus, "summary"}
 	}
 
+	icon := typeIcon(m.typeIcons, issue.IssueType)
+
 	fixedWidth := 1
 	if len(fields) > 1 {
 		fixedWidth += len(fields) - 1
@@ -434,7 +448,11 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		case "assignee":
 			fixedWidth += 12
 		case "type":
-			fixedWidth += 10
+			if icon != "" {
+				fixedWidth += m.typeIconCols
+			} else {
+				fixedWidth += 10
+			}
 		case "updated":
 			fixedWidth += 8
 		case "summary":
@@ -468,11 +486,15 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 			}
 			parts = append(parts, padRight(components.TruncateEnd(name, 12), 12))
 		case "type":
-			name := ""
-			if issue.IssueType != nil {
-				name = issue.IssueType.Name
+			if icon != "" {
+				parts = append(parts, padRight(icon, m.typeIconCols))
+			} else {
+				name := ""
+				if issue.IssueType != nil {
+					name = issue.IssueType.Name
+				}
+				parts = append(parts, padRight(components.TruncateEnd(name, 10), 10))
 			}
-			parts = append(parts, padRight(components.TruncateEnd(name, 10), 10))
 		case "updated":
 			parts = append(parts, padRight(issueTimeAgo(issue.Updated), 8))
 		}
@@ -510,6 +532,18 @@ func issueTimeAgo(t time.Time) string {
 	default:
 		return fmt.Sprintf("%dmo", int(d.Hours()/(24*30)))
 	}
+}
+
+// typeIcon returns the configured icon for the given issue type, or empty string if none.
+func typeIcon(icons map[string]string, issueType *jira.IssueType) string {
+	if issueType == nil {
+		return ""
+	}
+	icon, ok := icons[issueType.Name]
+	if !ok || icon == "" {
+		return ""
+	}
+	return icon
 }
 
 // statusEmojiPlain returns uncolored status char for selected rows

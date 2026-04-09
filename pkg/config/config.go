@@ -143,8 +143,9 @@ type GUIConfig struct {
 	Mouse           bool     `yaml:"mouse"`      // TODO not yet wired up
 	Borders         string   `yaml:"borders"`    // TODO not yet wired up
 	IssueListFields    []string `yaml:"issueListFields"`
-	PrefillFromTab     *bool    `yaml:"prefillFromTab"`
-	SelectCreatedIssue *bool    `yaml:"selectCreatedIssue"`
+	PrefillFromTab     *bool             `yaml:"prefillFromTab"`
+	SelectCreatedIssue *bool             `yaml:"selectCreatedIssue"`
+	TypeIcons          map[string]string `yaml:"typeIcons"`
 }
 
 // ShouldPrefillFromTab returns true when the creation form should prefill from tab JQL

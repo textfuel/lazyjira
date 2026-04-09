@@ -194,6 +194,9 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	if len(cfg.GUI.IssueListFields) > 0 {
 		issuesList.SetFields(cfg.GUI.IssueListFields)
 	}
+	if len(cfg.GUI.TypeIcons) > 0 {
+		issuesList.SetTypeIcons(cfg.GUI.TypeIcons)
+	}
 	issuesList.SetTabs(cfg.IssueTabs)
 	issuesList.SetFocused(true)
 	issuesList.SetUserEmail(cfg.Jira.Email)
