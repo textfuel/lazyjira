@@ -626,9 +626,20 @@ func (c *Client) GetMyself(ctx context.Context) (*User, error) {
 
 func (c *Client) GetUsers(ctx context.Context, projectKey string) ([]User, error) {
 	var raw []userResponse
-	err := c.do(ctx, http.MethodGet, "/user/assignable/search?project="+projectKey+"&maxResults=100", nil, &raw)
-	if err != nil {
-		return nil, fmt.Errorf("get users for project %s: %w", projectKey, err)
+	startAt := 0
+	const pageSize = 100
+	for {
+		var page []userResponse
+		path := fmt.Sprintf("/user/assignable/search?project=%s&startAt=%d&maxResults=%d",
+			projectKey, startAt, pageSize)
+		if err := c.do(ctx, http.MethodGet, path, nil, &page); err != nil {
+			return nil, fmt.Errorf("get users for project %s: %w", projectKey, err)
+		}
+		raw = append(raw, page...)
+		if len(page) < pageSize {
+			break
+		}
+		startAt += len(page)
 	}
 	users := make([]User, len(raw))
 	for i, ru := range raw {
