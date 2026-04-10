@@ -19,6 +19,12 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.handleHelpKeys(msg)
 	}
 
+	// Custom commands take precedence over built-in keybindings so users
+	// can override any action they want.
+	if m, cmd, ok := a.handleCustomCommand(msg.String()); ok {
+		return m, cmd
+	}
+
 	action := a.keymap.Match(msg.String())
 
 	switch action { //nolint:exhaustive

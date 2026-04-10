@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -157,6 +159,8 @@ type App struct {
 	gitBranch      string
 	gitDetectedKey string
 
+	customCmds []config.ResolvedCustomCommand
+
 	panelSideW     int
 	panelStatusH   int
 	panelIssuesH   int
@@ -164,6 +168,10 @@ type App struct {
 	panelProjectsH int
 	panelDetailH   int
 	panelLogH      int
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	cmdWg  sync.WaitGroup
 
 	width  int
 	height int
@@ -274,11 +282,19 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		issueCache:      make(map[string]*jira.Issue),
 		createMetaCache: make(map[string][]jira.CreateMetaField),
 	}
+	app.ctx, app.cancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is called in Shutdown()
 	navResolver := app.keymap.MatchNav
 	app.issuesList.ResolveNav = navResolver
 	app.infoPanel.ResolveNav = navResolver
 	app.projectList.ResolveNav = navResolver
 	app.detailView.ResolveNav = navResolver
+
+	app.initCustomCommands()
+
+	if warning := quitReachableWarning(app.keymap, app.customCmds); warning != "" {
+		fmt.Fprintln(os.Stderr, "lazyjira:", warning)
+		app.statusPanel.SetError(warning)
+	}
 
 	isCloud := cfg.Jira.IsCloud()
 	app.createForm.SetDescRenderer(func(text string, width int) []string {
@@ -308,6 +324,24 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 
 	app.helpBar.SetItems(app.helpBarItems())
 	return app
+}
+
+// Shutdown cancels the app-lifetime context, signalling any background
+// processes spawned with a.ctx to terminate, and waits for them to exit.
+// Safe to call multiple times.
+func (a *App) Shutdown() {
+	if a.cancel != nil {
+		a.cancel()
+	}
+	// Wait for background custom commands to finish (they receive the
+	// cancel signal via exec.CommandContext). Give up after 3 seconds
+	// so we never hang on exit.
+	done := make(chan struct{})
+	go func() { a.cmdWg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+	}
 }
 
 func (a *App) Init() tea.Cmd {
@@ -437,6 +471,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case editorFinishedMsg:
 		return a.handleEditorFinished(msg)
+	case customCommandFinishedMsg:
+		return a.handleCustomCommandFinished(msg)
 	case components.DiffConfirmedMsg:
 		return a.handleDiffConfirmed(msg)
 	case components.DiffCancelledMsg:

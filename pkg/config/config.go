@@ -8,16 +8,31 @@ import (
 )
 
 type Config struct {
-	Jira             JiraConfig       `yaml:"jira"`
-	Projects         []ProjectConfig  `yaml:"projects"`
-	GUI              GUIConfig        `yaml:"gui"`
-	Keybinding       KeybindingConfig `yaml:"keybinding"`
-	IssueTabs        []IssueTabConfig `yaml:"issueTabs"`
-	Cache            CacheConfig      `yaml:"cache"`
-	Refresh          RefreshConfig    `yaml:"refresh"`
-	Fields           []FieldConfig    `yaml:"fields"`
-	DeprecatedFields []FieldConfig    `yaml:"customFields,omitempty"`
-	Git              GitConfig        `yaml:"git"`
+	Jira             JiraConfig            `yaml:"jira"`
+	Projects         []ProjectConfig       `yaml:"projects"`
+	GUI              GUIConfig             `yaml:"gui"`
+	Keybinding       KeybindingConfig      `yaml:"keybinding"`
+	IssueTabs        []IssueTabConfig      `yaml:"issueTabs"`
+	Cache            CacheConfig           `yaml:"cache"`
+	Refresh          RefreshConfig         `yaml:"refresh"`
+	Fields           []FieldConfig         `yaml:"fields"`
+	DeprecatedFields []FieldConfig         `yaml:"customFields,omitempty"`
+	Git              GitConfig             `yaml:"git"`
+	CustomCommands   []CustomCommandConfig `yaml:"customCommands"`
+}
+
+type CustomCommandConfig struct {
+	Key      string   `yaml:"key"`
+	Name     string   `yaml:"name"`
+	Command  string   `yaml:"command"`
+	Suspend  *bool    `yaml:"suspend,omitempty"` // default: true
+	Refresh  bool     `yaml:"refresh,omitempty"` // default: false
+	Contexts []string `yaml:"contexts,omitempty"`
+}
+
+// ShouldSuspend returns true when the TUI should be suspended for this command (default: true)
+func (c CustomCommandConfig) ShouldSuspend() bool {
+	return c.Suspend == nil || *c.Suspend
 }
 
 type GitConfig struct {
@@ -276,6 +291,10 @@ func Load() (*Config, error) {
 	}
 	if v := os.Getenv("JIRA_TLS_INSECURE"); v == "1" || v == "true" {
 		cfg.Jira.TLS.Insecure = true
+	}
+
+	if _, err := cfg.ResolveCustomCommands(); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
