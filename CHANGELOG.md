@@ -7,6 +7,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Branch name templates support `{{.ParentKey}}` for subtask workflows like `PROJ-100/PROJ-142_summary` (#34)
+- Documented `{{.ProjectKey}}`, `{{.Number}}` and `{{.Type}}` template variables that were available but missing from docs (#34)
+
+### Fixed
+
+- Assignee list was capped at 100 users. Now fetches all pages so large orgs see everyone (#35)
+
 ## [2.7.2] - 2026-04-03
 
 ### Added
