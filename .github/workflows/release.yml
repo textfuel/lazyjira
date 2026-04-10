@@ -30,7 +30,7 @@ jobs:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
 
       - name: Publish lazyjira-git to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v4
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
         with:
           pkgname: lazyjira-git
           pkgbuild: aur/lazyjira-git/PKGBUILD
