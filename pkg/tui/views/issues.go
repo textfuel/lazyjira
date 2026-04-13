@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/textfuel/lazyjira/pkg/config"
 	"github.com/textfuel/lazyjira/pkg/jira"
@@ -448,7 +449,7 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		case "key":
 			parts = append(parts, padRight(issue.Key, m.keyColWidth))
 		case "summary":
-			parts = append(parts, components.TruncateEnd(issue.Summary, summaryWidth))
+			parts = append(parts, padRight(components.TruncateEnd(issue.Summary, summaryWidth), summaryWidth))
 		case fieldStatus:
 			if selected {
 				parts = append(parts, statusEmojiPlain(issue.Status))
@@ -478,6 +479,9 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		}
 	}
 	line := " " + strings.Join(parts, " ")
+	if ansi.StringWidth(line) > width {
+		line = ansi.Truncate(line, width, "")
+	}
 
 	if selected && m.Focused {
 		return m.theme.SelectedItem.Width(width).Render(line)

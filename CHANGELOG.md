@@ -7,6 +7,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Issue rows no longer wrap to two lines when the panel is narrow. Extra content is cut off instead
+- Updated column now lines up vertically. Summary column was not padded so dates floated left on short summaries
+
 ## [2.8.1] - 2026-04-10
 
 ## [2.8.0] - 2026-04-10
