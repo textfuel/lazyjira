@@ -29,7 +29,9 @@ func (a *App) handleIssuesLoaded(msg issuesLoadedMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	if msg.tab == a.issuesList.GetTabIndex() && a.side == sideLeft && a.leftFocus == focusIssues {
-		a.previewSelectedIssue()
+		if cmd := a.previewSelectedIssue(); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 	if a.gitDetectedKey != "" {
 		detectedKey := a.gitDetectedKey
@@ -395,6 +397,9 @@ func (a *App) prefetchRelated(issue *jira.Issue) tea.Cmd {
 		if link.InwardIssue != nil {
 			collect(link.InwardIssue.Key)
 		}
+	}
+	if issue.Parent != nil {
+		collect(issue.Parent.Key)
 	}
 	if len(keys) == 0 {
 		return nil

@@ -243,10 +243,13 @@ func (a *App) handleFocusAction(action Action) (tea.Model, tea.Cmd, bool) {
 				a.leftFocus = focusStatus
 			case focusInfo:
 				tab := a.infoPanel.ActiveTab()
+				var cmd tea.Cmd
 				if tab == views.InfoTabSubtasks || tab == views.InfoTabLinks {
-					a.previewSelectedIssue()
+					cmd = a.previewSelectedIssue()
 				}
 				a.leftFocus = focusIssues
+				a.updateFocusState()
+				return a, cmd, true
 			case focusProjects:
 				a.leftFocus = focusInfo
 			}
@@ -307,7 +310,7 @@ func (a *App) handleTabAction(action Action) (tea.Model, tea.Cmd, bool) {
 			if !a.issuesList.HasCachedTab() {
 				return a, a.fetchActiveTab(), true
 			}
-			a.previewSelectedIssue()
+			return a, a.previewSelectedIssue(), true
 		case a.side == sideLeft && a.leftFocus == focusInfo:
 			a.infoPanel.PrevTab()
 			return a, a.previewForInfoTab(), true
@@ -323,7 +326,7 @@ func (a *App) handleTabAction(action Action) (tea.Model, tea.Cmd, bool) {
 			if !a.issuesList.HasCachedTab() {
 				return a, a.fetchActiveTab(), true
 			}
-			a.previewSelectedIssue()
+			return a, a.previewSelectedIssue(), true
 		case a.side == sideLeft && a.leftFocus == focusInfo:
 			a.infoPanel.NextTab()
 			return a, a.previewForInfoTab(), true

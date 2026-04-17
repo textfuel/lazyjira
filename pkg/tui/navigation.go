@@ -27,10 +27,10 @@ func (a *App) showCachedIssue(key string) {
 	}
 }
 
-func (a *App) previewSelectedIssue() {
+func (a *App) previewSelectedIssue() tea.Cmd {
 	sel := a.issuesList.SelectedIssue()
 	if sel == nil {
-		return
+		return nil
 	}
 	a.previewKey = sel.Key
 	if cached, ok := a.issueCache[sel.Key]; ok {
@@ -40,6 +40,7 @@ func (a *App) previewSelectedIssue() {
 		a.detailView.SetIssue(sel)
 		a.infoPanel.SetIssue(sel)
 	}
+	return a.prefetchRelated(sel)
 }
 
 // previewForInfoTab refreshes the preview for the current InfoPanel tab, so
@@ -48,8 +49,7 @@ func (a *App) previewSelectedIssue() {
 func (a *App) previewForInfoTab() tea.Cmd {
 	switch a.infoPanel.ActiveTab() {
 	case views.InfoTabFields:
-		a.previewSelectedIssue()
-		return nil
+		return a.previewSelectedIssue()
 	case views.InfoTabSubtasks:
 		if key := a.infoPanel.SelectedSubtaskKey(); key != "" {
 			return func() tea.Msg { return views.PreviewRequestMsg{Key: key} }

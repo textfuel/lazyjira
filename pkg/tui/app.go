@@ -544,17 +544,18 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case views.IssueSelectedMsg:
-		if msg.Issue != nil {
-			a.previewKey = msg.Issue.Key
-			if cached, ok := a.issueCache[msg.Issue.Key]; ok {
-				a.detailView.SetIssue(cached)
-				a.infoPanel.SetIssue(cached)
-			} else {
-				a.detailView.SetIssue(msg.Issue)
-				a.infoPanel.SetIssue(msg.Issue)
-			}
+		if msg.Issue == nil {
+			return a, nil
 		}
-		return a, nil
+		a.previewKey = msg.Issue.Key
+		if cached, ok := a.issueCache[msg.Issue.Key]; ok {
+			a.detailView.SetIssue(cached)
+			a.infoPanel.SetIssue(cached)
+		} else {
+			a.detailView.SetIssue(msg.Issue)
+			a.infoPanel.SetIssue(msg.Issue)
+		}
+		return a, a.prefetchRelated(msg.Issue)
 
 	case views.PreviewRequestMsg:
 		a.previewKey = msg.Key
