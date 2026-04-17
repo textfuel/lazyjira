@@ -153,6 +153,11 @@ type App struct {
 	usersCache      map[string][]jira.User
 	issueCache      map[string]*jira.Issue
 	createMetaCache map[string][]jira.CreateMetaField
+	// previewKey is the Jira key of the issue currently shown as a preview
+	// (e.g. a sub-issue selected in the info panel). When set, it takes
+	// precedence over the main list selection for actions that operate on
+	// the visible issue, such as refresh. Empty means no preview active.
+	previewKey string
 	createCtx   createCtx
 
 	gitRepoPath    string
