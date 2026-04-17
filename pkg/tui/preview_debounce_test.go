@@ -17,7 +17,8 @@ import (
 // synthetic previewDebounceMsg for epoch=1 (stale) followed by one for
 // epoch=2 (fresh). Only the fresh one must trigger a GetIssue call.
 func TestPreviewDebounce_RapidMovement(t *testing.T) {
-	const key1, key2 = "SUB-1", "SUB-2"
+	const key2 = "SUB-2"
+	key1 := subKey1
 
 	fake := &jiratest.FakeClient{T: t}
 	// Configure for key2 only; any unexpected GetIssue for key1 would t.Fatalf.
@@ -76,7 +77,8 @@ func TestPreviewDebounce_RapidMovement(t *testing.T) {
 // first before the second PreviewRequestMsg arrives), both result in a
 // GetIssue call.
 func TestPreviewDebounce_Lapse(t *testing.T) {
-	const key1, key2 = "SUB-1", "SUB-2"
+	const key2 = "SUB-2"
+	key1 := subKey1
 
 	var issueCalls []string
 	fake := &jiratest.FakeClient{T: t}
@@ -127,7 +129,8 @@ func TestPreviewDebounce_Lapse(t *testing.T) {
 // TestPreviewStaleResponse_DroppedWhenEpochAdvanced verifies that a detail
 // response carrying an old epoch does not update infoPanel or issueCache.
 func TestPreviewStaleResponse_DroppedWhenEpochAdvanced(t *testing.T) {
-	const key1, key2 = "SUB-1", "SUB-2"
+	const key2 = "SUB-2"
+	key1 := subKey1
 
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: key2, Summary: "current"})

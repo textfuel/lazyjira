@@ -10,6 +10,7 @@ import (
 )
 
 const mainKey = "ABC-1"
+const subKey1 = "SUB-1"
 
 // newAppWithFake augments newTestApp() with a FakeClient, a non-nil logFlag,
 // an InfoPanel, a StatusPanel, and an empty issueCache — enough to flow a
@@ -22,6 +23,7 @@ func newAppWithFake(t *testing.T, fake *jiratest.FakeClient) *App {
 	a.logFlag = &logFlag
 	a.infoPanel = views.NewInfoPanel()
 	a.statusPanel = views.NewStatusPanel("", "", "")
+	a.logPanel = views.NewLogPanel()
 	a.issueCache = map[string]*jira.Issue{}
 	return a
 }
@@ -111,17 +113,17 @@ func TestHandleIssueDetailLoaded_RoutesByPreviewKey(t *testing.T) {
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: "MAIN-1"}})
-	a.previewKey = "SUB-1"
+	a.previewKey = subKey1
 
 	_, _ = a.handleIssueDetailLoaded(issueDetailLoadedMsg{
-		issue: &jira.Issue{Key: "SUB-1", Summary: "fresh"},
+		issue: &jira.Issue{Key: subKey1, Summary: "fresh"},
 	})
 
-	if got := a.infoPanel.IssueKey(); got != "SUB-1" {
-		t.Errorf("infoPanel.IssueKey() = %q, want %q", got, "SUB-1")
+	if got := a.infoPanel.IssueKey(); got != subKey1 {
+		t.Errorf("infoPanel.IssueKey() = %q, want %q", got, subKey1)
 	}
-	if got := a.detailView.IssueKey(); got != "SUB-1" {
-		t.Errorf("detailView.IssueKey() = %q, want %q", got, "SUB-1")
+	if got := a.detailView.IssueKey(); got != subKey1 {
+		t.Errorf("detailView.IssueKey() = %q, want %q", got, subKey1)
 	}
 }
 

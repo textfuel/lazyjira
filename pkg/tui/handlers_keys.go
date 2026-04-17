@@ -242,6 +242,10 @@ func (a *App) handleFocusAction(action Action) (tea.Model, tea.Cmd, bool) {
 			case focusIssues:
 				a.leftFocus = focusStatus
 			case focusInfo:
+				tab := a.infoPanel.ActiveTab()
+				if tab == views.InfoTabSubtasks || tab == views.InfoTabLinks {
+					a.previewSelectedIssue()
+				}
 				a.leftFocus = focusIssues
 			case focusProjects:
 				a.leftFocus = focusInfo
