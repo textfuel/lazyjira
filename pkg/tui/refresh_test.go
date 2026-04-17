@@ -176,3 +176,29 @@ func TestActRefresh_UsesPreviewKey_WhenSet(t *testing.T) {
 		t.Errorf("GetIssue called with key %q, want %q (preview key)", got, "ABC-2")
 	}
 }
+
+// TestActRefresh_InvalidatesCacheBeforeFetch ensures that ActRefresh removes the
+// existing cache entry for the previewed issue synchronously, before the fetch
+// cmd is dispatched. Any cache read between the keypress and the response must
+// see a miss, never stale data.
+func TestActRefresh_InvalidatesCacheBeforeFetch(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	stubFullIssueFetch(fake, &jira.Issue{Key: mainKey, Summary: "fresh"})
+
+	a := newAppWithFake(t, fake)
+	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
+	a.previewKey = mainKey
+	// Pre-populate the cache with a stale entry.
+	stale := &jira.Issue{Key: mainKey, Summary: "stale"}
+	a.issueCache[mainKey] = stale
+
+	_, _, handled := a.handleIssueAction(ActRefresh)
+	if !handled {
+		t.Fatal("ActRefresh was not handled")
+	}
+
+	// The cache entry must be gone synchronously — before cmd is executed.
+	if _, ok := a.issueCache[mainKey]; ok {
+		t.Errorf("issueCache[%q] still present after ActRefresh; expected cache invalidation", mainKey)
+	}
+}

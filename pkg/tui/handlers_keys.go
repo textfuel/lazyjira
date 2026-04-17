@@ -431,6 +431,7 @@ func (a *App) handleIssueAction(action Action) (tea.Model, tea.Cmd, bool) {
 
 	case ActRefresh:
 		if a.previewKey != "" {
+			delete(a.issueCache, a.previewKey)
 			*a.logFlag = true
 			return a, fetchIssueDetail(a.client, a.previewKey), true
 		}
