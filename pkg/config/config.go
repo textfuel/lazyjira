@@ -151,6 +151,31 @@ type ProjectConfig struct {
 	BoardID int    `yaml:"boardId"` // TODO not yet wired up
 }
 
+// UnmarshalYAML lets `projects:` accept either the full mapping form
+//
+//	projects:
+//	  - key: ORCH
+//	    boardId: 42
+//
+// or the shorthand string form used in most personal configs:
+//
+//	projects:
+//	  - ORCH
+//
+// The bare-string form maps straight to Key with BoardID left at its zero
+// value. Without this, a list of bare strings unmarshals into a struct and
+// yaml.v3 returns "cannot unmarshal !!str into config.ProjectConfig", which
+// previously propagated as a nil *Config and a SIGSEGV (#41).
+func (p *ProjectConfig) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		return node.Decode(&p.Key)
+	}
+	// Full form: decode into a type alias so we don't recurse into this
+	// UnmarshalYAML method.
+	type rawProjectConfig ProjectConfig
+	return node.Decode((*rawProjectConfig)(p))
+}
+
 type GUIConfig struct {
 	Theme                string            `yaml:"theme"`    // TODO not yet wired up
 	Language             string            `yaml:"language"` // TODO not yet wired up

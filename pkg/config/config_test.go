@@ -145,3 +145,31 @@ func TestDefaultConfig_MaxResults(t *testing.T) {
 		t.Errorf("ResolveGlobalMaxResults on defaults = %d, want %d", got, DefaultMaxResults)
 	}
 }
+
+func TestLoad_ProjectsAcceptsStringShorthand(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CONFIG_DIR", dir)
+
+	cfgYAML := `projects:
+  - ORCH
+  - key: DATA
+    boardId: 7
+`
+	if err := os.WriteFile(filepath.Join(dir, "config.yml"), []byte(cfgYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := len(cfg.Projects); got != 2 {
+		t.Fatalf("len(Projects) = %d, want 2", got)
+	}
+	if cfg.Projects[0].Key != "ORCH" || cfg.Projects[0].BoardID != 0 {
+		t.Errorf("Projects[0] = %+v, want {Key:ORCH BoardID:0}", cfg.Projects[0])
+	}
+	if cfg.Projects[1].Key != "DATA" || cfg.Projects[1].BoardID != 7 {
+		t.Errorf("Projects[1] = %+v, want {Key:DATA BoardID:7}", cfg.Projects[1])
+	}
+}
