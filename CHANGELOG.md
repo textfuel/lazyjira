@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-04-18
+
 ### Fixed
 
 - String shorthand in `projects` list (e.g. `- ORCH` instead of `- key: ORCH`) no longer panics on startup. Both forms can now be mixed in the same list (#53)
@@ -345,7 +347,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.10.1...HEAD
+[2.10.1]: https://github.com/textfuel/lazyjira/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/textfuel/lazyjira/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/textfuel/lazyjira/compare/v2.8.2...v2.9.0
 [2.8.2]: https://github.com/textfuel/lazyjira/compare/v2.8.1...v2.8.2
