@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- String shorthand in `projects` list (e.g. `- ORCH` instead of `- key: ORCH`) no longer panics on startup. Both forms can now be mixed in the same list (#53)
+
 ## [2.10.0] - 2026-04-18
 
 ### Added
