@@ -4,8 +4,16 @@ import (
 	"encoding/json"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
+// legacySprintPattern matches the bracketed attribute list tail of a legacy
+// sprint string returned by older Jira Server and Data Center. Example input:
+//
+//	com.atlassian.greenhopper.service.sprint.Sprint@1a2b3c[id=42,rapidViewId=5,state=ACTIVE,name=Sprint 1,startDate=...,endDate=...,goal=]
+//
+// The capture group collects the comma-separated key=value attributes inside
+// the trailing brackets.
 var legacySprintPattern = regexp.MustCompile(`\[([^\[\]]*)\]$`)
 
 func parseSprintRaw(data json.RawMessage) []Sprint {
@@ -79,16 +87,11 @@ func splitLegacyAttributes(body string) map[string]string {
 }
 
 func assignLegacyAttribute(attributes map[string]string, pair string) {
-	for index := range len(pair) {
-		if pair[index] == '=' {
-			key := pair[:index]
-			value := pair[index+1:]
-			if key != "" {
-				attributes[key] = value
-			}
-			return
-		}
+	eq := strings.IndexByte(pair, '=')
+	if eq <= 0 {
+		return
 	}
+	attributes[pair[:eq]] = pair[eq+1:]
 }
 
 func pickSprint(sprints []Sprint) *Sprint {
@@ -98,14 +101,14 @@ func pickSprint(sprints []Sprint) *Sprint {
 	var future, closed *Sprint
 	for index := range sprints {
 		sprint := &sprints[index]
-		switch sprint.State {
-		case "active", "ACTIVE":
+		switch strings.ToLower(sprint.State) {
+		case "active":
 			return sprint
-		case "future", "FUTURE":
+		case "future":
 			if future == nil {
 				future = sprint
 			}
-		case "closed", "CLOSED":
+		case "closed":
 			if closed == nil {
 				closed = sprint
 			}
@@ -118,4 +121,47 @@ func pickSprint(sprints []Sprint) *Sprint {
 		return closed
 	}
 	return &sprints[0]
+}
+
+// findSprintInCustomFields scans every customfield_* entry in the raw response
+// and returns the first one whose payload parses as a non-empty sprint list
+// with a concrete sprint ID. It lets us render the Sprint column before
+// DiscoverFields finishes: Jira Cloud returns sprint data under the real
+// custom field id (e.g. customfield_10020) even when queried by the "sprint"
+// alias, and older Server instances respond the same way once the alias is
+// passed through.
+func findSprintInCustomFields(raw map[string]json.RawMessage) *Sprint {
+	for key, data := range raw {
+		if !strings.HasPrefix(key, "customfield_") {
+			continue
+		}
+		sprints := parseSprintRaw(data)
+		if sprint := pickSprint(sprints); sprint != nil && sprint.ID != 0 {
+			return sprint
+		}
+	}
+	return nil
+}
+
+// remapSprintField returns the fields map rewritten so that the "sprint" alias
+// is sent as the real custom field id discovered at startup (for example
+// customfield_10020 on Cloud or customfield_10010 on older Server/DC). Some
+// Jira deployments reject writes to the alias, so PUT /issue must address the
+// custom field directly. Returns the original map when the alias is absent or
+// when no resolved id is available yet (first few seconds after startup), so
+// callers can use it unconditionally.
+func remapSprintField(fields map[string]any, resolvedID string) map[string]any {
+	value, ok := fields[sprintFieldAlias]
+	if !ok || resolvedID == "" || resolvedID == sprintFieldAlias {
+		return fields
+	}
+	remapped := make(map[string]any, len(fields))
+	for key, current := range fields {
+		if key == sprintFieldAlias {
+			continue
+		}
+		remapped[key] = current
+	}
+	remapped[resolvedID] = value
+	return remapped
 }

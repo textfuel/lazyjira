@@ -320,6 +320,9 @@ func (a *App) Init() tea.Cmd {
 			return autoFetchTickMsg{}
 		}),
 	}
+	if cmd := a.fetchActiveTab(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -379,7 +382,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			a.statusPanel.SetError(msg.err.Error())
 		}
-		return a, a.fetchActiveTab()
+		return a, nil
 	case boardsLoadedMsg:
 		return a.handleBoardsLoaded(msg)
 	case sprintsLoadedMsg:

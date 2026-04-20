@@ -280,18 +280,26 @@ func (c *Client) GetIssue(ctx context.Context, issueKey string) (*Issue, error) 
 }
 
 func (c *Client) fillSprintFromCustomField(issue *Issue, raw map[string]json.RawMessage) {
-	if issue.Sprint != nil || c.sprintFieldID == "" {
+	if issue.Sprint != nil {
 		return
 	}
-	data, ok := raw[c.sprintFieldID]
-	if !ok {
-		return
+	if c.sprintFieldID != "" {
+		if data, ok := raw[c.sprintFieldID]; ok {
+			issue.Sprint = pickSprint(parseSprintRaw(data))
+			if issue.Sprint != nil {
+				return
+			}
+		}
 	}
-	issue.Sprint = pickSprint(parseSprintRaw(data))
+	issue.Sprint = findSprintInCustomFields(raw)
 }
 
 func (c *Client) SearchIssues(ctx context.Context, jql string, startAt, maxResults int) (*SearchResult, error) {
-	fields := "summary,description,status,priority,assignee,reporter,labels,components," + c.SprintFieldID() + ",issuetype,created,updated,subtasks,issuelinks,parent"
+	sprintField := c.SprintFieldID()
+	fields := "summary,description,status,priority,assignee,reporter,labels,components," + sprintField + ",issuetype,created,updated,subtasks,issuelinks,parent"
+	if sprintField == sprintFieldAlias {
+		fields += ",customfield_10010,customfield_10020"
+	}
 	if len(c.customFieldIDs) > 0 {
 		fields += "," + strings.Join(c.customFieldIDs, ",")
 	}
@@ -482,21 +490,7 @@ func (c *Client) GetBoardIssues(ctx context.Context, boardID int, jql string) ([
 }
 
 func (c *Client) UpdateIssue(ctx context.Context, issueKey string, fields map[string]any) error {
-	payload := fields
-	if value, ok := fields[sprintFieldAlias]; ok {
-		resolved := c.SprintFieldID()
-		if resolved != sprintFieldAlias {
-			payload = make(map[string]any, len(fields))
-			for key, current := range fields {
-				if key == sprintFieldAlias {
-					continue
-				}
-				payload[key] = current
-			}
-			payload[resolved] = value
-		}
-	}
-	body := map[string]any{"fields": payload}
+	body := map[string]any{"fields": remapSprintField(fields, c.SprintFieldID())}
 	err := c.do(ctx, http.MethodPut, "/issue/"+issueKey, body, nil)
 	if err != nil {
 		return fmt.Errorf("update issue %s: %w", issueKey, err)
