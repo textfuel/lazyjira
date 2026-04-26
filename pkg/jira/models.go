@@ -42,28 +42,28 @@ func (jt *JiraTime) UnmarshalJSON(b []byte) error {
 }
 
 type Issue struct {
-	ID          string      `json:"id"`
-	Key         string      `json:"key"`
-	Summary     string      `json:"-"`
-	Description    string `json:"-"`
-	DescriptionADF any    `json:"-"` // raw ADF document from API
-	Status      *Status     `json:"-"`
-	Priority    *Priority   `json:"-"`
-	Assignee    *User       `json:"-"`
-	Reporter    *User       `json:"-"`
-	Labels      []string    `json:"-"`
-	Components  []Component `json:"-"`
-	Sprint      *Sprint     `json:"-"`
-	IssueType   *IssueType  `json:"-"`
-	Parent      *Issue      `json:"-"`
-	Created     time.Time   `json:"-"`
-	Updated     time.Time   `json:"-"`
-	Subtasks    []Issue     `json:"-"`
-	IssueLinks  []IssueLink `json:"-"`
-	Comments     []Comment        `json:"-"`
-	Changelog    []ChangelogEntry `json:"-"`
-	Transitions  []Transition     `json:"-"`
-	CustomFields map[string]any   `json:"-"`
+	ID             string           `json:"id"`
+	Key            string           `json:"key"`
+	Summary        string           `json:"-"`
+	Description    string           `json:"-"`
+	DescriptionADF any              `json:"-"` // raw ADF document from API
+	Status         *Status          `json:"-"`
+	Priority       *Priority        `json:"-"`
+	Assignee       *User            `json:"-"`
+	Reporter       *User            `json:"-"`
+	Labels         []string         `json:"-"`
+	Components     []Component      `json:"-"`
+	Sprint         *Sprint          `json:"-"`
+	IssueType      *IssueType       `json:"-"`
+	Parent         *Issue           `json:"-"`
+	Created        time.Time        `json:"-"`
+	Updated        time.Time        `json:"-"`
+	Subtasks       []Issue          `json:"-"`
+	IssueLinks     []IssueLink      `json:"-"`
+	Comments       []Comment        `json:"-"`
+	Changelog      []ChangelogEntry `json:"-"`
+	Transitions    []Transition     `json:"-"`
+	CustomFields   map[string]any   `json:"-"`
 }
 
 // ChangelogEntry represents a single change in issue history
@@ -128,8 +128,8 @@ type Project struct {
 type Comment struct {
 	ID      string    `json:"id"`
 	Author  *User     `json:"-"`
-	Body    string `json:"-"`
-	BodyADF any    `json:"-"` // raw ADF document from API
+	Body    string    `json:"-"`
+	BodyADF any       `json:"-"` // raw ADF document from API
 	Created time.Time `json:"-"`
 	Updated time.Time `json:"-"`
 }

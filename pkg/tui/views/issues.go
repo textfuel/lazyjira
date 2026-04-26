@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/textfuel/lazyjira/pkg/config"
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/config"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 type IssuesLoadedMsg struct{ Issues []jira.Issue }
@@ -27,20 +27,20 @@ const statusOpen = "○"
 
 type IssuesList struct {
 	components.ListBase
-	issues      []jira.Issue
-	allIssues   []jira.Issue
-	filter      string
-	tabs        []config.IssueTabConfig
-	tab         int
-	tabCache    map[int][]jira.Issue
-	userEmail   string
-	keyColWidth int
-	fields      []string
+	issues       []jira.Issue
+	allIssues    []jira.Issue
+	filter       string
+	tabs         []config.IssueTabConfig
+	tab          int
+	tabCache     map[int][]jira.Issue
+	userEmail    string
+	keyColWidth  int
+	fields       []string
 	theme        *theme.Theme
 	typeIcons    map[string]string
 	typeIconCols int
 	jqlQuery     string
-	jqlTabIdx   int
+	jqlTabIdx    int
 }
 
 func NewIssuesList() *IssuesList {

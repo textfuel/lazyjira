@@ -7,22 +7,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 const (
-	keyEsc    = "esc"
-	keyEnter  = "enter"
-	keyDown   = "down"
-	keyCtrlD  = "ctrl+d"
-	keyCtrlU  = "ctrl+u"
+	keyEsc   = "esc"
+	keyEnter = "enter"
+	keyDown  = "down"
+	keyCtrlD = "ctrl+d"
+	keyCtrlU = "ctrl+u"
 )
 
 // CreatePanel identifies which sub-panel of the create form is focused
 type CreatePanel int
 
 const (
-	CreatePanelSummary     CreatePanel = iota
+	CreatePanelSummary CreatePanel = iota
 	CreatePanelDescription
 	CreatePanelFields
 	createPanelCount = 3
@@ -132,7 +132,6 @@ func (f *CreateForm) SetDescRenderer(r DescRenderFunc) { f.descRenderer = r }
 
 // SetDescADFRenderer sets an optional renderer for raw ADF description values
 func (f *CreateForm) SetDescADFRenderer(r DescADFRenderFunc) { f.descADFRenderer = r }
-
 
 func (f *CreateForm) ShowForm(fields []CreateFormField, issueTypeName, projectKey string) {
 	f.visible = true

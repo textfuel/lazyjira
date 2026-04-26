@@ -230,10 +230,10 @@ func (s *DemoServer) handleGetTransitions(w http.ResponseWriter, key string) {
 		}
 		if t.To != nil {
 			tr["to"] = map[string]any{
-				"id":              t.To.ID,
-				"name":            t.To.Name,
-				"description":     t.To.Description,
-				"statusCategory":  map[string]string{"key": t.To.CategoryKey},
+				"id":             t.To.ID,
+				"name":           t.To.Name,
+				"description":    t.To.Description,
+				"statusCategory": map[string]string{"key": t.To.CategoryKey},
 			}
 		}
 		result[i] = tr
@@ -605,7 +605,7 @@ func issueToJSON(iss *Issue) map[string]any {
 	}
 
 	fields := map[string]any{
-		"summary": iss.Summary,
+		"summary":     iss.Summary,
 		"description": descriptionADF(iss),
 		"labels":      labels,
 		"components":  componentsToJSON(iss.Components),

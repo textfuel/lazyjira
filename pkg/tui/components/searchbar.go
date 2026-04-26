@@ -15,11 +15,11 @@ func NewSearchBar() SearchBar {
 	return SearchBar{}
 }
 
-func (s *SearchBar) SetWidth(w int)   { s.input.SetWidth(w) }
-func (s *SearchBar) IsActive() bool   { return s.active }
-func (s *SearchBar) Query() string    { return s.input.Value() }
-func (s *SearchBar) Activate()        { s.active = true; s.input.SetValue("") }
-func (s *SearchBar) Deactivate()      { s.active = false; s.input.SetValue("") }
+func (s *SearchBar) SetWidth(w int) { s.input.SetWidth(w) }
+func (s *SearchBar) IsActive() bool { return s.active }
+func (s *SearchBar) Query() string  { return s.input.Value() }
+func (s *SearchBar) Activate()      { s.active = true; s.input.SetValue("") }
+func (s *SearchBar) Deactivate()    { s.active = false; s.input.SetValue("") }
 
 // SearchChangedMsg is sent when the search query changes
 type SearchChangedMsg struct{ Query string }

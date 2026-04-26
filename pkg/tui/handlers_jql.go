@@ -3,7 +3,7 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/textfuel/lazyjira/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 )
 
 // handleJQLSubmit starts a JQL search.

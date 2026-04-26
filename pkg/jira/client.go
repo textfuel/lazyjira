@@ -772,21 +772,21 @@ type issueResponse struct {
 }
 
 type issueFieldsResponse struct {
-	Summary     string              `json:"summary"`
-	Description any                 `json:"description"`
-	Status      *statusResponse     `json:"status"`
-	Priority    *Priority           `json:"priority"`
-	Assignee    *userResponse       `json:"assignee"`
-	Reporter    *userResponse       `json:"reporter"`
-	Labels      []string            `json:"labels"`
-	Components  []Component         `json:"components"`
-	Sprint      *Sprint             `json:"sprint"`
-	IssueType   *IssueType          `json:"issuetype"`
-	Parent      *issueResponse      `json:"parent"`
-	Created     JiraTime            `json:"created"`
-	Updated     JiraTime            `json:"updated"`
-	Subtasks    []issueResponse     `json:"subtasks"`
-	IssueLinks  []issueLinkResponse `json:"issuelinks"`
+	Summary     string                     `json:"summary"`
+	Description any                        `json:"description"`
+	Status      *statusResponse            `json:"status"`
+	Priority    *Priority                  `json:"priority"`
+	Assignee    *userResponse              `json:"assignee"`
+	Reporter    *userResponse              `json:"reporter"`
+	Labels      []string                   `json:"labels"`
+	Components  []Component                `json:"components"`
+	Sprint      *Sprint                    `json:"sprint"`
+	IssueType   *IssueType                 `json:"issuetype"`
+	Parent      *issueResponse             `json:"parent"`
+	Created     JiraTime                   `json:"created"`
+	Updated     JiraTime                   `json:"updated"`
+	Subtasks    []issueResponse            `json:"subtasks"`
+	IssueLinks  []issueLinkResponse        `json:"issuelinks"`
 	RawExtra    map[string]json.RawMessage `json:"-"`
 }
 
@@ -1027,7 +1027,7 @@ func (r *userResponse) toUser() User {
 type commentResponse struct {
 	ID      string        `json:"id"`
 	Author  *userResponse `json:"author"`
-	Body    any   `json:"body"`
+	Body    any           `json:"body"`
 	Created JiraTime      `json:"created"`
 	Updated JiraTime      `json:"updated"`
 }
