@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/jira/jiratest"
-	"github.com/textfuel/lazyjira/pkg/tui/views"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/jira/jiratest"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
 // TestPrefetchRelated_IncludesParent ensures the parent key is fetched along

@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // ModalItem is one option in the modal
@@ -35,20 +35,20 @@ type ChecklistConfirmedMsg struct {
 
 // Modal is a centered popup list for picking an option
 type Modal struct {
-	title     string
-	items     []ModalItem
-	allItems  []ModalItem
-	cursor    int
-	visible   bool
-	readOnly  bool
-	checklist bool
-	selected  map[string]bool
-	offset    int
-	width     int
-	height    int
+	title       string
+	items       []ModalItem
+	allItems    []ModalItem
+	cursor      int
+	visible     bool
+	readOnly    bool
+	checklist   bool
+	selected    map[string]bool
+	offset      int
+	width       int
+	height      int
 	filterInput TextInput
 	searching   bool
-	isError   bool
+	isError     bool
 }
 
 func NewModal() Modal {
@@ -226,10 +226,10 @@ func (m *Modal) selectionContentW() int {
 	return min(contentW, maxW)
 }
 
-func (m *Modal) Hide()           { m.visible = false }
-func (m *Modal) IsVisible() bool    { return m.visible }
-func (m *Modal) IsSearching() bool  { return m.searching }
-func (m *Modal) IsChecklist() bool  { return m.checklist }
+func (m *Modal) Hide()             { m.visible = false }
+func (m *Modal) IsVisible() bool   { return m.visible }
+func (m *Modal) IsSearching() bool { return m.searching }
+func (m *Modal) IsChecklist() bool { return m.checklist }
 
 // SearchView renders the modal search bar for external use
 func (m *Modal) SearchView(_ int) string {

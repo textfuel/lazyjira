@@ -5,9 +5,9 @@ package main
 import (
 	"errors"
 
-	"github.com/textfuel/lazyjira/pkg/config"
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui"
+	"github.com/textfuel/lazyjira/v2/pkg/config"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui"
 )
 
 func startDemo(_ *config.Config) (jira.ClientInterface, tui.AuthMethod, func(), error) {

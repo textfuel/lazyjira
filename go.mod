@@ -1,4 +1,4 @@
-module github.com/textfuel/lazyjira
+module github.com/textfuel/lazyjira/v2
 
 go 1.25.5
 

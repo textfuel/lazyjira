@@ -8,12 +8,12 @@ import (
 
 // Lazygit-style standard ANSI 16 palette colors
 const (
-	ColorGreen  = lipgloss.Color("2")  // ANSI green — active borders, accents
-	ColorBlue   = lipgloss.Color("4")  // ANSI blue — help bar, selected bg
-	ColorRed    = lipgloss.Color("1")  // ANSI red — errors, unstaged
-	ColorYellow = lipgloss.Color("3")  // ANSI yellow — warnings, in-progress
-	ColorCyan   = lipgloss.Color("6")  // ANSI cyan — search mode
-	ColorWhite  = lipgloss.Color("7")  // ANSI white (light gray)
+	ColorGreen  = lipgloss.Color("2")   // ANSI green — active borders, accents
+	ColorBlue   = lipgloss.Color("4")   // ANSI blue — help bar, selected bg
+	ColorRed    = lipgloss.Color("1")   // ANSI red — errors, unstaged
+	ColorYellow = lipgloss.Color("3")   // ANSI yellow — warnings, in-progress
+	ColorCyan   = lipgloss.Color("6")   // ANSI cyan — search mode
+	ColorWhite  = lipgloss.Color("7")   // ANSI white (light gray)
 	ColorGray   = lipgloss.Color("8")   // ANSI bright black (dark gray)
 	ColorOrange = lipgloss.Color("208") // ANSI 256 orange — secondary accent (names, metadata)
 	ColorNone   = lipgloss.Color("-1")  // default terminal color

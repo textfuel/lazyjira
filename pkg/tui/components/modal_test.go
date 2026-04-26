@@ -121,7 +121,7 @@ func TestModal_SearchFilter(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}})
 
 	// Confirm search, then select.
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // confirm search
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})    // confirm search
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // select
 
 	msg := cmd()

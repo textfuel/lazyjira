@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/textfuel/lazyjira/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
 )
 
 // JQL context modes returned by parseJQLContext
