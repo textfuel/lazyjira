@@ -873,8 +873,8 @@ func isMultiSelectField(field string) bool {
 }
 
 func renderMultiSelectDiff(from, to string) []string {
-	red := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	red := lipgloss.NewStyle().Foreground(theme.ColorRed)
+	green := lipgloss.NewStyle().Foreground(theme.ColorGreen)
 
 	parseSet := func(s string) map[string]struct{} {
 		m := make(map[string]struct{})

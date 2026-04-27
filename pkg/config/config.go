@@ -177,7 +177,7 @@ func (p *ProjectConfig) UnmarshalYAML(node *yaml.Node) error {
 }
 
 type GUIConfig struct {
-	Theme                string            `yaml:"theme"`    // TODO not yet wired up
+	Theme                string            `yaml:"theme"`
 	Language             string            `yaml:"language"` // TODO not yet wired up
 	SidePanelWidth       int               `yaml:"sidePanelWidth"`
 	CollapsedPanelHeight int               `yaml:"collapsedPanelHeight"`

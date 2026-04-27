@@ -3,6 +3,8 @@ package components
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // SearchBar is a bottom search input that filters the current panel
@@ -67,7 +69,7 @@ func (s *SearchBar) View() string {
 // RenderFilterBarInput renders filter bar using TextInput (with cursor positioning)
 func RenderFilterBarInput(input *TextInput) string {
 	prefixStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("6")).
+		Foreground(theme.ColorCyan).
 		Bold(true)
 
 	return prefixStyle.Render(" /") + input.View()
