@@ -5,6 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // HelpItem represents a single keybinding hint.
@@ -52,7 +54,7 @@ func (h HelpBar) Update(msg tea.Msg) (HelpBar, tea.Cmd) {
 }
 
 func (h HelpBar) View() string {
-	blueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+	blueStyle := lipgloss.NewStyle().Foreground(theme.ColorBlue)
 	sep := blueStyle.Render(" | ")
 
 	availW := h.width
@@ -60,7 +62,7 @@ func (h HelpBar) View() string {
 	// Status message (green) on the left.
 	prefix := ""
 	if h.statusMsg != "" {
-		greenStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
+		greenStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
 		prefix = " " + greenStyle.Render(h.statusMsg) + " "
 		availW -= lipgloss.Width(prefix)
 	}

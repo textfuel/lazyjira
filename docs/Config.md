@@ -170,6 +170,13 @@ gui:
 
 `collapsedPanelHeight` sets the height of non-focused left panels in lines (default 5, minimum 3).
 
+`theme` selects the color palette. Supported values: `default` (ANSI 16, original look), `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`. Omit or set to `default` to keep the original colors. Catppuccin themes use hex colors and require a terminal with truecolor support.
+
+```yaml
+gui:
+  theme: catppuccin-mocha
+```
+
 `selectCreatedIssue` controls whether the app auto-selects a newly created issue in the list. If the issue does not match the current tab, the app switches to the All tab. Enabled by default.
 
 ```yaml

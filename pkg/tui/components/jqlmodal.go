@@ -379,13 +379,13 @@ func (m *JQLModal) View() string {
 
 	inputContent := m.input.View()
 	if m.loading {
-		inputContent += lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Render("  Searching...")
+		inputContent += lipgloss.NewStyle().Foreground(theme.ColorYellow).Render("  Searching...")
 	}
 	inputPanel := RenderPanelFull("JQL Query", "", inputContent, m.width-2, 1, m.focusInput, nil)
 
 	errorLine := ""
 	if m.errorMsg != "" {
-		errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+		errStyle := lipgloss.NewStyle().Foreground(theme.ColorRed).Bold(true)
 		errorLine = " " + errStyle.Render(m.errorMsg)
 	}
 
@@ -431,7 +431,7 @@ func (m *JQLModal) renderListContent(listH, contentW int) string {
 	switch {
 	case m.acLoading:
 		lines := make([]string, listH)
-		lines[0] = lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Render("  Loading...")
+		lines[0] = lipgloss.NewStyle().Foreground(theme.ColorYellow).Render("  Loading...")
 		return strings.Join(lines, "\n")
 
 	case len(m.items) == 0:
@@ -440,7 +440,7 @@ func (m *JQLModal) renderListContent(listH, contentW int) string {
 			emptyMsg = "No suggestions"
 		}
 		lines := make([]string, listH)
-		lines[0] = lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render("  " + emptyMsg)
+		lines[0] = lipgloss.NewStyle().Foreground(theme.ColorGray).Render("  " + emptyMsg)
 		return strings.Join(lines, "\n")
 
 	default:
@@ -454,7 +454,7 @@ func (m *JQLModal) renderListContent(listH, contentW int) string {
 			}
 			if i == m.cursor && !m.focusInput {
 				row := lipgloss.NewStyle().
-					Background(lipgloss.Color("4")).
+					Background(theme.ColorHighlight).
 					Width(contentW).
 					Render(" " + item)
 				rows = append(rows, row)

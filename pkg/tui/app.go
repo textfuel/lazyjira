@@ -15,6 +15,7 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/git"
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
@@ -967,9 +968,9 @@ func (a *App) renderHelpOverlay(base string) string {
 
 	popupW := min(maxKey+40, a.width-4)
 
-	keyNormal := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
-	keySel := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true).Background(lipgloss.Color("4"))
-	descSel := lipgloss.NewStyle().Background(lipgloss.Color("4"))
+	keyNormal := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
+	keySel := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true).Background(theme.ColorHighlight)
+	descSel := lipgloss.NewStyle().Background(theme.ColorHighlight)
 
 	lines := make([]string, 0, len(bindings)+2)
 	lines = append(lines, "")
