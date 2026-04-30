@@ -787,7 +787,7 @@ func (f *CreateForm) renderForm(bg string, w, h int) string {
 	combined := lipgloss.JoinVertical(lipgloss.Left, summaryPanel, descPanel, fieldsPanel)
 
 	if f.errorMsg != "" {
-		errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+		errStyle := lipgloss.NewStyle().Foreground(theme.ColorRed)
 		errLine := errStyle.Render(" " + f.errorMsg)
 		if lw := lipgloss.Width(errLine); lw < formW {
 			errLine += strings.Repeat(" ", formW-lw)
@@ -825,7 +825,7 @@ func (f *CreateForm) renderSummary(formW, panelH int) string {
 }
 
 func (f *CreateForm) renderSummaryWithCursor(innerW, innerH int) string {
-	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	cursorStyle := lipgloss.NewStyle().Foreground(theme.ColorCyan)
 	allRunes := append([]rune{' '}, f.summaryText...)
 	cursorPos := f.summaryCursor + 1 // +1 for leading space
 
@@ -1005,9 +1005,9 @@ func (f *CreateForm) renderFields(formW, panelH int) string {
 		f.fieldOffset = maxOffset
 	}
 
-	selStyle := lipgloss.NewStyle().Background(lipgloss.Color("4")).Foreground(lipgloss.Color("15"))
-	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-	reqMark := lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true).Render("*")
+	selStyle := lipgloss.NewStyle().Background(theme.ColorHighlight).Foreground(lipgloss.Color("15"))
+	errStyle := lipgloss.NewStyle().Foreground(theme.ColorRed)
+	reqMark := lipgloss.NewStyle().Foreground(theme.ColorRed).Bold(true).Render("*")
 
 	// label column = longest field name + 1 space gap (+ 1 for req mark / leading space)
 	labelW := 0
@@ -1095,11 +1095,13 @@ func (f *CreateForm) renderFields(formW, panelH int) string {
 	return RenderPanelFull(title, footer, content, formW, innerH, focused, scroll)
 }
 
-var noneStyle = lipgloss.NewStyle().Foreground(theme.ColorGray)
+func noneStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(theme.ColorGray)
+}
 
 func styleFieldValue(fld CreateFormField, val string) string {
 	if val == "None" {
-		return noneStyle.Render(val)
+		return noneStyle().Render(val)
 	}
 	switch fld.FieldID {
 	case "priority":

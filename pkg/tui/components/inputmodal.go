@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // InputConfirmedMsg is sent when the user presses Enter in the input modal
@@ -173,7 +175,7 @@ func (m *InputModal) View() string {
 	contentW := min(max(m.width*6/10, 30), m.width-4)
 	innerW := contentW - 2
 
-	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	cursorStyle := lipgloss.NewStyle().Foreground(theme.ColorCyan)
 	allRunes := append([]rune{' '}, m.text...)
 	cursorPos := m.cursor + 1
 
@@ -278,7 +280,7 @@ func (m *InputModal) HintView() string {
 	contentW := min(max(m.width*6/10, 30), m.width-4)
 	innerW := contentW - 2
 
-	selStyle := lipgloss.NewStyle().Background(lipgloss.Color("4")).Foreground(lipgloss.Color("15"))
+	selStyle := lipgloss.NewStyle().Background(theme.ColorHighlight).Foreground(lipgloss.Color("15"))
 	normalStyle := lipgloss.NewStyle()
 
 	maxHints := min(5, len(m.hints))

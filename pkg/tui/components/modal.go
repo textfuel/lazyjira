@@ -464,7 +464,7 @@ func (m *Modal) viewReadOnly() string {
 }
 
 func (m *Modal) viewSelectable() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
+	titleStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
 
 	contentW := m.selectionContentW()
 	if m.checklist {
@@ -508,7 +508,7 @@ func (m *Modal) viewSelectable() string {
 	}
 	lines = visible
 
-	borderStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	borderStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen)
 	bv := borderStyle.Render("│")
 
 	topLine := borderStyle.Render("╭" + strings.Repeat("─", contentW) + "╮")
@@ -550,9 +550,9 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 	lines = append(lines, " "+titleStyle.Render(m.title))
 	lines = append(lines, "")
 
-	checkGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	checkGreen := lipgloss.NewStyle().Foreground(theme.ColorGreen)
 	activeMarker := checkGreen.Render("*")
-	sepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	sepStyle := lipgloss.NewStyle().Foreground(theme.ColorGray)
 	for i, item := range m.items {
 		if item.Separator {
 			label := TruncateEnd(item.Label, contentW-4)
@@ -569,7 +569,7 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 			style := lipgloss.NewStyle().Width(contentW)
 			switch {
 			case isCursor:
-				style = style.Bold(true).Background(lipgloss.Color("4"))
+				style = style.Bold(true).Background(theme.ColorHighlight)
 				if sel {
 					lines = append(lines, style.Render("✓ "+text))
 				} else {
@@ -589,12 +589,12 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 			style := lipgloss.NewStyle().Width(contentW)
 			switch {
 			case isCursor:
-				style = style.Bold(true).Background(lipgloss.Color("4"))
+				style = style.Bold(true).Background(theme.ColorHighlight)
 				lines = append(lines, style.Render(marker+text))
 			case item.Active:
 				lines = append(lines, style.Render(activeMarker+text))
 			case item.Internal:
-				lines = append(lines, style.Render(lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(" "+text)))
+				lines = append(lines, style.Render(lipgloss.NewStyle().Foreground(theme.ColorGreen).Render(" "+text)))
 			default:
 				lines = append(lines, style.Render(" "+text))
 			}
@@ -657,7 +657,7 @@ func (m *Modal) HintView() string {
 	hintContent := lipgloss.NewStyle().Width(contentW).Render(" " + hint)
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("7")).
+		BorderForeground(theme.ColorWhite).
 		Width(contentW).
 		Height(hintH).
 		Render(hintContent)

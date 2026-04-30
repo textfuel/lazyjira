@@ -14,6 +14,7 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/config"
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/tui"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // version is set at build time via ldflags
@@ -60,6 +61,10 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("loading config: %w", err)
 		}
+	}
+
+	if err := theme.SetTheme(cfg.GUI.Theme); err != nil {
+		return err
 	}
 
 	var client jira.ClientInterface
