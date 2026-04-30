@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/textfuel/lazyjira/v2/pkg/tui/navstack"
 	"github.com/textfuel/lazyjira/v2/pkg/config"
 	"github.com/textfuel/lazyjira/v2/pkg/git"
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
@@ -187,11 +188,20 @@ type App struct {
 	// is how we simulate "cancel the previous intent", which bubbletea
 	// does not provide natively for tea.Cmd.
 	previewEpoch int
+	// parentEpoch is bumped on every showParent invocation. fetchParent
+	// responses carry the epoch of the intent that spawned them; the
+	// parentLoadedMsg handler drops anything whose epoch no longer
+	// matches. Same staleness-cancellation pattern as previewEpoch.
+	parentEpoch int
 	// childrenEpoch is the analogous counter for Cloud Sub-tab GetChildren
 	// fetches. Bumped on every ChildrenRequestMsg; responses with stale
 	// epoch are dropped.
 	childrenEpoch int
-	createCtx     createCtx
+	// pendingWalkKey is the issue the user is waiting to walk into
+	// while a Cloud children-fetch is in flight. Empty when no walk
+	// is pending.
+	pendingWalkKey string
+	createCtx  createCtx
 
 	gitRepoPath    string
 	gitBranch      string
@@ -576,22 +586,29 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Issue == nil {
 			return a, nil
 		}
-		a.previewKey = msg.Issue.Key
 		if cached, ok := a.issueCache[msg.Issue.Key]; ok {
-			a.detailView.SetIssue(cached)
 			a.infoPanel.SetIssue(cached)
 		} else {
-			a.detailView.SetIssue(msg.Issue)
 			a.infoPanel.SetIssue(msg.Issue)
 		}
-		return a, tea.Batch(a.prefetchRelated(msg.Issue), a.infoPanel.MaybeChildrenRequest())
+		_, previewCmd := a.Update(views.PreviewRequestMsg{Key: msg.Issue.Key})
+		return a, tea.Batch(previewCmd, a.prefetchRelated(msg.Issue), a.infoPanel.MaybeChildrenRequest())
 
 	case views.PreviewRequestMsg:
 		a.previewKey = msg.Key
 		a.previewEpoch++
+		sel := a.issuesList.SelectedIssue()
+		mainListMatches := sel != nil && sel.Key == msg.Key
 		if cached, ok := a.issueCache[msg.Key]; ok && cached != nil {
 			a.detailView.UpdateIssueData(cached)
+			if mainListMatches {
+				a.infoPanel.SetIssue(cached)
+			}
 			return a, nil
+		}
+		if mainListMatches {
+			a.detailView.SetIssue(sel)
+			a.infoPanel.SetIssue(sel)
 		}
 		epoch := a.previewEpoch
 		key := msg.Key
@@ -617,17 +634,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, fetchChildren(a.client, msg.Key, a.childrenEpoch)
 
 	case childrenLoadedMsg:
-		if msg.epoch != a.childrenEpoch {
+		return a.handleChildrenLoaded(msg)
+
+	case parentLoadedMsg:
+		if msg.epoch != a.parentEpoch {
 			return a, nil
 		}
-		if msg.err != nil {
-			a.statusPanel.SetError("Failed to load children: " + msg.err.Error())
-			a.infoPanel.SetChildrenError(msg.key, msg.err.Error())
+		if msg.err != nil || msg.parent == nil {
 			return a, nil
 		}
-		a.childrenCache[msg.key] = msg.issues
-		a.infoPanel.SetChildren(msg.key, msg.issues)
-		return a, a.prefetchChildrenDetails(msg.issues)
+		a.pushNav("Parent", msg.parent.Key, navstack.SourceParent, []jira.Issue{*msg.parent})
+		return a, a.previewAfterNav()
 
 	case previewDetailLoadedMsg:
 		if msg.epoch != a.previewEpoch {

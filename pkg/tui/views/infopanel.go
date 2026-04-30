@@ -170,6 +170,12 @@ func (p *InfoPanel) ActiveTab() InfoPanelTab {
 	return p.activeTab
 }
 
+// Does not reset Cursor/Offset; callers must do so themselves if needed.
+func (p *InfoPanel) SetActiveTab(tab InfoPanelTab) {
+	p.activeTab = tab
+	p.syncItemCount()
+}
+
 func (p *InfoPanel) Fields() []InfoField {
 	return buildInfoFields(p.issue, p.fields)
 }
@@ -198,12 +204,22 @@ func (p *InfoPanel) resolveOriginalIndex() int {
 
 // SelectedLinkKey returns the issue key of the selected link
 func (p *InfoPanel) SelectedLinkKey() string {
+	if iss := p.SelectedLinkIssue(); iss != nil {
+		return iss.Key
+	}
+	return ""
+}
+
+// SelectedLinkIssue returns the linked issue currently under cursor (with
+// whatever fields the parent payload carried, typically key + summary +
+// status), or nil when no link is selected.
+func (p *InfoPanel) SelectedLinkIssue() *jira.Issue {
 	if p.issue == nil || p.activeTab != InfoTabLinks {
-		return ""
+		return nil
 	}
 	target := p.resolveOriginalIndex()
 	if target < 0 {
-		return ""
+		return nil
 	}
 	idx := 0
 	for _, link := range p.issue.IssueLinks {
@@ -212,31 +228,41 @@ func (p *InfoPanel) SelectedLinkKey() string {
 		}
 		if link.OutwardIssue != nil {
 			if idx == target {
-				return link.OutwardIssue.Key
+				return link.OutwardIssue
 			}
 			idx++
 		}
 		if link.InwardIssue != nil {
 			if idx == target {
-				return link.InwardIssue.Key
+				return link.InwardIssue
 			}
 			idx++
 		}
 	}
-	return ""
+	return nil
 }
 
 // SelectedSubtaskKey returns the issue key of the selected subtask
 func (p *InfoPanel) SelectedSubtaskKey() string {
+	if iss := p.SelectedSubtaskIssue(); iss != nil {
+		return iss.Key
+	}
+	return ""
+}
+
+// SelectedSubtaskIssue returns the subtask under cursor (with whatever
+// fields the parent payload carried, typically key + summary + status),
+// or nil when no subtask is selected.
+func (p *InfoPanel) SelectedSubtaskIssue() *jira.Issue {
 	if p.issue == nil || p.activeTab != InfoTabSubtasks {
-		return ""
+		return nil
 	}
 	idx := p.resolveOriginalIndex()
 	subs := p.subtaskList()
 	if idx >= 0 && idx < len(subs) {
-		return subs[idx].Key
+		return &subs[idx]
 	}
-	return ""
+	return nil
 }
 
 // subtaskList returns the list backing the Sub tab: Cloud children when

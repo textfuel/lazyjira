@@ -5,10 +5,26 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/jira/jiratest"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
+
+// runAll executes a tea.Cmd, recursively expanding tea.BatchMsg so callers
+// can assert on side effects from individual commands.
+func runAll(cmd tea.Cmd) {
+	if cmd == nil {
+		return
+	}
+	msg := cmd()
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, c := range batch {
+			runAll(c)
+		}
+	}
+}
 
 // TestPrefetchRelated_IncludesParent ensures the parent key is fetched along
 // with subtasks and links so that navigating up the hierarchy feels the same
@@ -65,7 +81,7 @@ func TestIssueSelectedMsg_PrefetchesRelated(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected a prefetch cmd from IssueSelectedMsg, got nil")
 	}
-	cmd()
+	runAll(cmd)
 
 	if !strings.Contains(got, subKey1) {
 		t.Errorf("SearchIssues JQL %q does not contain %q", got, subKey1)

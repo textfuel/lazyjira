@@ -204,6 +204,18 @@ func (a *App) helpBarItems() []components.HelpItem {
 		if a.issuesList.IsJQLTab() {
 			items = append(items, components.HelpItem{Key: km.Keys(ActCloseJQLTab), Description: "close JQL"})
 		}
+		cur := a.currentIssue()
+		enterDesc := "detail"
+		if cur != nil {
+			children, resolved := a.childrenForList(cur)
+			if resolved && len(children) > 0 {
+				enterDesc = "children"
+			}
+		}
+		items = append(items, components.HelpItem{Key: km.Keys(ActSelect), Description: enterDesc})
+		if cur != nil && cur.Parent != nil && cur.Parent.Key != "" {
+			items = append(items, components.HelpItem{Key: km.Keys(ActShowParent), Description: "parent"})
+		}
 		items = append(items,
 			components.HelpItem{Key: km.Keys(ActEdit), Description: "edit"},
 			components.HelpItem{Key: km.Keys(ActTransition), Description: "transition"},
