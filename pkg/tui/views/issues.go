@@ -490,9 +490,9 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 				parts = append(parts, padRight(currStatusIcon, m.statusIconCols))
 			} else {
                 if selected {
-                    parts = append(parts, statusEmojiPlain(issue.Status))
+                    parts = append(parts, padRight(statusEmojiPlain(issue.Status), m.statusIconCols))
                 } else {
-                    parts = append(parts, statusEmoji(issue.Status))
+                    parts = append(parts, padRight(statusEmoji(issue.Status), m.statusIconCols))
                 }
 			}
 		case "priority":
