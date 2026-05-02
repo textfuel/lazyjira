@@ -1,0 +1,167 @@
+package tui
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/jira/jiratest"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
+)
+
+// TestChildrenRequestMsg_Cloud_FiresGetChildren pins the happy path: a
+// ChildrenRequestMsg on a Cloud app dispatches GetChildren with the right
+// key and routes the loaded children into InfoPanel.
+func TestChildrenRequestMsg_Cloud_FiresGetChildren(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	want := []jira.Issue{{Key: "C-1", Summary: "first"}, {Key: "C-2", Summary: "second"}}
+	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
+		return want, nil
+	}
+
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.infoPanel.SetCloud(true)
+	a.infoPanel.SetIssue(&jira.Issue{Key: "EPIC-1"})
+
+	_, cmd := a.Update(views.ChildrenRequestMsg{Key: "EPIC-1"})
+	if cmd == nil {
+		t.Fatal("expected fetch Cmd, got nil")
+	}
+	loadedMsg := cmd()
+
+	if len(fake.GetChildrenCalls) != 1 {
+		t.Fatalf("expected 1 GetChildren call, got %d", len(fake.GetChildrenCalls))
+	}
+	if got := fake.GetChildrenCalls[0].ParentKey; got != "EPIC-1" {
+		t.Errorf("GetChildren ParentKey = %q, want EPIC-1", got)
+	}
+
+	_, _ = a.Update(loadedMsg)
+
+	got := a.infoPanel.Children()
+	if len(got) != 2 || got[0].Key != "C-1" || got[1].Key != "C-2" {
+		t.Errorf("InfoPanel children = %+v, want %+v", got, want)
+	}
+}
+
+// TestChildrenRequestMsg_ServerDC_NoCall pins the Server/DC fast-path: the
+// app shortcircuits before touching the client when isCloud=false.
+func TestChildrenRequestMsg_ServerDC_NoCall(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	// No GetChildrenFunc — any call would t.Fatalf via fake.fatal.
+
+	a := newAppWithFake(t, fake)
+	a.isCloud = false
+	a.infoPanel.SetCloud(false)
+	a.infoPanel.SetIssue(&jira.Issue{Key: "EPIC-1"})
+
+	_, cmd := a.Update(views.ChildrenRequestMsg{Key: "EPIC-1"})
+	if cmd != nil {
+		t.Errorf("Server/DC: expected nil cmd, got non-nil")
+	}
+	if len(fake.GetChildrenCalls) != 0 {
+		t.Errorf("Server/DC: expected 0 GetChildren calls, got %d", len(fake.GetChildrenCalls))
+	}
+}
+
+// TestChildrenLoadedMsg_StaleEpochDropped pins the stale-drop invariant: a
+// childrenLoadedMsg with a stale epoch (because a newer ChildrenRequestMsg
+// has bumped the counter) is ignored.
+func TestChildrenLoadedMsg_StaleEpochDropped(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.infoPanel.SetCloud(true)
+	a.infoPanel.SetIssue(&jira.Issue{Key: "EPIC-1"})
+
+	a.childrenEpoch = 5
+
+	stale := childrenLoadedMsg{
+		key:    "EPIC-1",
+		issues: []jira.Issue{{Key: "STALE-CHILD"}},
+		epoch:  3,
+	}
+	_, _ = a.Update(stale)
+
+	if got := a.infoPanel.Children(); got != nil {
+		t.Errorf("stale response: expected nil children, got %+v", got)
+	}
+}
+
+// TestChildrenLoadedMsg_FetchError_SetsStatusPanelError pins the error path:
+// a non-nil err lands as a StatusPanel error message and propagates to
+// InfoPanel for the error row.
+func TestChildrenLoadedMsg_FetchError_SetsStatusPanelError(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.infoPanel.SetCloud(true)
+	a.infoPanel.SetIssue(&jira.Issue{Key: "EPIC-1"})
+
+	a.childrenEpoch = 1
+	_, _ = a.Update(childrenLoadedMsg{
+		key:   "EPIC-1",
+		err:   errors.New("network down"),
+		epoch: 1,
+	})
+
+	if a.statusPanel.ErrorMessage() == "" {
+		t.Error("StatusPanel error should be set on fetch failure")
+	}
+}
+
+func TestIssueSelectedMsg_OnSubTab_DispatchesChildrenRequest(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.infoPanel.SetCloud(true)
+
+	a.infoPanel.SetIssue(&jira.Issue{Key: "OLD"})
+	for a.infoPanel.ActiveTab() != views.InfoTabSubtasks {
+		a.infoPanel.NextTab()
+	}
+
+	_, cmd := a.Update(views.IssueSelectedMsg{Issue: &jira.Issue{Key: "EPIC-1"}})
+	if cmd == nil {
+		t.Fatal("expected batch cmd, got nil")
+	}
+
+	if !batchContainsChildrenRequest(cmd, "EPIC-1") {
+		t.Error("expected ChildrenRequestMsg{Key: EPIC-1} in cmd batch")
+	}
+}
+
+func TestIssueSelectedMsg_OnFieldsTab_NoChildrenRequest(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.infoPanel.SetCloud(true)
+	a.infoPanel.SetIssue(&jira.Issue{Key: "OLD"})
+
+	_, cmd := a.Update(views.IssueSelectedMsg{Issue: &jira.Issue{Key: "EPIC-1"}})
+	if batchContainsChildrenRequest(cmd, "EPIC-1") {
+		t.Error("Fields tab should not dispatch ChildrenRequestMsg")
+	}
+}
+
+func batchContainsChildrenRequest(cmd tea.Cmd, key string) bool {
+	if cmd == nil {
+		return false
+	}
+	msg := cmd()
+	if m, ok := msg.(views.ChildrenRequestMsg); ok && m.Key == key {
+		return true
+	}
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, sub := range batch {
+			if batchContainsChildrenRequest(sub, key) {
+				return true
+			}
+		}
+	}
+	return false
+}

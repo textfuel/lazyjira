@@ -34,6 +34,7 @@ func NewStatusPanel(project, user, host string) *StatusPanel {
 func (s *StatusPanel) SetProject(project string) { s.project = project }
 func (s *StatusPanel) SetOnline(online bool)     { s.online = online }
 func (s *StatusPanel) SetError(err string)       { s.errText = err }
+func (s *StatusPanel) ErrorMessage() string      { return s.errText }
 func (s *StatusPanel) SetSize(w, h int)          { s.width = w; s.height = h }
 func (s *StatusPanel) SetFocused(focused bool)   { s.focused = focused }
 

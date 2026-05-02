@@ -120,6 +120,16 @@ func fetchPreviewDetail(client jira.ClientInterface, key string, epoch int) tea.
 	})
 }
 
+// fetchChildren issues a Cloud GetChildren request and tags the response
+// with the caller's epoch so that stale responses can be dropped.
+// See App.childrenEpoch.
+func fetchChildren(client jira.ClientInterface, key string, epoch int) tea.Cmd {
+	return func() tea.Msg {
+		issues, err := client.GetChildren(context.Background(), key)
+		return childrenLoadedMsg{key: key, issues: issues, err: err, epoch: epoch}
+	}
+}
+
 func fetchProjects(client jira.ClientInterface) tea.Cmd {
 	return func() tea.Msg {
 		projects, err := client.GetProjects(context.Background())

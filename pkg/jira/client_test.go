@@ -1,6 +1,9 @@
 package jira
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -47,6 +50,69 @@ func TestNewClientWithOpts_HostNormalization(t *testing.T) {
 		if c.hostURL != tt.want {
 			t.Errorf("Host %q: got %q, want %q", tt.input, c.hostURL, tt.want)
 		}
+	}
+}
+
+// countingRoundTripper records every HTTP call without performing one.
+type countingRoundTripper struct {
+	calls int
+}
+
+func (c *countingRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	c.calls++
+	return nil, http.ErrUseLastResponse // any error suffices; we only count
+}
+
+func TestClient_GetChildren_CloudFiresJQL(t *testing.T) {
+	var (
+		gotPath string
+		gotJQL  string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotJQL = r.URL.Query().Get("jql")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"issues":[],"total":0,"maxResults":100,"startAt":0}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClientWithOpts(ClientOpts{
+		Host:    srv.URL,
+		Email:   "u",
+		Token:   "t",
+		IsCloud: true,
+	})
+
+	if _, err := c.GetChildren(context.Background(), "PROJ-123"); err != nil {
+		t.Fatalf("GetChildren returned error: %v", err)
+	}
+
+	if !strings.HasSuffix(gotPath, "/search/jql") {
+		t.Errorf("Cloud: expected /search/jql, got %s", gotPath)
+	}
+	if gotJQL != "parent = PROJ-123" {
+		t.Errorf("Cloud JQL: got %q, want %q", gotJQL, "parent = PROJ-123")
+	}
+}
+
+func TestClient_GetChildren_ServerDCNoCall(t *testing.T) {
+	rt := &countingRoundTripper{}
+	c := NewClientWithOpts(ClientOpts{
+		Host:       "https://jira.corp.example",
+		Token:      "pat",
+		IsCloud:    false,
+		HTTPClient: &http.Client{Transport: rt},
+	})
+
+	issues, err := c.GetChildren(context.Background(), "PROJ-123")
+	if err != nil {
+		t.Fatalf("Server/DC GetChildren: unexpected error %v", err)
+	}
+	if issues != nil {
+		t.Errorf("Server/DC GetChildren: expected nil slice, got %v", issues)
+	}
+	if rt.calls != 0 {
+		t.Errorf("Server/DC GetChildren: expected 0 HTTP calls, got %d", rt.calls)
 	}
 }
 
