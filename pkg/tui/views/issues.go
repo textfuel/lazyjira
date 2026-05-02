@@ -456,11 +456,7 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		case "key":
 			fixedWidth += m.keyColWidth
 		case fieldStatus:
-			if currStatusIcon != "" {
-				fixedWidth += m.statusIconCols
-			} else {
-				fixedWidth += 1
-			}
+			fixedWidth += max(1, m.statusIconCols)
 		case "priority":
 			fixedWidth += 8
 		case "assignee":
@@ -571,7 +567,7 @@ func typeIcon(icons map[string]string, issueType *jira.IssueType) string {
 	return icon
 }
 
-// statusIcon returns the configured icon for the given issue type, or empty string if none.
+// statusIcon returns the configured icon for the given status, or empty string if none.
 func statusIcon(icons map[string]string, status *jira.Status) string {
 	if status == nil {
 		return ""
