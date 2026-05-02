@@ -249,6 +249,9 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	issuesList.SetFocused(true)
 	issuesList.SetUserEmail(cfg.Jira.Email)
 	infoPanel := views.NewInfoPanel()
+	if len(cfg.GUI.TypeIcons) > 0 {
+		infoPanel.SetTypeIcons(cfg.GUI.TypeIcons)
+	}
 	projectList := views.NewProjectList()
 	detailView := views.NewDetailView()
 	logPanel := views.NewLogPanel()

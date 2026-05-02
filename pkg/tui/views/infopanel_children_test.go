@@ -1,6 +1,7 @@
 package views
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
@@ -194,5 +195,57 @@ func TestInfoPanel_SetIssue_ResetsChildrenState(t *testing.T) {
 	msg := cmd().(ChildrenRequestMsg)
 	if msg.Key != "EPIC-2" {
 		t.Errorf("re-fire key = %q, want EPIC-2", msg.Key)
+	}
+}
+
+func TestInfoPanel_RenderSubtaskRowPairs_PrependsIssueTypeMarker(t *testing.T) {
+	p := makeInfoPanelFocused()
+	p.SetCloud(true)
+	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
+	p.SetChildren("EPIC-1", []jira.Issue{
+		{Key: "FOO-1", Summary: "with type", IssueType: &jira.IssueType{Name: "Story"}},
+		{Key: "FOO-2", Summary: "without type"},
+	})
+	for p.activeTab != InfoTabSubtasks {
+		p.NextTab()
+	}
+
+	_, plain := p.renderSubtaskRowPairs(80)
+	if len(plain) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(plain))
+	}
+	if !strings.Contains(plain[0], "[Story] FOO-1") {
+		t.Errorf("row 0 = %q, want containing %q", plain[0], "[Story] FOO-1")
+	}
+	if strings.Contains(plain[1], "[]") {
+		t.Errorf("row 1 = %q, must not contain empty marker %q", plain[1], "[]")
+	}
+	if !strings.Contains(plain[1], "FOO-2: without type") {
+		t.Errorf("row 1 = %q, want containing %q", plain[1], "FOO-2: without type")
+	}
+}
+
+func TestInfoPanel_RenderSubtaskRowPairs_TypeIconReplacesNameMarker(t *testing.T) {
+	p := makeInfoPanelFocused()
+	p.SetCloud(true)
+	p.SetTypeIcons(map[string]string{"Story": "📖", "Bug": "🐞"})
+	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
+	p.SetChildren("EPIC-1", []jira.Issue{
+		{Key: "FOO-1", Summary: "story", IssueType: &jira.IssueType{Name: "Story"}},
+		{Key: "FOO-2", Summary: "task", IssueType: &jira.IssueType{Name: "Task"}},
+	})
+	for p.activeTab != InfoTabSubtasks {
+		p.NextTab()
+	}
+
+	_, plain := p.renderSubtaskRowPairs(80)
+	if !strings.Contains(plain[0], "📖 FOO-1") {
+		t.Errorf("row 0 = %q, want containing %q", plain[0], "📖 FOO-1")
+	}
+	if strings.Contains(plain[0], "[Story]") {
+		t.Errorf("row 0 = %q, must drop [Story] when icon configured", plain[0])
+	}
+	if !strings.Contains(plain[1], "[Task] FOO-2") {
+		t.Errorf("row 1 = %q, want fallback marker [Task] FOO-2", plain[1])
 	}
 }

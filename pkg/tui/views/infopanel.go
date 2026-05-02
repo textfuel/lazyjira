@@ -53,7 +53,11 @@ type InfoPanel struct {
 	children       []jira.Issue
 	childrenLoaded bool
 	childrenError  string
+
+	typeIcons map[string]string
 }
+
+func (p *InfoPanel) SetTypeIcons(icons map[string]string) { p.typeIcons = icons }
 
 func NewInfoPanel() *InfoPanel {
 	return &InfoPanel{theme: theme.Default}
@@ -525,10 +529,21 @@ func (p *InfoPanel) renderSubtaskRowPairs(width int) (styled, plain []string) {
 	for _, sub := range subs {
 		emoji := statusEmoji(sub.Status)
 		emojiPlain := statusEmojiPlain(sub.Status)
-		s := fmt.Sprintf(" %s %s: %s", emoji, sub.Key, sub.Summary)
-		pl := fmt.Sprintf(" %s %s: %s", emojiPlain, sub.Key, sub.Summary)
+		marker := p.issueTypeMarker(sub.IssueType)
+		s := fmt.Sprintf(" %s %s%s: %s", emoji, marker, sub.Key, sub.Summary)
+		pl := fmt.Sprintf(" %s %s%s: %s", emojiPlain, marker, sub.Key, sub.Summary)
 		styled = append(styled, components.TruncateEnd(s, width-1))
 		plain = append(plain, components.TruncateEnd(pl, width-1))
 	}
 	return
+}
+
+func (p *InfoPanel) issueTypeMarker(t *jira.IssueType) string {
+	if t == nil || t.Name == "" {
+		return ""
+	}
+	if icon := typeIcon(p.typeIcons, t); icon != "" {
+		return icon + " "
+	}
+	return "[" + t.Name + "] "
 }
