@@ -407,6 +407,26 @@ func (a *App) prefetchRelated(issue *jira.Issue) tea.Cmd {
 	return batchPrefetch(a.client, keys)
 }
 
+// prefetchChildrenDetails warms issueCache for the given children so that
+// drilling into one from the Sub tab doesn't require a per-key fetch. Skips
+// keys that are already cached.
+func (a *App) prefetchChildrenDetails(children []jira.Issue) tea.Cmd {
+	var keys []string
+	for _, c := range children {
+		if c.Key == "" {
+			continue
+		}
+		if _, ok := a.issueCache[c.Key]; ok {
+			continue
+		}
+		keys = append(keys, c.Key)
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	return batchPrefetch(a.client, keys)
+}
+
 // handleBatchPrefetched caches all issues from a batch prefetch
 func (a *App) handleBatchPrefetched(msg batchPrefetchedMsg) (tea.Model, tea.Cmd) {
 	for i := range msg.issues {

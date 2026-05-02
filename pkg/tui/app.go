@@ -627,7 +627,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.childrenCache[msg.key] = msg.issues
 		a.infoPanel.SetChildren(msg.key, msg.issues)
-		return a, nil
+		return a, a.prefetchChildrenDetails(msg.issues)
 
 	case previewDetailLoadedMsg:
 		if msg.epoch != a.previewEpoch {

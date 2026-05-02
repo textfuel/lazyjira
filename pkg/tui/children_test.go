@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -198,6 +199,58 @@ func TestChildrenRequestMsg_CacheMiss_PopulatesCacheOnLoad(t *testing.T) {
 	}
 	if len(cached) != 2 || cached[0].Key != "C-1" {
 		t.Errorf("cached entry = %+v, want %+v", cached, want)
+	}
+}
+
+func TestChildrenLoadedMsg_PrefetchesChildDetails(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	var seenJQL string
+	fake.SearchIssuesFunc = func(_ context.Context, jql string, _, _ int) (*jira.SearchResult, error) {
+		seenJQL = jql
+		return &jira.SearchResult{}, nil
+	}
+
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.infoPanel.SetCloud(true)
+	a.infoPanel.SetIssue(&jira.Issue{Key: "EPIC-1"})
+	a.childrenEpoch = 1
+
+	_, cmd := a.Update(childrenLoadedMsg{
+		key:    "EPIC-1",
+		issues: []jira.Issue{{Key: "C-1"}, {Key: "C-2"}},
+		epoch:  1,
+	})
+	if cmd == nil {
+		t.Fatal("expected prefetch cmd, got nil")
+	}
+	cmd()
+
+	if seenJQL == "" {
+		t.Fatal("expected SearchIssues call for prefetch")
+	}
+	if !strings.Contains(seenJQL, "C-1") || !strings.Contains(seenJQL, "C-2") {
+		t.Errorf("prefetch JQL %q must include both child keys", seenJQL)
+	}
+}
+
+func TestChildrenLoadedMsg_PrefetchSkipsAlreadyCached(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.infoPanel.SetCloud(true)
+	a.infoPanel.SetIssue(&jira.Issue{Key: "EPIC-1"})
+	a.issueCache["C-1"] = &jira.Issue{Key: "C-1"}
+	a.issueCache["C-2"] = &jira.Issue{Key: "C-2"}
+	a.childrenEpoch = 1
+
+	_, cmd := a.Update(childrenLoadedMsg{
+		key:    "EPIC-1",
+		issues: []jira.Issue{{Key: "C-1"}, {Key: "C-2"}},
+		epoch:  1,
+	})
+	if cmd != nil {
+		t.Errorf("all children cached: expected nil cmd, got non-nil")
 	}
 }
 
