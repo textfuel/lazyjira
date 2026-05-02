@@ -176,6 +176,7 @@ type App struct {
 	currentUser     *jira.User
 	usersCache      map[string][]jira.User
 	issueCache      map[string]*jira.Issue
+	childrenCache   map[string][]jira.Issue
 	createMetaCache map[string][]jira.CreateMetaField
 	// previewKey identifies the issue displayed in the right-side views.
 	// Empty means nothing is displayed.
@@ -323,6 +324,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		logFlag:         logFlag,
 		usersCache:      make(map[string][]jira.User),
 		issueCache:      make(map[string]*jira.Issue),
+		childrenCache:   make(map[string][]jira.Issue),
 		createMetaCache: make(map[string][]jira.CreateMetaField),
 	}
 	app.ctx, app.cancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is called in Shutdown()
@@ -607,6 +609,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !a.isCloud || msg.Key == "" {
 			return a, nil
 		}
+		if cached, ok := a.childrenCache[msg.Key]; ok {
+			a.infoPanel.SetChildren(msg.Key, cached)
+			return a, nil
+		}
 		a.childrenEpoch++
 		return a, fetchChildren(a.client, msg.Key, a.childrenEpoch)
 
@@ -619,6 +625,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.infoPanel.SetChildrenError(msg.key, msg.err.Error())
 			return a, nil
 		}
+		a.childrenCache[msg.key] = msg.issues
 		a.infoPanel.SetChildren(msg.key, msg.issues)
 		return a, nil
 

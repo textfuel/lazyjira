@@ -439,8 +439,14 @@ func (a *App) handleIssueAction(action Action) (tea.Model, tea.Cmd, bool) {
 	case ActRefresh:
 		if a.previewKey != "" {
 			delete(a.issueCache, a.previewKey)
+			delete(a.childrenCache, a.previewKey)
 			*a.logFlag = true
-			return a, fetchIssueDetail(a.client, a.previewKey), true
+			cmds := []tea.Cmd{fetchIssueDetail(a.client, a.previewKey)}
+			if a.isCloud {
+				key := a.previewKey
+				cmds = append(cmds, func() tea.Msg { return views.ChildrenRequestMsg{Key: key} })
+			}
+			return a, tea.Batch(cmds...), true
 		}
 		return a, nil, true
 
