@@ -49,7 +49,6 @@ func (p *InfoPanel) SetIssue(issue *jira.Issue) {
 	if issue == nil || issue.Key != prevKey {
 		p.Cursor = 0
 		p.Offset = 0
-		p.activeTab = InfoTabFields
 	}
 	p.syncItemCount()
 }
