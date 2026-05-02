@@ -51,6 +51,15 @@ gui:
         - status
         - summary
     selectCreatedIssue: true
+    typeIcons:
+        Bug: "🐞"
+        Story: "📖"
+        Sub-task: "📎"
+    statusIcons:
+        To do: "📋"
+        On hold: "⏸️"
+        Future: "🔜"
+
 keybinding:
     universal:
         quit: q
@@ -182,6 +191,26 @@ gui:
 ```yaml
 gui:
   selectCreatedIssue: true
+```
+
+`typeIcons` will have issue `type` names replaced by the emojis you set. Mappings are case-sensitive, and support not only emojis but also plaintext. Enable the field `type` under `issueListFields` to profit from this option.
+
+```
+gui:
+    typeIcons:
+        Bug: "🐞"
+        Story: "📖"
+        Sub-task: "📎"
+```
+
+`statusIcons` will have issue `status` indicators replaced by the emojis you set. Default indicators may be shared for similar states (e.g. To do / Future), so one may get more granularity from this option. Mappings are case-sensitive, and support not only emojis but also plaintext. Enable the field `status` under `issueListFields` to profit from this option.
+
+```
+gui:
+    statusIcons:
+        To do: "📋"
+        On hold: "⏸️"
+        Future: "🔜"
 ```
 
 ### Issue list fields
