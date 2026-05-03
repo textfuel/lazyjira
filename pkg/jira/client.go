@@ -297,6 +297,7 @@ func (c *Client) fillSprintFromCustomField(issue *Issue, raw map[string]json.Raw
 func (c *Client) SearchIssues(ctx context.Context, jql string, startAt, maxResults int) (*SearchResult, error) {
 	sprintField := c.SprintFieldID()
 	fields := "summary,description,status,priority,assignee,reporter,labels,components," + sprintField + ",issuetype,created,updated,subtasks,issuelinks,parent"
+	// Default sprint custom-field ids: 10020 (Cloud), 10010 (older Server/DC).
 	if sprintField == sprintFieldAlias {
 		fields += ",customfield_10010,customfield_10020"
 	}
