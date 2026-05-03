@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Custom icons for issue priorities in the list view. Configure via `gui.priorityIcons` map in config.yml. Plain text works too.
+
 ## [2.13.0] - 2026-05-05
 
 ### Added

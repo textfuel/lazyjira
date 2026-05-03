@@ -59,6 +59,12 @@ gui:
         To do: "📋"
         On hold: "⏸️"
         Future: "🔜"
+    priorityIcons:
+        Highest: "⇈"
+        High: "↑"
+        Medium: "→"
+        Low: "↓"
+        Lowest: "⇊"
 
 keybinding:
     universal:
@@ -211,6 +217,18 @@ gui:
         To do: "📋"
         On hold: "⏸️"
         Future: "🔜"
+```
+
+`priorityIcons` will have issue `priority` names replaced by the emojis you set. Mappings are case-sensitive, and support not only emojis but also plaintext. Unmapped priorities fall back to the plain priority name. Enable the field `priority` under `issueListFields` to profit from this option.
+
+```
+gui:
+    priorityIcons:
+        Highest: "⇈"
+        High: "↑"
+        Medium: "→"
+        Low: "↓"
+        Lowest: "⇊"
 ```
 
 ### Issue list fields

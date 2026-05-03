@@ -190,6 +190,7 @@ type GUIConfig struct {
 	SelectCreatedIssue   *bool             `yaml:"selectCreatedIssue"`
 	TypeIcons            map[string]string `yaml:"typeIcons"`
 	StatusIcons          map[string]string `yaml:"statusIcons"`
+	PriorityIcons        map[string]string `yaml:"priorityIcons"`
 }
 
 // ShouldPrefillFromTab returns true when the creation form should prefill from tab JQL

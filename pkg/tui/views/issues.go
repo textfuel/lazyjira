@@ -28,25 +28,27 @@ const statusOpen = "○"
 
 type IssuesList struct {
 	components.ListBase
-	issues          []jira.Issue
-	allIssues       []jira.Issue
-	filter          string
-	tabs            []config.IssueTabConfig
-	tab             int
-	tabCache        map[int][]jira.Issue
-	userEmail       string
-	keyColWidth     int
-	fields          []string
-	theme           *theme.Theme
-	typeIcons       map[string]string
-	typeIconCols    int
-	statusIcons     map[string]string
-	statusIconCols  int
-	jqlQuery        string
-	jqlTabIdx       int
-	hierarchyTabIdx int
-	hierarchyTitle  string
-	hierarchyStack  *navstack.NavStack
+	issues           []jira.Issue
+	allIssues        []jira.Issue
+	filter           string
+	tabs             []config.IssueTabConfig
+	tab              int
+	tabCache         map[int][]jira.Issue
+	userEmail        string
+	keyColWidth      int
+	fields           []string
+	theme            *theme.Theme
+	typeIcons        map[string]string
+	typeIconCols     int
+	statusIcons      map[string]string
+	statusIconCols   int
+	priorityIcons    map[string]string
+	priorityIconCols int
+	jqlQuery         string
+	jqlTabIdx        int
+	hierarchyTabIdx  int
+	hierarchyTitle   string
+	hierarchyStack   *navstack.NavStack
 }
 
 func NewIssuesList() *IssuesList {
@@ -73,6 +75,16 @@ func (m *IssuesList) SetStatusIcons(icons map[string]string) {
 		}
 	}
 	m.statusIconCols = max
+}
+func (m *IssuesList) SetPriorityIcons(icons map[string]string) {
+	m.priorityIcons = icons
+	max := 0
+	for _, icon := range icons {
+		if w := lipgloss.Width(icon); w > max {
+			max = w
+		}
+	}
+	m.priorityIconCols = max
 }
 func (m *IssuesList) SetTabs(tabs []config.IssueTabConfig) { m.tabs = tabs }
 func (m *IssuesList) SetUserEmail(email string)            { m.userEmail = email }
@@ -535,6 +547,7 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 
 	currTypeIcon := typeIcon(m.typeIcons, issue.IssueType)
 	currStatusIcon := statusIcon(m.statusIcons, issue.Status)
+	currPriorityIcon := priorityIcon(m.priorityIcons, issue.Priority)
 
 	fixedWidth := 1
 	if len(fields) > 1 {
@@ -547,7 +560,11 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		case fieldStatus:
 			fixedWidth += max(1, m.statusIconCols)
 		case "priority":
-			fixedWidth += 8
+			if currPriorityIcon != "" {
+				fixedWidth += m.priorityIconCols
+			} else {
+				fixedWidth += 8
+			}
 		case "assignee":
 			fixedWidth += 12
 		case "type":
@@ -581,11 +598,15 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 				}
 			}
 		case "priority":
-			name := ""
-			if issue.Priority != nil {
-				name = issue.Priority.Name
+			if currPriorityIcon != "" {
+				parts = append(parts, padRight(currPriorityIcon, m.priorityIconCols))
+			} else {
+				name := ""
+				if issue.Priority != nil {
+					name = issue.Priority.Name
+				}
+				parts = append(parts, padRight(components.TruncateEnd(name, 8), 8))
 			}
-			parts = append(parts, padRight(components.TruncateEnd(name, 8), 8))
 		case "assignee":
 			name := ""
 			if issue.Assignee != nil {
@@ -662,6 +683,18 @@ func statusIcon(icons map[string]string, status *jira.Status) string {
 		return ""
 	}
 	icon, ok := icons[status.Name]
+	if !ok || icon == "" {
+		return ""
+	}
+	return icon
+}
+
+// priorityIcon returns the configured icon for the given priority, or empty string if none.
+func priorityIcon(icons map[string]string, priority *jira.Priority) string {
+	if priority == nil {
+		return ""
+	}
+	icon, ok := icons[priority.Name]
 	if !ok || icon == "" {
 		return ""
 	}
