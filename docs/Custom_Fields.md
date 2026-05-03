@@ -41,15 +41,15 @@ You can override the display name with `name`.
 
 ## System fields
 
-These standard Jira fields can also be added to your `fields:` config. They render as read only values without special styling.
+These standard Jira fields can also be added to your `fields:` config.
 
-| ID | Typical content |
-|----|-----------------|
-| `fixVersions` | List of fix versions |
-| `versions` | List of affected versions |
-| `duedate` | Due date |
-| `resolution` | Resolution |
-| `environment` | Environment |
+| ID | Typical content | Editable |
+|----|-----------------|----------|
+| `fixVersions` | List of fix versions | no |
+| `versions` | List of affected versions | no |
+| `duedate` | Due date | yes |
+| `resolution` | Resolution | no |
+| `environment` | Environment | no |
 
 Example:
 
@@ -63,7 +63,9 @@ fields:
 
 Multi value fields are joined with commas. A `fixVersions` with two entries renders as `Version 1, Version 2`.
 
-Only `id` and `name` apply here. Editing with the `e` key is not supported for these fields.
+`duedate` accepts an inline edit with the `e` key. The format is `YYYY-MM-DD`. An empty value clears the date.
+
+The other fields are read only here. Pressing `e` shows a status message. Use the Jira UI to change them.
 
 ## Custom field properties
 

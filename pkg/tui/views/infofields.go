@@ -179,6 +179,7 @@ const (
 	FieldPerson
 	FieldSingleText
 	FieldMultiText
+	FieldDate
 )
 
 type InfoField struct {
@@ -213,6 +214,9 @@ func buildInfoFields(issue *jira.Issue, cfgFields []config.FieldConfig) []InfoFi
 			raw := issue.CustomFields[cf.ID]
 			val := formatCustomFieldValue(raw)
 			ft := resolveCustomFieldType(cf.Type, raw)
+			if cf.ID == "duedate" {
+				ft = FieldDate
+			}
 			name := cf.Name
 			if name == "" {
 				name = cf.ID

@@ -58,6 +58,7 @@ const (
 	editSummary
 	editField
 	editFieldText
+	editFieldDate
 	editBranch
 	editCreateField
 	editCreateDesc
@@ -681,6 +682,10 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 	if field == nil {
 		return a, nil
 	}
+	if jira.IsSystemExtraField(field.FieldID) && field.Type != views.FieldDate {
+		a.statusPanel.SetError("editing " + field.Name + " is not supported")
+		return a, nil
+	}
 	*a.logFlag = true
 	switch field.Type {
 	case views.FieldSingleSelect:
@@ -749,6 +754,10 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 	case views.FieldMultiText:
 		a.editContext = editCtx{kind: editFieldText, issueKey: sel.Key, fieldID: field.FieldID}
 		return a, launchEditor(views.EditValueForInput(field.Value), ".md")
+	case views.FieldDate:
+		a.inputModal.Show("Edit "+field.Name+" (YYYY-MM-DD)", views.EditValueForInput(field.Value))
+		a.editContext = editCtx{kind: editFieldDate, issueKey: sel.Key, fieldID: field.FieldID}
+		return a, nil
 	}
 	return a, nil
 }
@@ -771,7 +780,7 @@ func (a *App) optimisticFieldUpdate(issueKey, fieldID string, value any) {
 		if views.SetBuiltinFieldValue(cached, fieldID, value) {
 			break
 		}
-		if strings.HasPrefix(fieldID, "customfield_") {
+		if isExtraField(fieldID) {
 			if cached.CustomFields == nil {
 				cached.CustomFields = make(map[string]any)
 			}
@@ -805,6 +814,18 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 	case editFieldText:
 		a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, mdContent)
 		return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, mdContent)
+	case editFieldDate:
+		v := strings.TrimSpace(mdContent)
+		if v == "" {
+			a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, nil)
+			return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, nil)
+		}
+		if _, err := time.Parse("2006-01-02", v); err != nil {
+			a.statusPanel.SetError("invalid date, expected YYYY-MM-DD")
+			return nil
+		}
+		a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, v)
+		return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, v)
 	}
 	return nil
 }

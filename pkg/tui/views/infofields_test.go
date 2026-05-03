@@ -58,3 +58,16 @@ func TestBuildInfoFields_SystemExtra_AbsentRendersNone(t *testing.T) {
 		t.Errorf("absent system field: Value = %q, want %q", got[0].Value, noneLabelUpper)
 	}
 }
+
+func TestBuildInfoFields_Duedate_HasDateType(t *testing.T) {
+	issue := &jira.Issue{
+		Key:          "PROJ-1",
+		CustomFields: map[string]any{"duedate": "2026-05-15"},
+	}
+	cfg := []config.FieldConfig{{ID: "duedate", Name: "Due"}}
+
+	got := buildInfoFields(issue, cfg)
+	if len(got) != 1 || got[0].Type != FieldDate {
+		t.Errorf("duedate Type = %v, want FieldDate; got rows %+v", got[0].Type, got)
+	}
+}

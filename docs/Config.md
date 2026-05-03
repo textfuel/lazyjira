@@ -314,7 +314,7 @@ fields:
     name: "Fix Version/s"
 ```
 
-Standard Jira fields like `fixVersions`, `versions`, `duedate`, `resolution` and `environment` can also be listed here as read only entries.
+Standard Jira fields like `fixVersions`, `versions`, `duedate`, `resolution` and `environment` can also be listed here. They are read only, except `duedate` which accepts inline edit in `YYYY-MM-DD` format.
 
 ## Git integration
 
