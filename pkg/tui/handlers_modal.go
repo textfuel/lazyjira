@@ -3,6 +3,7 @@ package tui
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -121,6 +122,18 @@ func (a *App) handleInputConfirmed(msg components.InputConfirmedMsg) (tea.Model,
 			a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, msg.Text)
 			return a, updateIssueField(a.client, ctx.issueKey, ctx.fieldID, msg.Text)
 		}
+	case editFieldDate:
+		v := strings.TrimSpace(msg.Text)
+		if v == "" {
+			a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, nil)
+			return a, updateIssueField(a.client, ctx.issueKey, ctx.fieldID, nil)
+		}
+		if _, err := time.Parse("2006-01-02", v); err != nil {
+			a.statusPanel.SetError("invalid date, expected YYYY-MM-DD")
+			return a, nil
+		}
+		a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, v)
+		return a, updateIssueField(a.client, ctx.issueKey, ctx.fieldID, v)
 	case editBranch:
 		if msg.Text != "" {
 			switch git.ResolveBranchAction(a.gitRepoPath, msg.Text) {

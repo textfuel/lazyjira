@@ -814,18 +814,6 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 	case editFieldText:
 		a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, mdContent)
 		return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, mdContent)
-	case editFieldDate:
-		v := strings.TrimSpace(mdContent)
-		if v == "" {
-			a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, nil)
-			return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, nil)
-		}
-		if _, err := time.Parse("2006-01-02", v); err != nil {
-			a.statusPanel.SetError("invalid date, expected YYYY-MM-DD")
-			return nil
-		}
-		a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, v)
-		return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, v)
 	}
 	return nil
 }

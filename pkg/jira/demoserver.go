@@ -640,6 +640,9 @@ func issueToJSON(iss *Issue) map[string]any {
 			"iconUrl": iss.IssueType.IconURL, "subtask": iss.IssueType.Subtask,
 		}
 	}
+	for k, v := range iss.CustomFields {
+		fields[k] = v
+	}
 
 	return map[string]any{
 		"id":     iss.ID,

@@ -15,6 +15,14 @@ func startDemo(cfg *config.Config) (jira.ClientInterface, tui.AuthMethod, func()
 	}
 	cfg.Jira.Host = "https://demo.atlassian.net"
 	cfg.Jira.Email = "demo@lazyjira.dev"
+	if len(cfg.Fields) == 0 {
+		cfg.Fields = []config.FieldConfig{
+			{ID: "status"}, {ID: "priority"}, {ID: "assignee"}, {ID: "reporter"},
+			{ID: "issuetype"}, {ID: "sprint"}, {ID: "labels"}, {ID: "components"},
+			{ID: "fixVersions", Name: "Fix Version/s"},
+			{ID: "duedate", Name: "Due"},
+		}
+	}
 	client := jira.NewClient(srv.URL, cfg.Jira.Email, "demo-token")
 	cleanup := func() { _ = srv.Close() }
 	return client, tui.AuthDemo, cleanup, nil

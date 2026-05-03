@@ -653,6 +653,13 @@ func (d *DemoClient) initDemoData() {
 			IssueType: story, Sprint: sprint1,
 			Labels: []string{"frontend", "ux"}, Components: []Component{{ID: "c1", Name: "Cart"}},
 			Created: now.Add(-10 * day), Updated: now.Add(-1 * day),
+			CustomFields: map[string]any{
+				"duedate": now.Add(14 * day).Format("2006-01-02"),
+				"fixVersions": []any{
+					map[string]any{"name": "v1.2.0"},
+					map[string]any{"name": "v1.3.0"},
+				},
+			},
 		},
 		{
 			ID: "102", Key: "SHOP-2", Summary: "Fix checkout total not updating on quantity change",
@@ -669,6 +676,9 @@ func (d *DemoClient) initDemoData() {
 			IssueType: story,
 			Labels:    []string{"backend", "search"}, Components: []Component{{ID: "c3", Name: "Search"}},
 			Created: now.Add(-14 * day), Updated: now.Add(-3 * day),
+			CustomFields: map[string]any{
+				"fixVersions": []any{map[string]any{"name": "v2.0.0"}},
+			},
 		},
 		{
 			ID: "104", Key: "SHOP-4", Summary: "Set up CI/CD pipeline for staging",
@@ -693,6 +703,9 @@ func (d *DemoClient) initDemoData() {
 			IssueType: bug,
 			Labels:    []string{"bug", "payments"}, Components: []Component{{ID: "c5", Name: "Payments"}},
 			Created: now.Add(-2 * day), Updated: now.Add(-1 * day),
+			CustomFields: map[string]any{
+				"duedate": now.Add(3 * day).Format("2006-01-02"),
+			},
 		},
 		{
 			ID: "107", Key: "SHOP-7", Summary: "Implement wishlist feature",
