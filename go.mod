@@ -11,6 +11,8 @@ require (
 	golang.org/x/text v0.3.8
 	github.com/seflue/adf-converter v0.1.1-0.20260503210448-71e4328e5467
 	github.com/seflue/adf-converter/display v0.0.0-20260503210448-71e4328e5467
+	github.com/seflue/adf-converter v0.1.1-0.20260503234037-6dd87c076b36
+	github.com/seflue/adf-converter/display v0.0.0-20260503234037-6dd87c076b36
 	gopkg.in/yaml.v3 v3.0.1
 )
 
