@@ -7,7 +7,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Custom icons for issue statuses in the list view. Configure via `gui.statusIcons` map in config.yml. Plain text works too (#64)
+
+### Fixed
+
+- Sprint field shows None on Jira instances where the `sprint` alias does not resolve to the real custom field id. The id is now discovered at startup via `/field` and used in both reads and writes. Affects older Server/DC and other instances that map sprint to non-default ids like `customfield_10010` (#48)
+
 ## [2.11.1] - 2026-04-30
+
+### Fixed
+
+- Branch modal: names that do not match an existing remote ref now create a local branch. Previously any `/` in the input forced remote tracking, breaking prefixed conventions like `feature/PROJ-1-foo` (#62)
 
 ## [2.11.0] - 2026-04-30
 
