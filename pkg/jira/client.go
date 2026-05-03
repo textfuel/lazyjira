@@ -25,6 +25,7 @@ type ClientInterface interface {
 	GetProjects(ctx context.Context) ([]Project, error)
 	GetBoards(ctx context.Context) ([]Board, error)
 	GetBoardIssues(ctx context.Context, boardID int, jql string) ([]Issue, error)
+	GetChildren(ctx context.Context, parentKey string) ([]Issue, error)
 	UpdateIssue(ctx context.Context, issueKey string, fields map[string]any) error
 	GetPriorities(ctx context.Context) ([]Priority, error)
 	CreateIssue(ctx context.Context, fields map[string]any) (*Issue, error)
@@ -331,6 +332,20 @@ func (c *Client) SearchIssues(ctx context.Context, jql string, startAt, maxResul
 		c.fillSprintFromCustomField(&result.Issues[i], ri.Fields.RawExtra)
 	}
 	return result, nil
+}
+
+// GetChildren returns child issues of parentKey on Cloud (parent-link model).
+// Server/DC returns (nil, nil); classic subtasks live on Issue.Subtasks.
+func (c *Client) GetChildren(ctx context.Context, parentKey string) ([]Issue, error) {
+	if !c.isCloud {
+		return nil, nil
+	}
+	jql := "parent = " + parentKey
+	result, err := c.SearchIssues(ctx, jql, 0, 100)
+	if err != nil {
+		return nil, fmt.Errorf("get children of %s: %w", parentKey, err)
+	}
+	return result.Issues, nil
 }
 
 func (c *Client) GetMyIssues(ctx context.Context) ([]Issue, error) {

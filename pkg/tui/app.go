@@ -103,6 +103,15 @@ type previewDebounceMsg struct {
 	epoch int
 }
 
+// childrenLoadedMsg carries the response of a Cloud GetChildren fetch.
+// See App.childrenEpoch.
+type childrenLoadedMsg struct {
+	key    string
+	issues []jira.Issue
+	err    error
+	epoch  int
+}
+
 type transitionDoneMsg struct{}
 type errorMsg struct{ err error }
 type projectsLoadedMsg struct{ projects []jira.Project }
@@ -167,6 +176,7 @@ type App struct {
 	currentUser     *jira.User
 	usersCache      map[string][]jira.User
 	issueCache      map[string]*jira.Issue
+	childrenCache   map[string][]jira.Issue
 	createMetaCache map[string][]jira.CreateMetaField
 	// previewKey identifies the issue displayed in the right-side views.
 	// Empty means nothing is displayed.
@@ -177,7 +187,11 @@ type App struct {
 	// is how we simulate "cancel the previous intent", which bubbletea
 	// does not provide natively for tea.Cmd.
 	previewEpoch int
-	createCtx    createCtx
+	// childrenEpoch is the analogous counter for Cloud Sub-tab GetChildren
+	// fetches. Bumped on every ChildrenRequestMsg; responses with stale
+	// epoch are dropped.
+	childrenEpoch int
+	createCtx     createCtx
 
 	gitRepoPath    string
 	gitBranch      string
@@ -236,6 +250,9 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	issuesList.SetFocused(true)
 	issuesList.SetUserEmail(cfg.Jira.Email)
 	infoPanel := views.NewInfoPanel()
+	if len(cfg.GUI.TypeIcons) > 0 {
+		infoPanel.SetTypeIcons(cfg.GUI.TypeIcons)
+	}
 	projectList := views.NewProjectList()
 	detailView := views.NewDetailView()
 	logPanel := views.NewLogPanel()
@@ -307,12 +324,14 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		logFlag:         logFlag,
 		usersCache:      make(map[string][]jira.User),
 		issueCache:      make(map[string]*jira.Issue),
+		childrenCache:   make(map[string][]jira.Issue),
 		createMetaCache: make(map[string][]jira.CreateMetaField),
 	}
 	app.ctx, app.cancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is called in Shutdown()
 	navResolver := app.keymap.MatchNav
 	app.issuesList.ResolveNav = navResolver
 	app.infoPanel.ResolveNav = navResolver
+	app.infoPanel.SetCloud(app.isCloud)
 	app.projectList.ResolveNav = navResolver
 	app.detailView.ResolveNav = navResolver
 
@@ -565,7 +584,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.detailView.SetIssue(msg.Issue)
 			a.infoPanel.SetIssue(msg.Issue)
 		}
-		return a, a.prefetchRelated(msg.Issue)
+		return a, tea.Batch(a.prefetchRelated(msg.Issue), a.infoPanel.MaybeChildrenRequest())
 
 	case views.PreviewRequestMsg:
 		a.previewKey = msg.Key
@@ -585,6 +604,30 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		return a, fetchPreviewDetail(a.client, msg.key, a.previewEpoch)
+
+	case views.ChildrenRequestMsg:
+		if !a.isCloud || msg.Key == "" {
+			return a, nil
+		}
+		if cached, ok := a.childrenCache[msg.Key]; ok {
+			a.infoPanel.SetChildren(msg.Key, cached)
+			return a, nil
+		}
+		a.childrenEpoch++
+		return a, fetchChildren(a.client, msg.Key, a.childrenEpoch)
+
+	case childrenLoadedMsg:
+		if msg.epoch != a.childrenEpoch {
+			return a, nil
+		}
+		if msg.err != nil {
+			a.statusPanel.SetError("Failed to load children: " + msg.err.Error())
+			a.infoPanel.SetChildrenError(msg.key, msg.err.Error())
+			return a, nil
+		}
+		a.childrenCache[msg.key] = msg.issues
+		a.infoPanel.SetChildren(msg.key, msg.issues)
+		return a, a.prefetchChildrenDetails(msg.issues)
 
 	case previewDetailLoadedMsg:
 		if msg.epoch != a.previewEpoch {

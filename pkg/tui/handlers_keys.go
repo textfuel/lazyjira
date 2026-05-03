@@ -313,7 +313,7 @@ func (a *App) handleTabAction(action Action) (tea.Model, tea.Cmd, bool) {
 			return a, a.previewSelectedIssue(), true
 		case a.side == sideLeft && a.leftFocus == focusInfo:
 			a.infoPanel.PrevTab()
-			return a, a.previewForInfoTab(), true
+			return a, tea.Batch(a.previewForInfoTab(), a.infoPanel.MaybeChildrenRequest()), true
 		}
 		return a, nil, true
 
@@ -329,7 +329,7 @@ func (a *App) handleTabAction(action Action) (tea.Model, tea.Cmd, bool) {
 			return a, a.previewSelectedIssue(), true
 		case a.side == sideLeft && a.leftFocus == focusInfo:
 			a.infoPanel.NextTab()
-			return a, a.previewForInfoTab(), true
+			return a, tea.Batch(a.previewForInfoTab(), a.infoPanel.MaybeChildrenRequest()), true
 		}
 		return a, nil, true
 
@@ -439,8 +439,14 @@ func (a *App) handleIssueAction(action Action) (tea.Model, tea.Cmd, bool) {
 	case ActRefresh:
 		if a.previewKey != "" {
 			delete(a.issueCache, a.previewKey)
+			delete(a.childrenCache, a.previewKey)
 			*a.logFlag = true
-			return a, fetchIssueDetail(a.client, a.previewKey), true
+			cmds := []tea.Cmd{fetchIssueDetail(a.client, a.previewKey)}
+			if a.isCloud {
+				key := a.previewKey
+				cmds = append(cmds, func() tea.Msg { return views.ChildrenRequestMsg{Key: key} })
+			}
+			return a, tea.Batch(cmds...), true
 		}
 		return a, nil, true
 

@@ -140,6 +140,85 @@ func TestInfoPanel_LnkTab_CursorMove_InwardLink(t *testing.T) {
 	}
 }
 
+func TestInfoPanel_SetIssue_PreservesActiveTab(t *testing.T) {
+	p := makeInfoPanelFocused()
+
+	issueA := &jira.Issue{
+		Key: "MAIN-1",
+		Subtasks: []jira.Issue{
+			{Key: "SUB-1", Summary: "first subtask"},
+			{Key: "SUB-2", Summary: "second subtask"},
+		},
+	}
+	p.SetIssue(issueA)
+
+	for p.activeTab != InfoTabSubtasks {
+		p.NextTab()
+	}
+
+	p.Update(pressJ())
+	if p.Cursor == 0 {
+		t.Fatalf("setup: expected cursor > 0 after nav, got 0")
+	}
+
+	issueB := &jira.Issue{
+		Key: "MAIN-2",
+		Subtasks: []jira.Issue{
+			{Key: "OTHER-1", Summary: "different subtask"},
+		},
+	}
+	p.SetIssue(issueB)
+
+	if p.ActiveTab() != InfoTabSubtasks {
+		t.Errorf("ActiveTab = %v, want InfoTabSubtasks", p.ActiveTab())
+	}
+	if p.Cursor != 0 {
+		t.Errorf("Cursor = %d, want 0", p.Cursor)
+	}
+	if p.Offset != 0 {
+		t.Errorf("Offset = %d, want 0", p.Offset)
+	}
+}
+
+func TestInfoPanel_SetIssue_SameKey_PreservesCursor(t *testing.T) {
+	p := makeInfoPanelFocused()
+
+	issue := &jira.Issue{
+		Key: "MAIN-1",
+		Subtasks: []jira.Issue{
+			{Key: "SUB-1", Summary: "first subtask"},
+			{Key: "SUB-2", Summary: "second subtask"},
+		},
+	}
+	p.SetIssue(issue)
+
+	for p.activeTab != InfoTabSubtasks {
+		p.NextTab()
+	}
+
+	p.Update(pressJ())
+	cursorBefore := p.Cursor
+	if cursorBefore == 0 {
+		t.Fatalf("setup: expected cursor > 0 after nav, got 0")
+	}
+
+	refreshed := &jira.Issue{
+		Key: "MAIN-1",
+		Subtasks: []jira.Issue{
+			{Key: "SUB-1", Summary: "first subtask"},
+			{Key: "SUB-2", Summary: "second subtask"},
+		},
+	}
+	p.SetIssue(refreshed)
+
+	if p.Cursor != cursorBefore {
+		t.Errorf("Cursor = %d, want %d", p.Cursor, cursorBefore)
+	}
+	if p.ActiveTab() != InfoTabSubtasks {
+		t.Errorf("ActiveTab = %v, want InfoTabSubtasks", p.ActiveTab())
+	}
+}
+
 // TestInfoPanel_FieldsTab_CursorMove_NoPreviewRequestMsg verifies that cursor
 // movement in the Fields tab does NOT dispatch PreviewRequestMsg.
 func TestInfoPanel_FieldsTab_CursorMove_NoPreviewRequestMsg(t *testing.T) {

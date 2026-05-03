@@ -304,6 +304,7 @@ func (a *App) handleCustomCommandFinished(msg customCommandFinishedMsg) (tea.Mod
 	if msg.refresh {
 		if cur := a.currentIssue(); cur != nil {
 			delete(a.issueCache, cur.Key)
+			delete(a.childrenCache, cur.Key)
 			cmds = append(cmds, fetchIssueDetail(a.client, cur.Key))
 		}
 	}

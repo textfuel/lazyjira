@@ -17,6 +17,12 @@ import (
 // different issue in the Sub or Lnk tab, requesting a detail preview fetch.
 type PreviewRequestMsg struct{ Key string }
 
+// ChildrenRequestMsg is dispatched when the Sub tab becomes active for a
+// Cloud issue and the children for its key have not been loaded yet. The
+// app handles it by calling jira.Client.GetChildren and feeding the result
+// back via InfoPanel.SetChildren / SetChildrenError.
+type ChildrenRequestMsg struct{ Key string }
+
 // InfoPanelTab identifies a tab within the Info panel
 type InfoPanelTab int
 
@@ -34,7 +40,24 @@ type InfoPanel struct {
 	activeTab       InfoPanelTab
 	theme           *theme.Theme
 	filteredIndices []int
+
+	// cloud toggles the Cloud parent-link Children path. When true, the
+	// Sub tab renders children loaded via SetChildren; when false, it
+	// falls back to issue.Subtasks.
+	cloud bool
+	// Children state for the Cloud path. childrenForKey identifies which
+	// issue's children currently sit in children. childrenLoaded is the
+	// "we have an answer" flag (an empty slice still counts as loaded).
+	// childrenError carries the last fetch error, if any.
+	childrenForKey string
+	children       []jira.Issue
+	childrenLoaded bool
+	childrenError  string
+
+	typeIcons map[string]string
 }
+
+func (p *InfoPanel) SetTypeIcons(icons map[string]string) { p.typeIcons = icons }
 
 func NewInfoPanel() *InfoPanel {
 	return &InfoPanel{theme: theme.Default}
@@ -49,9 +72,66 @@ func (p *InfoPanel) SetIssue(issue *jira.Issue) {
 	if issue == nil || issue.Key != prevKey {
 		p.Cursor = 0
 		p.Offset = 0
-		p.activeTab = InfoTabFields
+		p.resetChildren()
 	}
 	p.syncItemCount()
+}
+
+// SetCloud toggles the Cloud parent-link Children rendering path.
+func (p *InfoPanel) SetCloud(cloud bool) { p.cloud = cloud }
+
+// SetChildren stores children for parentKey. If parentKey doesn't match the
+// currently displayed issue, the call is dropped (stale response).
+func (p *InfoPanel) SetChildren(parentKey string, issues []jira.Issue) {
+	if p.issue == nil || p.issue.Key != parentKey {
+		return
+	}
+	p.childrenForKey = parentKey
+	p.children = issues
+	p.childrenLoaded = true
+	p.childrenError = ""
+	p.syncItemCount()
+}
+
+// SetChildrenError records a fetch error for parentKey. Stale errors (key
+// mismatch) are dropped.
+func (p *InfoPanel) SetChildrenError(parentKey, msg string) {
+	if p.issue == nil || p.issue.Key != parentKey {
+		return
+	}
+	p.childrenForKey = parentKey
+	p.children = nil
+	p.childrenLoaded = false
+	p.childrenError = msg
+	p.syncItemCount()
+}
+
+// MaybeChildrenRequest returns a Cmd that emits ChildrenRequestMsg when the
+// Sub tab is active on a Cloud issue and the children have neither been
+// loaded nor failed for the current key. Returns nil otherwise.
+func (p *InfoPanel) MaybeChildrenRequest() tea.Cmd {
+	if !p.cloud || p.issue == nil {
+		return nil
+	}
+	if p.activeTab != InfoTabSubtasks {
+		return nil
+	}
+	if p.childrenForKey == p.issue.Key && (p.childrenLoaded || p.childrenError != "") {
+		return nil
+	}
+	key := p.issue.Key
+	return func() tea.Msg { return ChildrenRequestMsg{Key: key} }
+}
+
+// Children exposes the loaded Cloud children for tests and callers that need
+// the resolved sub-tab list.
+func (p *InfoPanel) Children() []jira.Issue { return p.children }
+
+func (p *InfoPanel) resetChildren() {
+	p.childrenForKey = ""
+	p.children = nil
+	p.childrenLoaded = false
+	p.childrenError = ""
 }
 
 // IssueKey returns the key of the currently displayed issue
@@ -152,10 +232,23 @@ func (p *InfoPanel) SelectedSubtaskKey() string {
 		return ""
 	}
 	idx := p.resolveOriginalIndex()
-	if idx >= 0 && idx < len(p.issue.Subtasks) {
-		return p.issue.Subtasks[idx].Key
+	subs := p.subtaskList()
+	if idx >= 0 && idx < len(subs) {
+		return subs[idx].Key
 	}
 	return ""
+}
+
+// subtaskList returns the list backing the Sub tab: Cloud children when
+// loaded, otherwise the legacy Subtasks slice.
+func (p *InfoPanel) subtaskList() []jira.Issue {
+	if p.cloud && p.childrenLoaded && p.childrenForKey != "" && p.issue != nil && p.childrenForKey == p.issue.Key {
+		return p.children
+	}
+	if p.issue == nil {
+		return nil
+	}
+	return p.issue.Subtasks
 }
 
 func (p *InfoPanel) ContentHeight() int {
@@ -218,7 +311,7 @@ func (p *InfoPanel) tabItemCount() int {
 		}
 		return count
 	case InfoTabSubtasks:
-		return len(p.issue.Subtasks)
+		return len(p.subtaskList())
 	}
 	return 0
 }
@@ -418,15 +511,39 @@ func (p *InfoPanel) renderLinkRowPairs(width int) (styled, plain []string) {
 }
 
 func (p *InfoPanel) renderSubtaskRowPairs(width int) (styled, plain []string) {
-	styled = make([]string, 0, len(p.issue.Subtasks))
-	plain = make([]string, 0, len(p.issue.Subtasks))
-	for _, sub := range p.issue.Subtasks {
+	subs := p.subtaskList()
+	if p.cloud && p.childrenForKey == p.issue.Key {
+		if p.childrenError != "" {
+			pl := " Failed to load children: " + p.childrenError
+			s := lipgloss.NewStyle().Foreground(theme.ColorRed).Render(pl)
+			return []string{components.TruncateEnd(s, width-1)}, []string{components.TruncateEnd(pl, width-1)}
+		}
+		if p.childrenLoaded && len(subs) == 0 {
+			pl := " No children"
+			s := lipgloss.NewStyle().Foreground(theme.ColorGray).Render(pl)
+			return []string{components.TruncateEnd(s, width-1)}, []string{components.TruncateEnd(pl, width-1)}
+		}
+	}
+	styled = make([]string, 0, len(subs))
+	plain = make([]string, 0, len(subs))
+	for _, sub := range subs {
 		emoji := statusEmoji(sub.Status)
 		emojiPlain := statusEmojiPlain(sub.Status)
-		s := fmt.Sprintf(" %s %s: %s", emoji, sub.Key, sub.Summary)
-		pl := fmt.Sprintf(" %s %s: %s", emojiPlain, sub.Key, sub.Summary)
+		marker := p.issueTypeMarker(sub.IssueType)
+		s := fmt.Sprintf(" %s %s%s: %s", emoji, marker, sub.Key, sub.Summary)
+		pl := fmt.Sprintf(" %s %s%s: %s", emojiPlain, marker, sub.Key, sub.Summary)
 		styled = append(styled, components.TruncateEnd(s, width-1))
 		plain = append(plain, components.TruncateEnd(pl, width-1))
 	}
 	return
+}
+
+func (p *InfoPanel) issueTypeMarker(t *jira.IssueType) string {
+	if t == nil || t.Name == "" {
+		return ""
+	}
+	if icon := typeIcon(p.typeIcons, t); icon != "" {
+		return icon + " "
+	}
+	return "[" + t.Name + "] "
 }

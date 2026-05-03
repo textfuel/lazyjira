@@ -61,6 +61,11 @@ type GetBoardIssuesCall struct {
 	JQL     string
 }
 
+type GetChildrenCall struct {
+	Ctx       context.Context
+	ParentKey string
+}
+
 type UpdateIssueCall struct {
 	Ctx    context.Context
 	Key    string
@@ -147,6 +152,7 @@ type FakeClient struct {
 	GetProjectsFunc                   func(ctx context.Context) ([]jira.Project, error)
 	GetBoardsFunc                     func(ctx context.Context) ([]jira.Board, error)
 	GetBoardIssuesFunc                func(ctx context.Context, boardID int, jql string) ([]jira.Issue, error)
+	GetChildrenFunc                   func(ctx context.Context, parentKey string) ([]jira.Issue, error)
 	UpdateIssueFunc                   func(ctx context.Context, key string, fields map[string]any) error
 	GetPrioritiesFunc                 func(ctx context.Context) ([]jira.Priority, error)
 	CreateIssueFunc                   func(ctx context.Context, fields map[string]any) (*jira.Issue, error)
@@ -179,6 +185,7 @@ type FakeClient struct {
 	GetProjectsCalls                   []context.Context
 	GetBoardsCalls                     []context.Context
 	GetBoardIssuesCalls                []GetBoardIssuesCall
+	GetChildrenCalls                   []GetChildrenCall
 	UpdateIssueCalls                   []UpdateIssueCall
 	GetPrioritiesCalls                 []context.Context
 	CreateIssueCalls                   []CreateIssueCall
@@ -304,6 +311,15 @@ func (f *FakeClient) GetBoardIssues(ctx context.Context, boardID int, jql string
 		return nil, nil
 	}
 	return f.GetBoardIssuesFunc(ctx, boardID, jql)
+}
+
+func (f *FakeClient) GetChildren(ctx context.Context, parentKey string) ([]jira.Issue, error) {
+	f.GetChildrenCalls = append(f.GetChildrenCalls, GetChildrenCall{Ctx: ctx, ParentKey: parentKey})
+	if f.GetChildrenFunc == nil {
+		f.fatal("GetChildren")
+		return nil, nil
+	}
+	return f.GetChildrenFunc(ctx, parentKey)
 }
 
 func (f *FakeClient) UpdateIssue(ctx context.Context, key string, fields map[string]any) error {

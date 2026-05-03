@@ -60,7 +60,7 @@ func (a *App) previewSelectedIssue() tea.Cmd {
 		a.detailView.SetIssue(sel)
 		a.infoPanel.SetIssue(sel)
 	}
-	return a.prefetchRelated(sel)
+	return tea.Batch(a.prefetchRelated(sel), a.infoPanel.MaybeChildrenRequest())
 }
 
 // previewForInfoTab refreshes the preview for the current InfoPanel tab, so

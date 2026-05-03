@@ -167,9 +167,9 @@ func (a *App) mouseClick(panel panelID, relY int, x int) (tea.Model, tea.Cmd) {
 		a.updateFocusState()
 		if relY == 0 {
 			a.infoPanel.ClickTabAt(x)
-		} else {
-			a.infoPanel.ClickAt(relY)
+			return a, a.infoPanel.MaybeChildrenRequest()
 		}
+		a.infoPanel.ClickAt(relY)
 
 	case panelProjects:
 		a.side = sideLeft
