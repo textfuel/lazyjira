@@ -13,9 +13,8 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/charmbracelet/lipgloss"
 
-	glamour "charm.land/glamour/v2"
 	adfconv "github.com/seflue/adf-converter/adf"
-	adfdefaults "github.com/seflue/adf-converter/adf/defaults"
+	adfdisplay "github.com/seflue/adf-converter/display"
 
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
@@ -52,8 +51,9 @@ func renderADFLegacy(node any, width int) []string {
 	return r.lines
 }
 
-// renderADFGlamour pipes ADF -> adf-converter (display mode) -> glamour.
-// Returns plain-text fallback lines on any conversion error so the preview
+// renderADFGlamour pipes ADF through adf-converter's display module,
+// which owns the ADF → display-Markdown → Glamour pipeline. Returns
+// plain-text fallback lines on any conversion error so the preview
 // never goes blank during the spike.
 func renderADFGlamour(node any, width int) []string {
 	raw, err := json.Marshal(node)
@@ -64,22 +64,13 @@ func renderADFGlamour(node any, width int) []string {
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return []string{fmt.Sprintf("[glamour: unmarshal: %v]", err)}
 	}
-	conv := adfdefaults.NewDisplayConverter()
-	md, _, err := conv.ToMarkdown(doc)
-	if err != nil {
-		return []string{fmt.Sprintf("[glamour: tomarkdown: %v]", err)}
-	}
 	if width < 10 {
 		width = 10
 	}
-	r, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle("dark"),
-		glamour.WithWordWrap(width),
+	out, err := adfdisplay.Render(&doc,
+		adfdisplay.WithStyle("dark"),
+		adfdisplay.WithWordWrap(width),
 	)
-	if err != nil {
-		return []string{fmt.Sprintf("[glamour: renderer: %v]", err)}
-	}
-	out, err := r.Render(md)
 	if err != nil {
 		return []string{fmt.Sprintf("[glamour: render: %v]", err)}
 	}
