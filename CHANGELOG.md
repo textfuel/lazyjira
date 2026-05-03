@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-05-03
+
 ### Added
 
 - Custom icons for issue statuses in the list view. Configure via `gui.statusIcons` map in config.yml. Plain text works too (#64)
@@ -378,7 +380,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.11.1...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.12.0...HEAD
+[2.12.0]: https://github.com/textfuel/lazyjira/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/textfuel/lazyjira/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/textfuel/lazyjira/compare/v2.10.2...v2.11.0
 [2.10.2]: https://github.com/textfuel/lazyjira/compare/v2.10.1...v2.10.2
