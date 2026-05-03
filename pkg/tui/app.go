@@ -80,8 +80,10 @@ type createCtx struct {
 	duplicateFrom *jira.Issue
 }
 
-type onSelectFunc func(components.ModalItem) tea.Cmd
-type onChecklistFunc func([]components.ModalItem) tea.Cmd
+type (
+	onSelectFunc    func(components.ModalItem) tea.Cmd
+	onChecklistFunc func([]components.ModalItem) tea.Cmd
+)
 
 type issuesLoadedMsg struct {
 	issues []jira.Issue
@@ -103,22 +105,26 @@ type previewDebounceMsg struct {
 	epoch int
 }
 
-type transitionDoneMsg struct{}
-type errorMsg struct{ err error }
-type projectsLoadedMsg struct{ projects []jira.Project }
-type issuePrefetchedMsg struct {
-	issue *jira.Issue
-}
+type (
+	transitionDoneMsg  struct{}
+	errorMsg           struct{ err error }
+	projectsLoadedMsg  struct{ projects []jira.Project }
+	issuePrefetchedMsg struct {
+		issue *jira.Issue
+	}
+)
 type batchPrefetchedMsg struct {
 	issues []jira.Issue
 }
-type autoFetchTickMsg struct{}
-type boardsLoadedMsg struct{ boards []jira.Board }
-type sprintsLoadedMsg struct{ sprints []jira.Sprint }
-type transitionsLoadedMsg struct {
-	issueKey    string
-	transitions []jira.Transition
-}
+type (
+	autoFetchTickMsg     struct{}
+	boardsLoadedMsg      struct{ boards []jira.Board }
+	sprintsLoadedMsg     struct{ sprints []jira.Sprint }
+	transitionsLoadedMsg struct {
+		issueKey    string
+		transitions []jira.Transition
+	}
+)
 
 type App struct {
 	cfg        *config.Config
@@ -271,7 +277,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	if len(cfg.Fields) > 0 {
 		var customIDs []string
 		for _, f := range cfg.Fields {
-			if isCustomField(f.ID) {
+			if isExtraField(f.ID) {
 				customIDs = append(customIDs, f.ID)
 			}
 		}
@@ -827,6 +833,12 @@ func (a *App) makeFieldSelectCallback(issueKey, fieldID string) onSelectFunc {
 
 func isCustomField(fieldID string) bool {
 	return strings.HasPrefix(fieldID, "customfield_")
+}
+
+// Read-only predicate. Edit paths stay on isCustomField
+// System fields have no CreateMeta options to fetch
+func isExtraField(fieldID string) bool {
+	return isCustomField(fieldID) || jira.IsSystemExtraField(fieldID)
 }
 
 func (a *App) fieldMultilineEnabled(fieldID string) bool {

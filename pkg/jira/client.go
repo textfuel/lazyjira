@@ -48,6 +48,16 @@ type ClientInterface interface {
 
 const sprintFieldAlias = "sprint"
 
+var systemExtraFields = map[string]bool{
+	"fixVersions": true,
+	"versions":    true,
+	"duedate":     true,
+	"resolution":  true,
+	"environment": true,
+}
+
+func IsSystemExtraField(id string) bool { return systemExtraFields[id] }
+
 type RequestLog struct {
 	Method  string
 	Path    string
@@ -857,7 +867,7 @@ func (f *issueFieldsResponse) UnmarshalJSON(data []byte) error {
 	}
 	f.RawExtra = make(map[string]json.RawMessage)
 	for k, v := range allFields {
-		if strings.HasPrefix(k, "customfield_") {
+		if strings.HasPrefix(k, "customfield_") || systemExtraFields[k] {
 			f.RawExtra[k] = v
 		}
 	}

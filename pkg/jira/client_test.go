@@ -1,6 +1,7 @@
 package jira
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -46,6 +47,46 @@ func TestNewClientWithOpts_HostNormalization(t *testing.T) {
 		c := NewClientWithOpts(ClientOpts{Host: tt.input, Token: "x", IsCloud: false})
 		if c.hostURL != tt.want {
 			t.Errorf("Host %q: got %q, want %q", tt.input, c.hostURL, tt.want)
+		}
+	}
+}
+
+func TestIssueFieldsResponse_UnmarshalJSON_StashesSystemExtras(t *testing.T) {
+	body := []byte(`{
+		"summary": "the headline",
+		"fixVersions": [{"name": "v1"}, {"name": "v2"}],
+		"resolution": {"name": "Done"},
+		"duedate": "2026-05-15",
+		"customfield_10042": "anything"
+	}`)
+
+	var f issueFieldsResponse
+	if err := json.Unmarshal(body, &f); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if f.Summary != "the headline" {
+		t.Errorf("Summary lost: %q", f.Summary)
+	}
+	if _, ok := f.RawExtra["summary"]; ok {
+		t.Error("summary leaked into RawExtra")
+	}
+	for _, key := range []string{"fixVersions", "resolution", "duedate", "customfield_10042"} {
+		if _, ok := f.RawExtra[key]; !ok {
+			t.Errorf("RawExtra missing %q", key)
+		}
+	}
+}
+
+func TestIsSystemExtraField(t *testing.T) {
+	for _, id := range []string{"fixVersions", "versions", "duedate", "resolution", "environment"} {
+		if !IsSystemExtraField(id) {
+			t.Errorf("expected %q to be a system extra field", id)
+		}
+	}
+	for _, id := range []string{"summary", "status", "customfield_10001", "fixversions", ""} {
+		if IsSystemExtraField(id) {
+			t.Errorf("expected %q NOT to be a system extra field", id)
 		}
 	}
 }

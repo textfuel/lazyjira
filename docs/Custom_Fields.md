@@ -39,6 +39,32 @@ These IDs are recognized as builtin and get special rendering (colors, styling).
 
 You can override the display name with `name`.
 
+## System fields
+
+These standard Jira fields can also be added to your `fields:` config. They render as read only values without special styling.
+
+| ID | Typical content |
+|----|-----------------|
+| `fixVersions` | List of fix versions |
+| `versions` | List of affected versions |
+| `duedate` | Due date |
+| `resolution` | Resolution |
+| `environment` | Environment |
+
+Example:
+
+```yaml
+fields:
+  - id: fixVersions
+    name: "Fix Version/s"
+  - id: duedate
+    name: "Due"
+```
+
+Multi value fields are joined with commas. A `fixVersions` with two entries renders as `Version 1, Version 2`.
+
+Only `id` and `name` apply here. Editing with the `e` key is not supported for these fields.
+
 ## Custom field properties
 
 | Property | Required | Description |

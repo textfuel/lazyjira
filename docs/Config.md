@@ -310,7 +310,11 @@ fields:
   - id: "customfield_10015"
     name: "Story Points"
     type: "text"
+  - id: fixVersions
+    name: "Fix Version/s"
 ```
+
+Standard Jira fields like `fixVersions`, `versions`, `duedate`, `resolution` and `environment` can also be listed here as read only entries.
 
 ## Git integration
 
