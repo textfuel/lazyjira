@@ -72,10 +72,10 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
-github.com/seflue/adf-converter v0.1.1-0.20260503210448-71e4328e5467 h1:+5hPxiT7Ac+vOuonO1T03QSuub35cHlg9KE6kMZOKzk=
-github.com/seflue/adf-converter v0.1.1-0.20260503210448-71e4328e5467/go.mod h1:UnfPpiaxZ/UfKa15yFYngbwUOauAeADk5DHHHktx3R4=
-github.com/seflue/adf-converter/display v0.0.0-20260503210448-71e4328e5467 h1:An97AP2lpE5gZyNqI0Z/dH2Ou/mDzvGnM+QG/umADQc=
-github.com/seflue/adf-converter/display v0.0.0-20260503210448-71e4328e5467/go.mod h1:AG53X2SHFLlgS++KeIAG5nL1sUhB5eTi9Ef2nzSC4F8=
+github.com/seflue/adf-converter v0.1.1-0.20260503234037-6dd87c076b36 h1:VHR1qgXxxHtzWnupaBS0tGH8cdRY2n3QCCYE2QZARuc=
+github.com/seflue/adf-converter v0.1.1-0.20260503234037-6dd87c076b36/go.mod h1:UnfPpiaxZ/UfKa15yFYngbwUOauAeADk5DHHHktx3R4=
+github.com/seflue/adf-converter/display v0.0.0-20260503234037-6dd87c076b36 h1:LvBlFc8oMCG2XHQ6ed+Wv2dnn3TlegFHrARPCush9QU=
+github.com/seflue/adf-converter/display v0.0.0-20260503234037-6dd87c076b36/go.mod h1:AG53X2SHFLlgS++KeIAG5nL1sUhB5eTi9Ef2nzSC4F8=
 github.com/seflue/glamour/v2 v2.1.0-fork.1 h1:894MJ0VLXfmyce+xIZM6VOI+J29jxv6kEGcZEa1rBck=
 github.com/seflue/glamour/v2 v2.1.0-fork.1/go.mod h1:G1qTApkQjLWyqFt7vsT499ryupB5mcfC1Y51ZgirnYY=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
