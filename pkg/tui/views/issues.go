@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/textfuel/lazyjira/pkg/config"
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/config"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 type IssuesLoadedMsg struct{ Issues []jira.Issue }
@@ -27,20 +27,22 @@ const statusOpen = "○"
 
 type IssuesList struct {
 	components.ListBase
-	issues      []jira.Issue
-	allIssues   []jira.Issue
-	filter      string
-	tabs        []config.IssueTabConfig
-	tab         int
-	tabCache    map[int][]jira.Issue
-	userEmail   string
-	keyColWidth int
-	fields      []string
-	theme        *theme.Theme
-	typeIcons    map[string]string
-	typeIconCols int
-	jqlQuery     string
-	jqlTabIdx   int
+	issues         []jira.Issue
+	allIssues      []jira.Issue
+	filter         string
+	tabs           []config.IssueTabConfig
+	tab            int
+	tabCache       map[int][]jira.Issue
+	userEmail      string
+	keyColWidth    int
+	fields         []string
+	theme          *theme.Theme
+	typeIcons      map[string]string
+	typeIconCols   int
+	statusIcons    map[string]string
+	statusIconCols int
+	jqlQuery       string
+	jqlTabIdx      int
 }
 
 func NewIssuesList() *IssuesList {
@@ -57,6 +59,16 @@ func (m *IssuesList) SetTypeIcons(icons map[string]string) {
 		}
 	}
 	m.typeIconCols = max
+}
+func (m *IssuesList) SetStatusIcons(icons map[string]string) {
+	m.statusIcons = icons
+	max := 0
+	for _, icon := range icons {
+		if w := lipgloss.Width(icon); w > max {
+			max = w
+		}
+	}
+	m.statusIconCols = max
 }
 func (m *IssuesList) SetTabs(tabs []config.IssueTabConfig) { m.tabs = tabs }
 func (m *IssuesList) SetUserEmail(email string)            { m.userEmail = email }
@@ -432,7 +444,8 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		fields = []string{"key", fieldStatus, "summary"}
 	}
 
-	icon := typeIcon(m.typeIcons, issue.IssueType)
+	currTypeIcon := typeIcon(m.typeIcons, issue.IssueType)
+	currStatusIcon := statusIcon(m.statusIcons, issue.Status)
 
 	fixedWidth := 1
 	if len(fields) > 1 {
@@ -443,13 +456,13 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		case "key":
 			fixedWidth += m.keyColWidth
 		case fieldStatus:
-			fixedWidth += 1
+			fixedWidth += max(1, m.statusIconCols)
 		case "priority":
 			fixedWidth += 8
 		case "assignee":
 			fixedWidth += 12
 		case "type":
-			if icon != "" {
+			if currTypeIcon != "" {
 				fixedWidth += m.typeIconCols
 			} else {
 				fixedWidth += 10
@@ -469,10 +482,14 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 		case "summary":
 			parts = append(parts, padRight(components.TruncateEnd(issue.Summary, summaryWidth), summaryWidth))
 		case fieldStatus:
-			if selected {
-				parts = append(parts, statusEmojiPlain(issue.Status))
+			if currStatusIcon != "" {
+				parts = append(parts, padRight(currStatusIcon, m.statusIconCols))
 			} else {
-				parts = append(parts, statusEmoji(issue.Status))
+                if selected {
+                    parts = append(parts, padRight(statusEmojiPlain(issue.Status), m.statusIconCols))
+                } else {
+                    parts = append(parts, padRight(statusEmoji(issue.Status), m.statusIconCols))
+                }
 			}
 		case "priority":
 			name := ""
@@ -487,8 +504,8 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 			}
 			parts = append(parts, padRight(components.TruncateEnd(name, 12), 12))
 		case "type":
-			if icon != "" {
-				parts = append(parts, padRight(icon, m.typeIconCols))
+			if currTypeIcon != "" {
+				parts = append(parts, padRight(currTypeIcon, m.typeIconCols))
 			} else {
 				name := ""
 				if issue.IssueType != nil {
@@ -544,6 +561,18 @@ func typeIcon(icons map[string]string, issueType *jira.IssueType) string {
 		return ""
 	}
 	icon, ok := icons[issueType.Name]
+	if !ok || icon == "" {
+		return ""
+	}
+	return icon
+}
+
+// statusIcon returns the configured icon for the given status, or empty string if none.
+func statusIcon(icons map[string]string, status *jira.Status) string {
+	if status == nil {
+		return ""
+	}
+	icon, ok := icons[status.Name]
 	if !ok || icon == "" {
 		return ""
 	}

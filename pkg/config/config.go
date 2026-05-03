@@ -177,7 +177,7 @@ func (p *ProjectConfig) UnmarshalYAML(node *yaml.Node) error {
 }
 
 type GUIConfig struct {
-	Theme                string            `yaml:"theme"`    // TODO not yet wired up
+	Theme                string            `yaml:"theme"`
 	Language             string            `yaml:"language"` // TODO not yet wired up
 	SidePanelWidth       int               `yaml:"sidePanelWidth"`
 	CollapsedPanelHeight int               `yaml:"collapsedPanelHeight"`
@@ -189,6 +189,7 @@ type GUIConfig struct {
 	PrefillFromTab       *bool             `yaml:"prefillFromTab"`
 	SelectCreatedIssue   *bool             `yaml:"selectCreatedIssue"`
 	TypeIcons            map[string]string `yaml:"typeIcons"`
+	StatusIcons          map[string]string `yaml:"statusIcons"`
 }
 
 // ShouldPrefillFromTab returns true when the creation form should prefill from tab JQL

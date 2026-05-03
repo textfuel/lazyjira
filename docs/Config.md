@@ -51,6 +51,15 @@ gui:
         - status
         - summary
     selectCreatedIssue: true
+    typeIcons:
+        Bug: "🐞"
+        Story: "📖"
+        Sub-task: "📎"
+    statusIcons:
+        To do: "📋"
+        On hold: "⏸️"
+        Future: "🔜"
+
 keybinding:
     universal:
         quit: q
@@ -170,11 +179,38 @@ gui:
 
 `collapsedPanelHeight` sets the height of non-focused left panels in lines (default 5, minimum 3).
 
+`theme` selects the color palette. Supported values: `default` (ANSI 16, original look), `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`. Omit or set to `default` to keep the original colors. Catppuccin themes use hex colors and require a terminal with truecolor support.
+
+```yaml
+gui:
+  theme: catppuccin-mocha
+```
+
 `selectCreatedIssue` controls whether the app auto-selects a newly created issue in the list. If the issue does not match the current tab, the app switches to the All tab. Enabled by default.
 
 ```yaml
 gui:
   selectCreatedIssue: true
+```
+
+`typeIcons` will have issue `type` names replaced by the emojis you set. Mappings are case-sensitive, and support not only emojis but also plaintext. Enable the field `type` under `issueListFields` to profit from this option.
+
+```
+gui:
+    typeIcons:
+        Bug: "🐞"
+        Story: "📖"
+        Sub-task: "📎"
+```
+
+`statusIcons` will have issue `status` indicators replaced by the emojis you set. Default indicators may be shared for similar states (e.g. To do / Future), so one may get more granularity from this option. Mappings are case-sensitive, and support not only emojis but also plaintext. Enable the field `status` under `issueListFields` to profit from this option.
+
+```
+gui:
+    statusIcons:
+        To do: "📋"
+        On hold: "⏸️"
+        Future: "🔜"
 ```
 
 ### Issue list fields

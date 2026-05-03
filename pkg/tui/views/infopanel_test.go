@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 )
 
 // navDownResolver is a minimal NavResolver that maps "j" to NavDown.

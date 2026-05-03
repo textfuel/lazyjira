@@ -14,8 +14,8 @@ type fakeOverlay struct {
 	w, h        int
 }
 
-func (f *fakeOverlay) IsVisible() bool    { return f.visible }
-func (f *fakeOverlay) SetSize(w, h int)   { f.w = w; f.h = h }
+func (f *fakeOverlay) IsVisible() bool  { return f.visible }
+func (f *fakeOverlay) SetSize(w, h int) { f.w = w; f.h = h }
 func (f *fakeOverlay) Render(bg string, w, h int) string {
 	f.rendered = true
 	return "[overlay]"

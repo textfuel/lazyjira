@@ -8,7 +8,7 @@ const (
 type NavAction int
 
 const (
-	NavNone     NavAction = iota
+	NavNone NavAction = iota
 	NavDown
 	NavUp
 	NavTop
@@ -20,17 +20,17 @@ const (
 type NavResolver func(key string) NavAction
 
 type ListBase struct {
-	Cursor      int
-	Offset      int
-	Width       int
-	Height      int
-	Focused     bool
-	ResolveNav  NavResolver
-	itemCount   int
-	dblClick    DblClickDetector
+	Cursor     int
+	Offset     int
+	Width      int
+	Height     int
+	Focused    bool
+	ResolveNav NavResolver
+	itemCount  int
+	dblClick   DblClickDetector
 }
 
-func (l *ListBase) SetSize(w, h int)       { l.Width = w; l.Height = h }
+func (l *ListBase) SetSize(w, h int)        { l.Width = w; l.Height = h }
 func (l *ListBase) SetFocused(focused bool) { l.Focused = focused }
 func (l *ListBase) SetItemCount(n int) {
 	l.itemCount = n

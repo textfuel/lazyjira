@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // TextInput is a readline-style text input component
@@ -166,7 +168,7 @@ func (t *TextInput) Update(msg tea.Msg) (TextInput, bool) {
 // View renders the text with a visible cursor block at the cursor position
 func (t *TextInput) View() string {
 	cursorStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("6"))
+		Foreground(theme.ColorCyan)
 
 	cursorBlock := cursorStyle.Render("█")
 

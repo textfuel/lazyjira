@@ -11,11 +11,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/config"
-	"github.com/textfuel/lazyjira/pkg/git"
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/views"
+	"github.com/textfuel/lazyjira/v2/pkg/config"
+	"github.com/textfuel/lazyjira/v2/pkg/git"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
 var Version = "dev"
@@ -23,7 +24,7 @@ var Version = "dev"
 type focusPanel int
 
 const (
-	focusStatus   focusPanel = iota
+	focusStatus focusPanel = iota
 	focusIssues
 	focusInfo
 	focusProjects
@@ -50,7 +51,7 @@ const (
 type editKind int
 
 const (
-	editNone       editKind = iota
+	editNone editKind = iota
 	editDesc
 	editCommentNew
 	editCommentMod
@@ -81,7 +82,6 @@ type createCtx struct {
 
 type onSelectFunc func(components.ModalItem) tea.Cmd
 type onChecklistFunc func([]components.ModalItem) tea.Cmd
-
 
 type issuesLoadedMsg struct {
 	issues []jira.Issue
@@ -132,9 +132,9 @@ type App struct {
 	detailView  *views.DetailView
 	logPanel    *views.LogPanel
 
-	keymap    Keymap
-	helpBar   components.HelpBar
-	searchBar components.SearchBar
+	keymap     Keymap
+	helpBar    components.HelpBar
+	searchBar  components.SearchBar
 	modal      components.Modal
 	jqlModal   components.JQLModal
 	diffView   components.DiffView
@@ -150,21 +150,21 @@ type App struct {
 	onSelect    onSelectFunc
 	onChecklist onChecklistFunc
 
-	side        focusSide
-	leftFocus   focusPanel
-	projectKey  string
-	projectID   string
-	boardID     int
-	boards      []jira.Board
-	showHelp      bool
-	helpCursor    int
-	helpSearching bool
-	helpSearch    components.TextInput
-	helpFilter    string
-	logFlag     *bool
-	isCloud     bool
-	demoMode    bool
-	currentUser *jira.User
+	side            focusSide
+	leftFocus       focusPanel
+	projectKey      string
+	projectID       string
+	boardID         int
+	boards          []jira.Board
+	showHelp        bool
+	helpCursor      int
+	helpSearching   bool
+	helpSearch      components.TextInput
+	helpFilter      string
+	logFlag         *bool
+	isCloud         bool
+	demoMode        bool
+	currentUser     *jira.User
 	usersCache      map[string][]jira.User
 	issueCache      map[string]*jira.Issue
 	createMetaCache map[string][]jira.CreateMetaField
@@ -177,7 +177,7 @@ type App struct {
 	// is how we simulate "cancel the previous intent", which bubbletea
 	// does not provide natively for tea.Cmd.
 	previewEpoch int
-	createCtx        createCtx
+	createCtx    createCtx
 
 	gitRepoPath    string
 	gitBranch      string
@@ -229,6 +229,9 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	if len(cfg.GUI.TypeIcons) > 0 {
 		issuesList.SetTypeIcons(cfg.GUI.TypeIcons)
 	}
+	if len(cfg.GUI.StatusIcons) > 0 {
+		issuesList.SetStatusIcons(cfg.GUI.StatusIcons)
+	}
 	issuesList.SetTabs(cfg.IssueTabs)
 	issuesList.SetFocused(true)
 	issuesList.SetUserEmail(cfg.Jira.Email)
@@ -279,29 +282,29 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	}
 
 	app := &App{
-		cfg:        cfg,
-		client:     client,
-		keymap:     KeymapFromConfig(cfg.Keybinding),
-		splashInfo: splash,
-		statusPanel: statusPanel,
-		issuesList:  issuesList,
-		infoPanel:   infoPanel,
-		projectList: projectList,
-		detailView:  detailView,
-		logPanel:    logPanel,
-		helpBar:     helpBar,
-		searchBar:   searchBar,
-		modal:       modal,
-		jqlModal:    jqlModal,
-		diffView:    diffView,
-		inputModal:  inputModal,
-		createForm:  createForm,
-		side:        sideLeft,
-		leftFocus:   focusIssues,
-		projectKey:  projectKey,
-		isCloud:     cfg.Jira.IsCloud(),
-		demoMode:    authMethod == AuthDemo,
-		logFlag:     logFlag,
+		cfg:             cfg,
+		client:          client,
+		keymap:          KeymapFromConfig(cfg.Keybinding),
+		splashInfo:      splash,
+		statusPanel:     statusPanel,
+		issuesList:      issuesList,
+		infoPanel:       infoPanel,
+		projectList:     projectList,
+		detailView:      detailView,
+		logPanel:        logPanel,
+		helpBar:         helpBar,
+		searchBar:       searchBar,
+		modal:           modal,
+		jqlModal:        jqlModal,
+		diffView:        diffView,
+		inputModal:      inputModal,
+		createForm:      createForm,
+		side:            sideLeft,
+		leftFocus:       focusIssues,
+		projectKey:      projectKey,
+		isCloud:         cfg.Jira.IsCloud(),
+		demoMode:        authMethod == AuthDemo,
+		logFlag:         logFlag,
 		usersCache:      make(map[string][]jira.User),
 		issueCache:      make(map[string]*jira.Issue),
 		createMetaCache: make(map[string][]jira.CreateMetaField),
@@ -800,7 +803,6 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 	return nil
 }
 
-
 func (a *App) makePersonSelectCallback(issueKey, fieldID string) onSelectFunc {
 	return func(item components.ModalItem) tea.Cmd {
 		if item.ID == "" {
@@ -976,9 +978,9 @@ func (a *App) renderHelpOverlay(base string) string {
 
 	popupW := min(maxKey+40, a.width-4)
 
-	keyNormal := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
-	keySel := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true).Background(lipgloss.Color("4"))
-	descSel := lipgloss.NewStyle().Background(lipgloss.Color("4"))
+	keyNormal := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
+	keySel := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true).Background(theme.ColorHighlight)
+	descSel := lipgloss.NewStyle().Background(theme.ColorHighlight)
 
 	lines := make([]string, 0, len(bindings)+2)
 	lines = append(lines, "")
@@ -1068,4 +1070,3 @@ func (a *App) updateFocusState() {
 	a.helpBar.SetItems(a.helpBarItems())
 	a.layoutPanels()
 }
-

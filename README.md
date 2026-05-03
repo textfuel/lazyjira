@@ -32,7 +32,8 @@ make build-demo
 - **4-panel layout** - issues, projects, detail, status - with vim-style navigation
 - **Inline editing** - transitions, priority, assignee, labels, comments, description (`$EDITOR`)
 - **Configurable** - custom keybindings (including navigation keys), JQL tabs, issue columns, custom fields
-- **Adaptive** - side-by-side or stacked layout, mouse support, ANSI 16 colors
+- **Themes** - default ANSI palette plus all four Catppuccin flavors (Latte, Frappé, Macchiato, Mocha)
+- **Adaptive** - side-by-side or stacked layout, mouse support
 
 ## Installation
 
@@ -108,7 +109,7 @@ Use [Windows Terminal](https://aka.ms/terminal) for best rendering.
 <summary><b>Go / From source</b></summary>
 
 ```
-go install github.com/textfuel/lazyjira/cmd/lazyjira@latest
+go install github.com/textfuel/lazyjira/v2/cmd/lazyjira@latest
 ```
 
 Or build manually:
@@ -140,6 +141,27 @@ Generate a PAT in Jira: Profile > Personal Access Tokens > Create token.
 For environments that require client certificates (mTLS), see [Configuration](docs/Config.md#tls).
 
 Credentials saved to `~/.config/lazyjira/auth.json`.
+
+## Themes
+
+lazyjira ships with the default ANSI 16 palette plus all four [Catppuccin](https://github.com/catppuccin/catppuccin) flavors. Set `gui.theme` in `~/.config/lazyjira/config.yml`:
+
+```yaml
+gui:
+  theme: catppuccin-mocha
+```
+
+Supported values:
+
+| Theme                  | Description                          |
+|------------------------|--------------------------------------|
+| `default` *(or unset)* | Standard ANSI 16 palette (original)  |
+| `catppuccin-latte`     | Light flavor                         |
+| `catppuccin-frappe`    | Dark flavor (low contrast)           |
+| `catppuccin-macchiato` | Dark flavor (medium contrast)        |
+| `catppuccin-mocha`     | Dark flavor (high contrast)          |
+
+The theme takes effect on next launch.
 
 ## Usage
 
@@ -175,7 +197,8 @@ Press `?` inside the app for all keybindings.
 - [ ] CLI mode (non-interactive commands for scripting and automation)
 - [ ] Robust issue type changer (handle subtask/parent unlinking, field validation)
 - [ ] Clickable hyperlinks in terminal (OSC 8) for URLs in descriptions and comments
-- [ ] Theming, borders, date format, language and other GUI options
+- [x] Catppuccin Theming
+- [ ] Custom colors theming, date format, languages
 - [ ] Mouse support toggle
 - [ ] Show icons toggle
 - [ ] Cache with configurable TTL

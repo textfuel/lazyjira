@@ -3,8 +3,8 @@ package tui
 import (
 	"slices"
 
-	"github.com/textfuel/lazyjira/pkg/config"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/config"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 )
 
 // Action represents a user-triggerable action
@@ -12,36 +12,36 @@ type Action string
 
 // Actions each can be remapped to different keys via config
 const (
-	ActQuit        Action = "quit"
-	ActHelp        Action = "help"
-	ActSearch      Action = "search"
-	ActSwitchPanel Action = "switchPanel"
-	ActFocusRight  Action = "focusRight"
-	ActFocusLeft   Action = "focusLeft"
-	ActSelect      Action = "select"      // primary: mark active + open
-	ActOpen        Action = "open"        // secondary: open/preview without marking
-	ActPrevTab     Action = "prevTab"
-	ActNextTab     Action = "nextTab"
-	ActFocusDetail Action = "focusDetail"
-	ActFocusStatus Action = "focusStatus"
-	ActFocusIssues Action = "focusIssues"
-	ActFocusInfo   Action = "focusInfo"
-	ActFocusProj   Action = "focusProjects"
-	ActCopyURL     Action = "copyURL"
-	ActBrowser     Action = "browser"
-	ActURLPicker   Action = "urlPicker"
-	ActTransition  Action = "transition"
-	ActRefresh     Action = "refresh"
-	ActRefreshAll  Action = "refreshAll"
-	ActInfoTab     Action = "infoTab" // legacy: now focuses Info panel
-	ActEdit        Action = "edit"
-	ActComments    Action = "comments"
-	ActNew Action = "new"
-	ActPriority Action = "editPriority"
-	ActAssignee Action = "editAssignee"
-	ActJQLSearch    Action = "jqlSearch"
-	ActCloseJQLTab  Action = "closeJQLTab"
-	ActCreateBranch Action = "createBranch"
+	ActQuit           Action = "quit"
+	ActHelp           Action = "help"
+	ActSearch         Action = "search"
+	ActSwitchPanel    Action = "switchPanel"
+	ActFocusRight     Action = "focusRight"
+	ActFocusLeft      Action = "focusLeft"
+	ActSelect         Action = "select" // primary: mark active + open
+	ActOpen           Action = "open"   // secondary: open/preview without marking
+	ActPrevTab        Action = "prevTab"
+	ActNextTab        Action = "nextTab"
+	ActFocusDetail    Action = "focusDetail"
+	ActFocusStatus    Action = "focusStatus"
+	ActFocusIssues    Action = "focusIssues"
+	ActFocusInfo      Action = "focusInfo"
+	ActFocusProj      Action = "focusProjects"
+	ActCopyURL        Action = "copyURL"
+	ActBrowser        Action = "browser"
+	ActURLPicker      Action = "urlPicker"
+	ActTransition     Action = "transition"
+	ActRefresh        Action = "refresh"
+	ActRefreshAll     Action = "refreshAll"
+	ActInfoTab        Action = "infoTab" // legacy: now focuses Info panel
+	ActEdit           Action = "edit"
+	ActComments       Action = "comments"
+	ActNew            Action = "new"
+	ActPriority       Action = "editPriority"
+	ActAssignee       Action = "editAssignee"
+	ActJQLSearch      Action = "jqlSearch"
+	ActCloseJQLTab    Action = "closeJQLTab"
+	ActCreateBranch   Action = "createBranch"
 	ActCreateIssue    Action = "createIssue"
 	ActDuplicateIssue Action = "duplicateIssue"
 
@@ -64,36 +64,36 @@ type Keymap map[Action][]string
 // DefaultKeymap returns the default key bindings
 func DefaultKeymap() Keymap {
 	return Keymap{
-		ActQuit:        {"q", "ctrl+c"},
-		ActHelp:        {"?"},
-		ActSearch:      {"/"},
-		ActSwitchPanel: {"tab"},
-		ActFocusRight:  {"l", "right"},
-		ActFocusLeft:   {"h", "left", "esc"},
-		ActSelect:      {" "},
-		ActOpen:        {"enter"},
-		ActPrevTab:     {"["},
-		ActNextTab:     {"]"},
-		ActFocusDetail: {"0"},
-		ActFocusStatus: {"1"},
-		ActFocusIssues: {"2"},
-		ActFocusInfo:   {"3"},
-		ActFocusProj:   {"4"},
-		ActCopyURL:     {"y"},
-		ActBrowser:     {"o"},
-		ActURLPicker:   {"u"},
-		ActTransition:  {"t"},
-		ActRefresh:     {"r"},
-		ActRefreshAll:  {"R"},
-		ActInfoTab:         {"i"},
-		ActEdit:        {"e"},
-		ActComments:    {"c"},
-		ActNew:  {"n"},
-		ActPriority: {"p"},
-		ActAssignee: {"a"},
-		ActJQLSearch:    {"s"},
-		ActCloseJQLTab:  {"x"},
-		ActCreateBranch:    {"b"},
+		ActQuit:           {"q", "ctrl+c"},
+		ActHelp:           {"?"},
+		ActSearch:         {"/"},
+		ActSwitchPanel:    {"tab"},
+		ActFocusRight:     {"l", "right"},
+		ActFocusLeft:      {"h", "left", "esc"},
+		ActSelect:         {" "},
+		ActOpen:           {"enter"},
+		ActPrevTab:        {"["},
+		ActNextTab:        {"]"},
+		ActFocusDetail:    {"0"},
+		ActFocusStatus:    {"1"},
+		ActFocusIssues:    {"2"},
+		ActFocusInfo:      {"3"},
+		ActFocusProj:      {"4"},
+		ActCopyURL:        {"y"},
+		ActBrowser:        {"o"},
+		ActURLPicker:      {"u"},
+		ActTransition:     {"t"},
+		ActRefresh:        {"r"},
+		ActRefreshAll:     {"R"},
+		ActInfoTab:        {"i"},
+		ActEdit:           {"e"},
+		ActComments:       {"c"},
+		ActNew:            {"n"},
+		ActPriority:       {"p"},
+		ActAssignee:       {"a"},
+		ActJQLSearch:      {"s"},
+		ActCloseJQLTab:    {"x"},
+		ActCreateBranch:   {"b"},
 		ActDuplicateIssue: {"ctrl+n"},
 
 		ActNavDown:     {"j", "down", "ctrl+j"},

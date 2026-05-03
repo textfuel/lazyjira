@@ -3,6 +3,8 @@ package components
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // SearchBar is a bottom search input that filters the current panel
@@ -15,11 +17,11 @@ func NewSearchBar() SearchBar {
 	return SearchBar{}
 }
 
-func (s *SearchBar) SetWidth(w int)   { s.input.SetWidth(w) }
-func (s *SearchBar) IsActive() bool   { return s.active }
-func (s *SearchBar) Query() string    { return s.input.Value() }
-func (s *SearchBar) Activate()        { s.active = true; s.input.SetValue("") }
-func (s *SearchBar) Deactivate()      { s.active = false; s.input.SetValue("") }
+func (s *SearchBar) SetWidth(w int) { s.input.SetWidth(w) }
+func (s *SearchBar) IsActive() bool { return s.active }
+func (s *SearchBar) Query() string  { return s.input.Value() }
+func (s *SearchBar) Activate()      { s.active = true; s.input.SetValue("") }
+func (s *SearchBar) Deactivate()    { s.active = false; s.input.SetValue("") }
 
 // SearchChangedMsg is sent when the search query changes
 type SearchChangedMsg struct{ Query string }
@@ -67,7 +69,7 @@ func (s *SearchBar) View() string {
 // RenderFilterBarInput renders filter bar using TextInput (with cursor positioning)
 func RenderFilterBarInput(input *TextInput) string {
 	prefixStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("6")).
+		Foreground(theme.ColorCyan).
 		Bold(true)
 
 	return prefixStyle.Render(" /") + input.View()

@@ -6,10 +6,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/textfuel/lazyjira/pkg/git"
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/views"
+	"github.com/textfuel/lazyjira/v2/pkg/git"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
 // handleModalSelected dispatches modal selection via the onSelect callback
@@ -123,10 +123,10 @@ func (a *App) handleInputConfirmed(msg components.InputConfirmedMsg) (tea.Model,
 		}
 	case editBranch:
 		if msg.Text != "" {
-			switch {
-			case git.BranchExists(a.gitRepoPath, msg.Text):
+			switch git.ResolveBranchAction(a.gitRepoPath, msg.Text) {
+			case git.ActionCheckout:
 				return a, gitCheckoutBranch(a.gitRepoPath, msg.Text)
-			case strings.Contains(msg.Text, "/"):
+			case git.ActionCheckoutTracking:
 				return a, gitCheckoutTracking(a.gitRepoPath, msg.Text)
 			default:
 				return a, gitCreateBranch(a.gitRepoPath, msg.Text)

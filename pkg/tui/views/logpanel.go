@@ -9,8 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // LogEntry is a single log line

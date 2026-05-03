@@ -22,12 +22,12 @@ const defaultTemplate = "{{.Key}}-{{.Summary}}"
 const maxBranchLen = 60
 
 var (
-	issueKeyRe    = regexp.MustCompile(`(?i)([A-Z][A-Z0-9]+-\d+)`)
-	skipBranches  = map[string]bool{"main": true, "master": true, "develop": true, "dev": true}
-	invalidChars  = regexp.MustCompile(`[~^:?*\[\]\\` + "\x00-\x1f\x7f" + `]`)
-	multiHyphens  = regexp.MustCompile(`-{2,}`)
-	multiDots     = regexp.MustCompile(`\.{2,}`)
-	atBrace       = regexp.MustCompile(`@\{`)
+	issueKeyRe   = regexp.MustCompile(`(?i)([A-Z][A-Z0-9]+-\d+)`)
+	skipBranches = map[string]bool{"main": true, "master": true, "develop": true, "dev": true}
+	invalidChars = regexp.MustCompile(`[~^:?*\[\]\\` + "\x00-\x1f\x7f" + `]`)
+	multiHyphens = regexp.MustCompile(`-{2,}`)
+	multiDots    = regexp.MustCompile(`\.{2,}`)
+	atBrace      = regexp.MustCompile(`@\{`)
 )
 
 // GenerateBranchName creates a branch name from issue data using the given template.

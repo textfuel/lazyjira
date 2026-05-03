@@ -10,9 +10,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 type DetailTab int
@@ -27,7 +27,7 @@ const (
 type MainMode int
 
 const (
-	ModeIssue   MainMode = iota
+	ModeIssue MainMode = iota
 	ModeSplash
 	ModeProject
 )
@@ -42,10 +42,10 @@ type SplashInfo struct {
 }
 
 const (
-	maxBlockLines   = 8 // max visible lines per entry before collapsing
-	unknownLabel    = "Unknown"
-	noneLabel       = "none"
-	noneLabelUpper  = "None"
+	maxBlockLines  = 8 // max visible lines per entry before collapsing
+	unknownLabel   = "Unknown"
+	noneLabel      = "none"
+	noneLabelUpper = "None"
 )
 
 // ExpandBlockMsg is sent when user wants to expand a collapsed block
@@ -60,21 +60,21 @@ type NavigateIssueMsg struct {
 }
 
 type DetailView struct {
-	issue        *jira.Issue
-	project      *jira.Project
-	splash       SplashInfo
-	mode         MainMode
-	activeTab    DetailTab
-	scrollY      int
-	listCursor   int
-	blocks       [][]string
-	blockKeys    []string
-	dblClick     components.DblClickDetector
-	width        int
-	height       int
-	focused      bool
-	theme        *theme.Theme
-	ResolveNav   components.NavResolver
+	issue      *jira.Issue
+	project    *jira.Project
+	splash     SplashInfo
+	mode       MainMode
+	activeTab  DetailTab
+	scrollY    int
+	listCursor int
+	blocks     [][]string
+	blockKeys  []string
+	dblClick   components.DblClickDetector
+	width      int
+	height     int
+	focused    bool
+	theme      *theme.Theme
+	ResolveNav components.NavResolver
 }
 
 func NewDetailView() *DetailView {
@@ -130,7 +130,7 @@ func (d *DetailView) SetSplash(info SplashInfo) {
 	d.scrollY = 0
 }
 
-func (d *DetailView) SetSize(w, h int)       { d.width = w; d.height = h }
+func (d *DetailView) SetSize(w, h int) { d.width = w; d.height = h }
 func (d *DetailView) SetFocused(focused bool) {
 	if d.focused && !focused {
 		// Actually losing focus — reset list cursor.
@@ -157,8 +157,7 @@ func (d *DetailView) SelectedComment() *jira.Comment {
 	return nil
 }
 
-
-func (d *DetailView) Init() tea.Cmd           { return nil }
+func (d *DetailView) Init() tea.Cmd { return nil }
 
 func (d *DetailView) NextTab() {
 	vt := d.visibleTabs()
@@ -661,7 +660,9 @@ func (d *DetailView) renderDescription(width int) []string {
 	return lines
 }
 
-var urlStyle = lipgloss.NewStyle().Foreground(theme.ColorCyan).Underline(true)
+func urlStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(theme.ColorCyan).Underline(true)
+}
 
 // colorURLs highlights http/https URLs in a single line with underlined cyan.
 func colorURLs(s string) string {
@@ -678,7 +679,7 @@ func colorURLs(s string) string {
 				end = len(rest)
 			}
 			rawURL := rest[:end]
-			colored := urlStyle.Render(rawURL)
+			colored := urlStyle().Render(rawURL)
 			result = result[:start] + colored + rest[end:]
 		}
 	}
@@ -695,11 +696,11 @@ func colorURLsWrapped(lines []string) []string {
 			// Previous line ended mid-URL — highlight continuation.
 			end := strings.IndexAny(line, " \t")
 			if end == -1 {
-				result[i] = urlStyle.Render(line)
+				result[i] = urlStyle().Render(line)
 				urlCont = true
 				continue
 			}
-			result[i] = urlStyle.Render(line[:end]) + colorURLs(line[end:])
+			result[i] = urlStyle().Render(line[:end]) + colorURLs(line[end:])
 		} else {
 			result[i] = colorURLs(line)
 		}
@@ -874,8 +875,8 @@ func isMultiSelectField(field string) bool {
 }
 
 func renderMultiSelectDiff(from, to string) []string {
-	red := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	red := lipgloss.NewStyle().Foreground(theme.ColorRed)
+	green := lipgloss.NewStyle().Foreground(theme.ColorGreen)
 
 	parseSet := func(s string) map[string]struct{} {
 		m := make(map[string]struct{})
@@ -1286,11 +1287,11 @@ func wrapText(text string, width int) []string {
 // wikiToPlain converts Jira wiki markup to plain text with basic formatting
 // handles *bold*, [text|url], {code}...{code} blocks, and h1 through h6 headings
 var (
-	wikiLinkRe     = regexp.MustCompile(`\[([^|\]]+)\|([^\]]+)\]`)
+	wikiLinkRe      = regexp.MustCompile(`\[([^|\]]+)\|([^\]]+)\]`)
 	wikiPlainLinkRe = regexp.MustCompile(`\[([^\]|]+)\]`)
-	wikiBoldRe     = regexp.MustCompile(`\*([^\n*]+)\*`)
-	wikiItalicRe   = regexp.MustCompile(`_([^\n_]+)_`)
-	wikiHeadingRe  = regexp.MustCompile(`(?m)^h[1-6]\.\s*`)
+	wikiBoldRe      = regexp.MustCompile(`\*([^\n*]+)\*`)
+	wikiItalicRe    = regexp.MustCompile(`_([^\n_]+)_`)
+	wikiHeadingRe   = regexp.MustCompile(`(?m)^h[1-6]\.\s*`)
 )
 
 // wikiToPlain converts Jira wiki markup to readable plain text.

@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // ModalItem is one option in the modal
@@ -35,20 +35,20 @@ type ChecklistConfirmedMsg struct {
 
 // Modal is a centered popup list for picking an option
 type Modal struct {
-	title     string
-	items     []ModalItem
-	allItems  []ModalItem
-	cursor    int
-	visible   bool
-	readOnly  bool
-	checklist bool
-	selected  map[string]bool
-	offset    int
-	width     int
-	height    int
+	title       string
+	items       []ModalItem
+	allItems    []ModalItem
+	cursor      int
+	visible     bool
+	readOnly    bool
+	checklist   bool
+	selected    map[string]bool
+	offset      int
+	width       int
+	height      int
 	filterInput TextInput
 	searching   bool
-	isError   bool
+	isError     bool
 }
 
 func NewModal() Modal {
@@ -226,10 +226,10 @@ func (m *Modal) selectionContentW() int {
 	return min(contentW, maxW)
 }
 
-func (m *Modal) Hide()           { m.visible = false }
-func (m *Modal) IsVisible() bool    { return m.visible }
-func (m *Modal) IsSearching() bool  { return m.searching }
-func (m *Modal) IsChecklist() bool  { return m.checklist }
+func (m *Modal) Hide()             { m.visible = false }
+func (m *Modal) IsVisible() bool   { return m.visible }
+func (m *Modal) IsSearching() bool { return m.searching }
+func (m *Modal) IsChecklist() bool { return m.checklist }
 
 // SearchView renders the modal search bar for external use
 func (m *Modal) SearchView(_ int) string {
@@ -464,7 +464,7 @@ func (m *Modal) viewReadOnly() string {
 }
 
 func (m *Modal) viewSelectable() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true)
+	titleStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
 
 	contentW := m.selectionContentW()
 	if m.checklist {
@@ -508,7 +508,7 @@ func (m *Modal) viewSelectable() string {
 	}
 	lines = visible
 
-	borderStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	borderStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen)
 	bv := borderStyle.Render("│")
 
 	topLine := borderStyle.Render("╭" + strings.Repeat("─", contentW) + "╮")
@@ -550,9 +550,9 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 	lines = append(lines, " "+titleStyle.Render(m.title))
 	lines = append(lines, "")
 
-	checkGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	checkGreen := lipgloss.NewStyle().Foreground(theme.ColorGreen)
 	activeMarker := checkGreen.Render("*")
-	sepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	sepStyle := lipgloss.NewStyle().Foreground(theme.ColorGray)
 	for i, item := range m.items {
 		if item.Separator {
 			label := TruncateEnd(item.Label, contentW-4)
@@ -569,7 +569,7 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 			style := lipgloss.NewStyle().Width(contentW)
 			switch {
 			case isCursor:
-				style = style.Bold(true).Background(lipgloss.Color("4"))
+				style = style.Bold(true).Background(theme.ColorHighlight)
 				if sel {
 					lines = append(lines, style.Render("✓ "+text))
 				} else {
@@ -589,12 +589,12 @@ func (m *Modal) renderItems(titleStyle lipgloss.Style, contentW int) []string {
 			style := lipgloss.NewStyle().Width(contentW)
 			switch {
 			case isCursor:
-				style = style.Bold(true).Background(lipgloss.Color("4"))
+				style = style.Bold(true).Background(theme.ColorHighlight)
 				lines = append(lines, style.Render(marker+text))
 			case item.Active:
 				lines = append(lines, style.Render(activeMarker+text))
 			case item.Internal:
-				lines = append(lines, style.Render(lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(" "+text)))
+				lines = append(lines, style.Render(lipgloss.NewStyle().Foreground(theme.ColorGreen).Render(" "+text)))
 			default:
 				lines = append(lines, style.Render(" "+text))
 			}
@@ -657,7 +657,7 @@ func (m *Modal) HintView() string {
 	hintContent := lipgloss.NewStyle().Width(contentW).Render(" " + hint)
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("7")).
+		BorderForeground(theme.ColorWhite).
 		Width(contentW).
 		Height(hintH).
 		Render(hintContent)

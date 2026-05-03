@@ -7,10 +7,10 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/config"
-	"github.com/textfuel/lazyjira/pkg/jira"
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/config"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 const fieldStatus = "status"
@@ -252,7 +252,9 @@ func renderInfoRowPairs(issue *jira.Issue, cfgFields []config.FieldConfig, th *t
 	return
 }
 
-var noneStyle = lipgloss.NewStyle().Foreground(theme.ColorGray)
+func noneStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(theme.ColorGray)
+}
 
 func renderFieldRows(fields []InfoField, issue *jira.Issue, th *theme.Theme, maxWidth int) []string {
 	if len(fields) == 0 {
@@ -283,7 +285,7 @@ func renderFieldRows(fields []InfoField, issue *jira.Issue, th *theme.Theme, max
 		isNone := val == noneLabelUpper || val == unknownLabel
 
 		if styled && isNone {
-			val = noneStyle.Render(val)
+			val = noneStyle().Render(val)
 		} else if styled {
 			switch f.FieldID {
 			case fieldStatus:
@@ -393,4 +395,3 @@ func formatCustomFieldValue(v any) string {
 		return fmt.Sprintf("%v", val)
 	}
 }
-

@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/textfuel/lazyjira/pkg/tui/components"
-	"github.com/textfuel/lazyjira/pkg/tui/theme"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 // RenderADFPreview renders raw ADF data to styled terminal lines for preview in create form
@@ -225,7 +225,7 @@ func (r *adfRenderer) renderInline(node any) string {
 	case adfInlineCard:
 		if attrs, ok := inline["attrs"].(map[string]any); ok {
 			if url, ok := attrs["url"].(string); ok {
-				return urlStyle.Render(url)
+				return urlStyle().Render(url)
 			}
 		}
 	}
@@ -286,7 +286,7 @@ func applyMarks(text string, marks []any) string {
 		case "strike":
 			text = lipgloss.NewStyle().Strikethrough(true).Render(text)
 		case "link":
-			text = urlStyle.Render(text)
+			text = urlStyle().Render(text)
 		case "textColor":
 			if attrs, ok := mark["attrs"].(map[string]any); ok {
 				if color, ok := attrs["color"].(string); ok {
