@@ -2,6 +2,8 @@ package tui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
 type panelID int
@@ -96,7 +98,7 @@ func (a *App) mouseScroll(panel panelID, delta int) (tea.Model, tea.Cmd) {
 			a.issuesList.ScrollBy(-1)
 		}
 		if sel := a.issuesList.SelectedIssue(); sel != nil {
-			a.showCachedIssue(sel.Key)
+			return a.Update(views.IssueSelectedMsg{Issue: sel})
 		}
 	case panelInfo:
 		if a.side != sideLeft || a.leftFocus != focusInfo {
@@ -158,7 +160,7 @@ func (a *App) mouseClick(panel panelID, relY int, x int) (tea.Model, tea.Cmd) {
 		} else if dbl := a.issuesList.ClickAt(relY); dbl {
 			return a.openIssueDetail()
 		} else if sel := a.issuesList.SelectedIssue(); sel != nil {
-			a.showCachedIssue(sel.Key)
+			return a.Update(views.IssueSelectedMsg{Issue: sel})
 		}
 
 	case panelInfo:
