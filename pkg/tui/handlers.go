@@ -87,6 +87,7 @@ func (a *App) selectProject(p *jira.Project) tea.Cmd {
 	a.issueCache = make(map[string]*jira.Issue)
 	a.childrenCache = make(map[string][]jira.Issue)
 	a.createMetaCache = make(map[string][]jira.CreateMetaField)
+	a.invalidateInFlight()
 	a.infoPanel.SetIssue(nil)
 	a.resolveBoardID()
 	if !a.demoMode {

@@ -17,6 +17,17 @@ type parentLoadedMsg struct {
 	err      error
 }
 
+// childrenWalkRequestMsg triggers a children fetch and asks the
+// handler to push a hierarchy frame once the response arrives.
+type childrenWalkRequestMsg struct{ key string }
+
+// pendingWalk binds a walk to one specific children fetch via its
+// epoch; a later bump implicitly invalidates the walk.
+type pendingWalk struct {
+	key   string
+	epoch int
+}
+
 func fetchParent(client jira.ClientInterface, childKey, parentKey string, epoch int) tea.Cmd {
 	return func() tea.Msg {
 		iss, err := client.GetIssue(context.Background(), parentKey)
@@ -45,8 +56,7 @@ func (a *App) showChildrenFromList() (tea.Cmd, bool) {
 	}
 	children, resolved := a.childrenForList(sel)
 	if !resolved {
-		a.pendingWalkKey = sel.Key
-		return func() tea.Msg { return views.ChildrenRequestMsg{Key: sel.Key} }, true
+		return func() tea.Msg { return childrenWalkRequestMsg{key: sel.Key} }, true
 	}
 	if len(children) == 0 {
 		return nil, false
@@ -100,8 +110,8 @@ func (a *App) handleChildrenLoaded(msg childrenLoadedMsg) (tea.Model, tea.Cmd) {
 	if msg.epoch != a.childrenEpoch {
 		return a, nil
 	}
-	walkPending := a.pendingWalkKey == msg.key
-	a.pendingWalkKey = ""
+	walkPending := a.pendingWalk.key == msg.key && a.pendingWalk.epoch == msg.epoch
+	a.pendingWalk = pendingWalk{}
 
 	if msg.err != nil {
 		a.statusPanel.SetError("Failed to load children: " + msg.err.Error())

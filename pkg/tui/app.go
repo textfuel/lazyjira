@@ -197,10 +197,7 @@ type App struct {
 	// fetches. Bumped on every ChildrenRequestMsg; responses with stale
 	// epoch are dropped.
 	childrenEpoch int
-	// pendingWalkKey is the issue the user is waiting to walk into
-	// while a Cloud children-fetch is in flight. Empty when no walk
-	// is pending.
-	pendingWalkKey string
+	pendingWalk pendingWalk
 	createCtx  createCtx
 
 	gitRepoPath    string
@@ -632,6 +629,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.childrenEpoch++
 		return a, fetchChildren(a.client, msg.Key, a.childrenEpoch)
+
+	case childrenWalkRequestMsg:
+		if !a.isCloud || msg.key == "" {
+			return a, nil
+		}
+		a.childrenEpoch++
+		a.pendingWalk = pendingWalk{key: msg.key, epoch: a.childrenEpoch}
+		return a, fetchChildren(a.client, msg.key, a.childrenEpoch)
 
 	case childrenLoadedMsg:
 		return a.handleChildrenLoaded(msg)

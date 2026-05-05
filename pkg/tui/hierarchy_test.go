@@ -303,9 +303,9 @@ func TestHierarchy_Cloud_ChildrenWalk_CacheHit_PushesImmediately(t *testing.T) {
 	}
 }
 
-// On Cloud, a cache miss dispatches a ChildrenRequestMsg and marks
-// pendingWalkKey; the eventual childrenLoadedMsg pushes the hierarchy
-// frame and primes the cache.
+// On Cloud, a cache miss dispatches a childrenWalkRequestMsg whose
+// handler tags pendingWalk with the active childrenEpoch; the eventual
+// childrenLoadedMsg pushes the hierarchy frame and primes the cache.
 func TestHierarchy_Cloud_ChildrenWalk_CacheMiss_FetchesThenPushes(t *testing.T) {
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetChildrenFunc = func(_ context.Context, parentKey string) ([]jira.Issue, error) {
@@ -320,19 +320,19 @@ func TestHierarchy_Cloud_ChildrenWalk_CacheMiss_FetchesThenPushes(t *testing.T) 
 		t.Fatalf("showChildren() handled = false, want true")
 	}
 	if cmd == nil {
-		t.Fatalf("showChildren() cmd = nil, want ChildrenRequestMsg cmd")
-	}
-	if a.pendingWalkKey != "EPIC-1" {
-		t.Errorf("pendingWalkKey = %q, want EPIC-1", a.pendingWalkKey)
+		t.Fatalf("showChildren() cmd = nil, want childrenWalkRequestMsg cmd")
 	}
 
-	req, ok := cmd().(views.ChildrenRequestMsg)
+	req, ok := cmd().(childrenWalkRequestMsg)
 	if !ok {
-		t.Fatalf("cmd produced %T, want views.ChildrenRequestMsg", cmd())
+		t.Fatalf("cmd produced %T, want childrenWalkRequestMsg", cmd())
 	}
 	_, fetchCmd := a.Update(req)
 	if fetchCmd == nil {
-		t.Fatalf("ChildrenRequestMsg produced nil cmd, want fetch cmd")
+		t.Fatalf("childrenWalkRequestMsg produced nil cmd, want fetch cmd")
+	}
+	if a.pendingWalk.key != "EPIC-1" || a.pendingWalk.epoch != a.childrenEpoch {
+		t.Errorf("pendingWalk = %+v, want {EPIC-1, %d}", a.pendingWalk, a.childrenEpoch)
 	}
 
 	loaded, ok := fetchCmd().(childrenLoadedMsg)
@@ -350,8 +350,8 @@ func TestHierarchy_Cloud_ChildrenWalk_CacheMiss_FetchesThenPushes(t *testing.T) 
 	if cached, ok := a.childrenCache["EPIC-1"]; !ok || len(cached) != 1 {
 		t.Errorf("childrenCache[EPIC-1] = %+v, want 1 entry", cached)
 	}
-	if a.pendingWalkKey != "" {
-		t.Errorf("pendingWalkKey = %q, want \"\" after consume", a.pendingWalkKey)
+	if a.pendingWalk != (pendingWalk{}) {
+		t.Errorf("pendingWalk = %+v, want zero after consume", a.pendingWalk)
 	}
 }
 
@@ -368,7 +368,7 @@ func TestHierarchy_Cloud_ChildrenWalk_EmptyResult_OpensDetail(t *testing.T) {
 	a.issuesList.SetIssues([]jira.Issue{{Key: "EPIC-1"}})
 
 	cmd, _ := a.showChildren()
-	req := cmd().(views.ChildrenRequestMsg)
+	req := cmd().(childrenWalkRequestMsg)
 	_, fetchCmd := a.Update(req)
 	loaded := fetchCmd().(childrenLoadedMsg)
 	_, _ = a.Update(loaded)
@@ -379,11 +379,70 @@ func TestHierarchy_Cloud_ChildrenWalk_EmptyResult_OpensDetail(t *testing.T) {
 	if a.side != sideRight {
 		t.Errorf("side = %v, want sideRight (detail opened)", a.side)
 	}
-	if a.pendingWalkKey != "" {
-		t.Errorf("pendingWalkKey = %q, want \"\" after consume", a.pendingWalkKey)
+	if a.pendingWalk != (pendingWalk{}) {
+		t.Errorf("pendingWalk = %+v, want zero after consume", a.pendingWalk)
 	}
 }
 
+// A passive Sub-tab fetch for the same key as an in-flight walk
+// must not be treated as a walk when its response arrives.
+func TestHierarchy_Cloud_ChildrenWalk_NoLeakIntoPassiveFetchSameKey(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
+		return []jira.Issue{{Key: "C-1"}}, nil
+	}
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.issuesList.SetIssues([]jira.Issue{{Key: "X"}})
+
+	cmd, _ := a.showChildren()
+	req := cmd().(childrenWalkRequestMsg)
+	_, fetch1 := a.Update(req)
+	loaded1 := fetch1().(childrenLoadedMsg)
+
+	_, fetch2 := a.Update(views.ChildrenRequestMsg{Key: "X"})
+	loaded2 := fetch2().(childrenLoadedMsg)
+
+	_, _ = a.Update(loaded1)
+	if a.issuesList.HasHierarchyTab() {
+		t.Errorf("stale walk response pushed a hierarchy tab")
+	}
+
+	_, _ = a.Update(loaded2)
+	if a.issuesList.HasHierarchyTab() {
+		t.Errorf("passive response for same key was treated as walk (leak)")
+	}
+}
+
+// Project switch invalidates an in-flight walk; its stale response
+// must not push a hierarchy frame on the new project.
+func TestHierarchy_Cloud_SelectProject_InvalidatesInFlightWalk(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
+		return []jira.Issue{{Key: "C-1"}}, nil
+	}
+	a := newAppWithFake(t, fake)
+	a.isCloud = true
+	a.demoMode = true
+	a.usersCache = map[string][]jira.User{"OLD": nil, "NEW": nil}
+	a.issuesList.SetIssues([]jira.Issue{{Key: "EPIC-1"}})
+
+	cmd, _ := a.showChildren()
+	req := cmd().(childrenWalkRequestMsg)
+	_, fetchCmd := a.Update(req)
+	loaded := fetchCmd().(childrenLoadedMsg)
+
+	_ = a.selectProject(&jira.Project{ID: "2", Key: "NEW"})
+
+	if a.pendingWalk != (pendingWalk{}) {
+		t.Fatalf("selectProject left pendingWalk = %+v", a.pendingWalk)
+	}
+
+	_, _ = a.Update(loaded)
+	if a.issuesList.HasHierarchyTab() {
+		t.Errorf("stale walk response after project switch pushed a hierarchy tab")
+	}
+}
 
 func TestHierarchy_Backspace_PushesEvenWhenTopMatches(t *testing.T) {
 	fake := &jiratest.FakeClient{T: t}
