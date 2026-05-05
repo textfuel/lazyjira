@@ -212,6 +212,17 @@ func (d *DemoClient) GetIssue(_ context.Context, issueKey string) (*Issue, error
 	return &cp, nil
 }
 
+func (d *DemoClient) GetChildren(_ context.Context, parentKey string) ([]Issue, error) {
+	d.logRequest("GET", "/search/jql?jql=parent="+parentKey)
+	parent, ok := d.issueIndex[parentKey]
+	if !ok || len(parent.Subtasks) == 0 {
+		return nil, nil
+	}
+	children := make([]Issue, len(parent.Subtasks))
+	copy(children, parent.Subtasks)
+	return children, nil
+}
+
 func (d *DemoClient) GetComments(_ context.Context, issueKey string) ([]Comment, error) {
 	d.logRequest("GET", "/issue/"+issueKey+"/comment")
 	return d.comments[issueKey], nil
