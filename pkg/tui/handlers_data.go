@@ -222,6 +222,13 @@ func (a *App) handleBoardsLoaded(msg boardsLoadedMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
+func (a *App) invalidateInFlight() {
+	a.parentEpoch++
+	a.childrenEpoch++
+	a.previewEpoch++
+	a.pendingWalk = pendingWalk{}
+}
+
 func (a *App) resolveBoardID() {
 	a.boardID = 0
 	for _, b := range a.boards {
@@ -683,8 +690,10 @@ func (a *App) buildCreateFields(meta []jira.CreateMetaField) []components.Create
 	return fields
 }
 
-const schemaArray = "array"
-const schemaUser = "user"
+const (
+	schemaArray = "array"
+	schemaUser  = "user"
+)
 
 // metaToFormField converts one CreateMetaField to CreateFormField
 func (a *App) metaToFormField(mf jira.CreateMetaField) components.CreateFormField {

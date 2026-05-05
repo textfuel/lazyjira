@@ -27,6 +27,14 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	action := a.keymap.Match(msg.String())
 
+	// In the hierarchy tab, ActFocusLeft pops a NavFrame instead of
+	// shifting focus.
+	if action == ActFocusLeft {
+		if cmd, ok := a.goBack(); ok {
+			return a, cmd
+		}
+	}
+
 	switch action { //nolint:exhaustive
 	case ActQuit:
 		return a, tea.Quit
@@ -49,6 +57,11 @@ func (a *App) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.handleActionEdit()
 	case ActCreateBranch:
 		return a.handleActionCreateBranch()
+	case ActShowParent:
+		if cmd, ok := a.showParent(); ok {
+			return a, cmd
+		}
+		return a, nil
 	}
 
 	if m, cmd, ok := a.handleFocusAction(action); ok {
@@ -485,6 +498,9 @@ func (a *App) startCreateIssue() (tea.Model, tea.Cmd) {
 }
 
 func (a *App) handleActionSelect() (tea.Model, tea.Cmd) {
+	if cmd, ok := a.showChildren(); ok {
+		return a, cmd
+	}
 	switch {
 	case a.side == sideLeft && a.leftFocus == focusIssues:
 		return a.openIssueDetail()

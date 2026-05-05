@@ -44,6 +44,7 @@ const (
 	ActCreateBranch   Action = "createBranch"
 	ActCreateIssue    Action = "createIssue"
 	ActDuplicateIssue Action = "duplicateIssue"
+	ActShowParent     Action = "showParent"
 
 	ActNavDown     Action = "navDown"
 	ActNavUp       Action = "navUp"
@@ -95,6 +96,7 @@ func DefaultKeymap() Keymap {
 		ActCloseJQLTab:    {"x"},
 		ActCreateBranch:   {"b"},
 		ActDuplicateIssue: {"ctrl+n"},
+		ActShowParent:     {"backspace"},
 
 		ActNavDown:     {"j", "down", "ctrl+j"},
 		ActNavUp:       {"k", "up", "ctrl+k"},

@@ -12,6 +12,7 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/config"
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/navstack"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
@@ -27,26 +28,29 @@ const statusOpen = "○"
 
 type IssuesList struct {
 	components.ListBase
-	issues         []jira.Issue
-	allIssues      []jira.Issue
-	filter         string
-	tabs           []config.IssueTabConfig
-	tab            int
-	tabCache       map[int][]jira.Issue
-	userEmail      string
-	keyColWidth    int
-	fields         []string
-	theme          *theme.Theme
-	typeIcons      map[string]string
-	typeIconCols   int
-	statusIcons    map[string]string
-	statusIconCols int
-	jqlQuery       string
-	jqlTabIdx      int
+	issues          []jira.Issue
+	allIssues       []jira.Issue
+	filter          string
+	tabs            []config.IssueTabConfig
+	tab             int
+	tabCache        map[int][]jira.Issue
+	userEmail       string
+	keyColWidth     int
+	fields          []string
+	theme           *theme.Theme
+	typeIcons       map[string]string
+	typeIconCols    int
+	statusIcons     map[string]string
+	statusIconCols  int
+	jqlQuery        string
+	jqlTabIdx       int
+	hierarchyTabIdx int
+	hierarchyTitle  string
+	hierarchyStack  *navstack.NavStack
 }
 
 func NewIssuesList() *IssuesList {
-	return &IssuesList{theme: theme.Default, jqlTabIdx: -1}
+	return &IssuesList{theme: theme.Default, jqlTabIdx: -1, hierarchyTabIdx: -1}
 }
 
 func (m *IssuesList) SetFields(fields []string) { m.fields = fields }
@@ -123,6 +127,79 @@ func (m *IssuesList) JQLQuery() string {
 	return m.jqlQuery
 }
 
+// Appends and focuses a hierarchy tab. If one already exists, behaves
+// like ReplaceHierarchyTabContent and returns the existing index.
+func (m *IssuesList) AddHierarchyTab(title string, issues []jira.Issue) int {
+	if m.hierarchyTabIdx >= 0 {
+		m.ReplaceHierarchyTabContent(title, issues)
+		return m.hierarchyTabIdx
+	}
+	m.tabs = append(m.tabs, config.IssueTabConfig{Name: title, JQL: ""})
+	m.hierarchyTabIdx = len(m.tabs) - 1
+	m.hierarchyTitle = title
+	m.hierarchyStack = navstack.NewNavStack()
+	if m.tabCache == nil {
+		m.tabCache = make(map[int][]jira.Issue)
+	}
+	m.tabCache[m.hierarchyTabIdx] = issues
+	m.tab = m.hierarchyTabIdx
+	m.loadFromCache()
+	return m.hierarchyTabIdx
+}
+
+// Replaces the hierarchy tab's title and issue list while keeping the
+// tab index and stack stable. No-op if no hierarchy tab.
+func (m *IssuesList) ReplaceHierarchyTabContent(title string, issues []jira.Issue) {
+	if m.hierarchyTabIdx < 0 {
+		return
+	}
+	m.hierarchyTitle = title
+	m.tabs[m.hierarchyTabIdx] = config.IssueTabConfig{Name: title, JQL: ""}
+	if m.tabCache == nil {
+		m.tabCache = make(map[int][]jira.Issue)
+	}
+	m.tabCache[m.hierarchyTabIdx] = issues
+	if m.tab == m.hierarchyTabIdx {
+		m.loadFromCache()
+	}
+}
+
+// Removes the hierarchy tab, drops its stack, and switches to tab 0.
+// No-op if no hierarchy tab.
+func (m *IssuesList) RemoveHierarchyTab() {
+	if m.hierarchyTabIdx < 0 {
+		return
+	}
+	if m.tabCache != nil {
+		delete(m.tabCache, m.hierarchyTabIdx)
+	}
+	m.tabs = append(m.tabs[:m.hierarchyTabIdx], m.tabs[m.hierarchyTabIdx+1:]...)
+	m.hierarchyTabIdx = -1
+	m.hierarchyTitle = ""
+	m.hierarchyStack = nil
+	m.tab = 0
+	m.loadFromCache()
+}
+
+func (m *IssuesList) HasHierarchyTab() bool {
+	return m.hierarchyTabIdx >= 0
+}
+
+func (m *IssuesList) IsHierarchyTab() bool {
+	return m.hierarchyTabIdx >= 0 && m.tab == m.hierarchyTabIdx
+}
+
+// The current hierarchy tab title ("Children"/"Parent"/"Link").
+func (m *IssuesList) HierarchyTitle() string {
+	return m.hierarchyTitle
+}
+
+// The NavStack associated with the hierarchy tab, or nil if no
+// hierarchy tab exists.
+func (m *IssuesList) HierarchyStack() *navstack.NavStack {
+	return m.hierarchyStack
+}
+
 func (m *IssuesList) NextTab() {
 	if len(m.tabs) == 0 {
 		return
@@ -153,6 +230,8 @@ func (m *IssuesList) loadFromCache() {
 }
 
 func (m *IssuesList) GetTabIndex() int { return m.tab }
+
+func (m *IssuesList) CurrentIssues() []jira.Issue { return m.allIssues }
 
 // SetTabIndex switches to the given tab and loads from cache if available
 func (m *IssuesList) SetTabIndex(idx int) {
@@ -228,16 +307,26 @@ func (m *IssuesList) SetIssuesForTab(tab int, issues []jira.Issue) {
 	m.tabCache[tab] = issues
 }
 
-// InvalidateTabCache clears all cached tab data
+// InvalidateTabCache clears all cached tab data and removes transient tabs (JQL and Hierarchy).
 func (m *IssuesList) InvalidateTabCache() {
 	m.tabCache = nil
-	if m.jqlTabIdx >= 0 {
-		m.tabs = m.tabs[:m.jqlTabIdx]
-		m.jqlTabIdx = -1
-		m.jqlQuery = ""
-		if m.tab >= len(m.tabs) {
-			m.tab = 0
-		}
+	trimFrom := len(m.tabs)
+	if m.jqlTabIdx >= 0 && m.jqlTabIdx < trimFrom {
+		trimFrom = m.jqlTabIdx
+	}
+	if m.hierarchyTabIdx >= 0 && m.hierarchyTabIdx < trimFrom {
+		trimFrom = m.hierarchyTabIdx
+	}
+	if trimFrom < len(m.tabs) {
+		m.tabs = m.tabs[:trimFrom]
+	}
+	m.jqlTabIdx = -1
+	m.jqlQuery = ""
+	m.hierarchyTabIdx = -1
+	m.hierarchyTitle = ""
+	m.hierarchyStack = nil
+	if m.tab >= len(m.tabs) {
+		m.tab = 0
 	}
 }
 
@@ -485,11 +574,11 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 			if currStatusIcon != "" {
 				parts = append(parts, padRight(currStatusIcon, m.statusIconCols))
 			} else {
-                if selected {
-                    parts = append(parts, padRight(statusEmojiPlain(issue.Status), m.statusIconCols))
-                } else {
-                    parts = append(parts, padRight(statusEmoji(issue.Status), m.statusIconCols))
-                }
+				if selected {
+					parts = append(parts, padRight(statusEmojiPlain(issue.Status), m.statusIconCols))
+				} else {
+					parts = append(parts, padRight(statusEmoji(issue.Status), m.statusIconCols))
+				}
 			}
 		case "priority":
 			name := ""
