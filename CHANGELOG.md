@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Walk through issue hierarchy from the issues list. Space opens an issue's children, Backspace opens its parent, Esc pops back to the previous view. Each step pushes a snapshot of the panel state so cursor, focus and Info tab are restored on the way back. Children walks also work from the Sub and Lnk tabs in the Info panel. Shares a single ad-hoc tab next to the existing ones, similar to the JQL tab (#68)
+
 ## [2.12.0] - 2026-05-03
 
 ### Added
