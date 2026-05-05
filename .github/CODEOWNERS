@@ -1,1 +1,7 @@
 * @textfuel
+
+/pkg/config/                       @textfuel @seflue
+/pkg/git/                          @textfuel @seflue
+/docs/Config.md                    @textfuel @seflue
+/pkg/tui/custom_commands*.go       @textfuel @seflue
+/pkg/tui/views/infopanel*.go       @textfuel @seflue
