@@ -183,7 +183,7 @@ func (a *App) pushNav(title, parentKey string, src navstack.Source, issues []jir
 
 // Pops the top NavFrame and restores it; removes the hierarchy tab when the stack empties.
 func (a *App) goBack() (tea.Cmd, bool) {
-	if a.side != sideLeft || !a.issuesList.IsHierarchyTab() {
+	if a.side != sideLeft || a.leftFocus != focusIssues || !a.issuesList.IsHierarchyTab() {
 		return nil, false
 	}
 	stack := a.issuesList.HierarchyStack()

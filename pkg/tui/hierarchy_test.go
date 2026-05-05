@@ -444,6 +444,30 @@ func TestHierarchy_Cloud_SelectProject_InvalidatesInFlightWalk(t *testing.T) {
 	}
 }
 
+// goBack only fires when the Issues panel itself has focus; on the
+// other left panels h/Esc/Left fall through to their natural behavior.
+func TestHierarchy_GoBack_SkipsWhenLeftFocusNotIssues(t *testing.T) {
+	fake := &jiratest.FakeClient{T: t}
+	a := newAppWithFake(t, fake)
+	a.issuesList.AddHierarchyTab(hierarchyTitleChildren, []jira.Issue{{Key: "CHILD-1"}})
+	a.issuesList.HierarchyStack().Push(navstack.NavFrame{ParentKey: "P-1"})
+
+	for _, focus := range []focusPanel{focusInfo, focusStatus, focusProjects} {
+		a.leftFocus = focus
+		if _, handled := a.goBack(); handled {
+			t.Errorf("leftFocus=%v: goBack() handled=true, want false", focus)
+		}
+		if !a.issuesList.HasHierarchyTab() {
+			t.Errorf("leftFocus=%v: hierarchy tab disappeared", focus)
+		}
+	}
+
+	a.leftFocus = focusIssues
+	if _, handled := a.goBack(); !handled {
+		t.Errorf("leftFocus=focusIssues: goBack() handled=false, want true")
+	}
+}
+
 func TestHierarchy_Backspace_PushesEvenWhenTopMatches(t *testing.T) {
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetIssueFunc = func(_ context.Context, key string) (*jira.Issue, error) {
