@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/textfuel/lazyjira/v2/pkg/ascii"
 	"github.com/textfuel/lazyjira/v2/pkg/git"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
@@ -701,6 +702,9 @@ func (a *App) handleActionCreateBranch() (tea.Model, tea.Cmd) {
 	if sel.IssueType != nil {
 		typeName = sel.IssueType.Name
 	}
+	if a.cfg.Git.AsciiOnly {
+		typeName = ascii.Convert(typeName)
+	}
 	parentKey := ""
 	if sel.Parent != nil {
 		parentKey = sel.Parent.Key
@@ -720,7 +724,7 @@ func (a *App) handleActionCreateBranch() (tea.Model, tea.Cmd) {
 			break
 		}
 	}
-	name := git.GenerateBranchName(data, tmplStr, a.cfg.Git.AsciiOnly)
+	name := git.GenerateBranchName(data, tmplStr)
 	a.inputModal.Show("Create branch", name)
 	a.editContext = editCtx{kind: editBranch}
 	if result, err := git.SearchBranches(a.gitRepoPath, sel.Key); err == nil {

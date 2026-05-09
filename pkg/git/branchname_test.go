@@ -7,11 +7,10 @@ import (
 
 func TestGenerateBranchName(t *testing.T) {
 	tests := []struct {
-		name      string
-		data      BranchTemplateData
-		tmpl      string
-		asciiOnly bool
-		want      string
+		name string
+		data BranchTemplateData
+		tmpl string
+		want string
 	}{
 		{
 			name: "default template",
@@ -54,21 +53,23 @@ func TestGenerateBranchName(t *testing.T) {
 			want: "Story/PROJ-10/PROJ-42-add-feature",
 		},
 		{
-			name: "ascii only strips unicode from summary",
+			// GenerateBranchName does not transliterate by itself; ASCII
+			// reduction is a per-field caller responsibility. Non-ASCII
+			// in raw fields survives.
+			name: "non-ASCII in raw fields survives",
 			data: BranchTemplateData{
-				Key:       "PROJ-1",
-				ParentKey: "PROJ-2",
-				Summary:   "fix-\u00e4\u00f6\u00fc-bug",
+				Key:     "PROJ-1",
+				Type:    "L\u00f6sung",
+				Summary: "fix-bug",
 			},
-			tmpl:      "{{.ParentKey}}/{{.Key}}_{{.Summary}}",
-			asciiOnly: true,
-			want:      "PROJ-2/PROJ-1_fix-bug",
+			tmpl: "{{.Type}}/{{.Key}}-{{.Summary}}",
+			want: "L\u00f6sung/PROJ-1-fix-bug",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GenerateBranchName(tt.data, tt.tmpl, tt.asciiOnly)
+			got := GenerateBranchName(tt.data, tt.tmpl)
 			if got != tt.want {
 				t.Errorf("GenerateBranchName() = %q, want %q", got, tt.want)
 			}
@@ -78,23 +79,22 @@ func TestGenerateBranchName(t *testing.T) {
 
 func TestSanitize(t *testing.T) {
 	tests := []struct {
-		name      string
-		input     string
-		asciiOnly bool
-		want      string
+		name  string
+		input string
+		want  string
 	}{
-		{"spaces to hyphens", "hello world", false, "hello-world"},
-		{"multiple hyphens", "a---b", false, "a-b"},
-		{"trailing dot", "branch.", false, "branch"},
-		{"trailing slash", "branch/", false, "branch"},
-		{"max length truncation", "a-" + strings.Repeat("b", 100), false, "a-" + strings.Repeat("b", 58)},
-		{"slash preserved", "parent/child", false, "parent/child"},
-		{"leading slash stripped", "/child", false, "child"},
+		{"spaces to hyphens", "hello world", "hello-world"},
+		{"multiple hyphens", "a---b", "a-b"},
+		{"trailing dot", "branch.", "branch"},
+		{"trailing slash", "branch/", "branch"},
+		{"max length truncation", "a-" + strings.Repeat("b", 100), "a-" + strings.Repeat("b", 58)},
+		{"slash preserved", "parent/child", "parent/child"},
+		{"leading slash stripped", "/child", "child"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Sanitize(tt.input, tt.asciiOnly)
+			got := Sanitize(tt.input)
 			if got != tt.want {
 				t.Errorf("Sanitize(%q) = %q, want %q", tt.input, got, tt.want)
 			}
@@ -112,6 +112,10 @@ func TestSanitizeSummary(t *testing.T) {
 		{"basic", "Fix Login Bug", false, "fix-login-bug"},
 		{"special chars", "Add feature (v2) & test!", false, "add-feature-v2-test"},
 		{"ascii only", "Umlaut aeoeue", true, "umlaut-aeoeue"},
+		{"umlauts transliterated", "Größe der Straße", true, "groesse-der-strasse"},
+		{"accents stripped", "café piñata", true, "cafe-pinata"},
+		{"umlauts with droppable special chars", "Fehler in Größe (v2)", true, "fehler-in-groesse-v2"},
+		{"umlauts kept when not asciiOnly", "Größe", false, "größe"},
 	}
 
 	for _, tt := range tests {
@@ -123,3 +127,4 @@ func TestSanitizeSummary(t *testing.T) {
 		})
 	}
 }
+

@@ -5,7 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
-	"unicode"
+
+	"github.com/textfuel/lazyjira/v2/pkg/ascii"
 )
 
 // BranchTemplateData holds data available in branch name templates
@@ -18,8 +19,10 @@ type BranchTemplateData struct {
 	ParentKey  string
 }
 
-const defaultTemplate = "{{.Key}}-{{.Summary}}"
-const maxBranchLen = 60
+const (
+	defaultTemplate = "{{.Key}}-{{.Summary}}"
+	maxBranchLen    = 60
+)
 
 var (
 	issueKeyRe   = regexp.MustCompile(`(?i)([A-Z][A-Z0-9]+-\d+)`)
@@ -31,8 +34,10 @@ var (
 )
 
 // GenerateBranchName creates a branch name from issue data using the given template.
-// Pass an empty string for tmplStr to use the default template.
-func GenerateBranchName(data BranchTemplateData, tmplStr string, asciiOnly bool) string {
+// Pass an empty string for tmplStr to use the default template. ASCII
+// reduction is the caller's responsibility (per-field, before passing
+// data in); see pkg/tui/handlers_keys.go.
+func GenerateBranchName(data BranchTemplateData, tmplStr string) string {
 	if tmplStr == "" {
 		tmplStr = defaultTemplate
 	}
@@ -49,26 +54,16 @@ func GenerateBranchName(data BranchTemplateData, tmplStr string, asciiOnly bool)
 		_ = tmpl.Execute(&buf, data)
 	}
 
-	return Sanitize(buf.String(), asciiOnly)
+	return Sanitize(buf.String())
 }
 
-// Sanitize cleans a branch name to be a valid git ref
-func Sanitize(name string, asciiOnly bool) string {
+// Sanitize cleans a branch name to be a valid git ref.
+func Sanitize(name string) string {
 	name = strings.TrimLeft(name, "/")
 	name = strings.ReplaceAll(name, " ", "-")
 	name = invalidChars.ReplaceAllString(name, "")
 	name = strings.ReplaceAll(name, "..", ".")
 	name = atBrace.ReplaceAllString(name, "")
-
-	if asciiOnly {
-		var b strings.Builder
-		for _, r := range name {
-			if r < 128 {
-				b.WriteRune(r)
-			}
-		}
-		name = b.String()
-	}
 
 	name = multiHyphens.ReplaceAllString(name, "-")
 	name = multiDots.ReplaceAllString(name, ".")
@@ -85,7 +80,12 @@ func Sanitize(name string, asciiOnly bool) string {
 
 // SanitizeSummary converts an issue summary to a branch-name-friendly slug
 func SanitizeSummary(summary string, asciiOnly bool) string {
-	s := strings.ToLower(summary)
+	var s string
+	if asciiOnly {
+		s = ascii.Convert(summary)
+	} else {
+		s = strings.ToLower(summary)
+	}
 	s = strings.ReplaceAll(s, " ", "-")
 	s = invalidChars.ReplaceAllString(s, "")
 	s = strings.Map(func(r rune) rune {
@@ -94,16 +94,6 @@ func SanitizeSummary(summary string, asciiOnly bool) string {
 		}
 		return r
 	}, s)
-
-	if asciiOnly {
-		var b strings.Builder
-		for _, r := range s {
-			if r < 128 && (unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '.') {
-				b.WriteRune(r)
-			}
-		}
-		s = b.String()
-	}
 
 	s = multiHyphens.ReplaceAllString(s, "-")
 	s = strings.Trim(s, "-.")

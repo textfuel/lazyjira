@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+
+	"github.com/textfuel/lazyjira/v2/pkg/ascii"
 )
 
 // Context identifies a UI state in which a custom command may fire.
@@ -64,8 +66,34 @@ func shellescape(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
+// slugify produces an ASCII slug: lowercase [a-z0-9], other runes
+// collapsed to '-'. Delegates ASCII normalization to ascii.Convert so
+// the transliteration rules (ä->ae, ß->ss, NFD accent strip) stay
+// shared with branch-name sanitization.
+func slugify(s string) string {
+	s = ascii.Convert(s)
+
+	var b strings.Builder
+	b.Grow(len(s))
+	prevDash := true // suppress leading dashes
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			prevDash = false
+		default:
+			if !prevDash {
+				b.WriteByte('-')
+				prevDash = true
+			}
+		}
+	}
+	return strings.TrimRight(b.String(), "-")
+}
+
 var commandFuncMap = template.FuncMap{
 	"shellescape": shellescape,
+	"slugify":     slugify,
 }
 
 // ResolveCustomCommands validates the flat CustomCommands list and returns

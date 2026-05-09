@@ -192,3 +192,57 @@ func TestResolveCustomCommands_ShellescapeFunc(t *testing.T) {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 }
+
+func TestSlugify(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"", ""},
+		{"hello", "hello"},
+		{"Hello World", "hello-world"},
+		{"Fix Bug #42!", "fix-bug-42"},
+		{"  leading and trailing  ", "leading-and-trailing"},
+		{"multiple   spaces", "multiple-spaces"},
+		{"--already--dashed--", "already-dashed"},
+		{"snake_case_name", "snake-case-name"},
+		{"path/to/thing", "path-to-thing"},
+		{"!!!", ""},
+		{"123-foo", "123-foo"},
+		{"a\tb\nc", "a-b-c"},
+		{"Übung 1", "uebung-1"},
+		{"Größe", "groesse"},
+		{"über alles", "ueber-alles"},
+		{"straße", "strasse"},
+		{"café", "cafe"},
+		{"naïve", "naive"},
+		{"jalapeño piñata", "jalapeno-pinata"},
+	}
+	for _, tc := range cases {
+		if got := slugify(tc.in); got != tc.want {
+			t.Errorf("slugify(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestResolveCustomCommands_SlugifyFunc(t *testing.T) {
+	cfg := &Config{
+		CustomCommands: []CustomCommandConfig{
+			{Key: "b", Name: "Branch", Command: "git checkout -b {{.Summary | slugify}}"},
+		},
+	}
+	resolved, err := cfg.ResolveCustomCommands()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var buf bytes.Buffer
+	data := struct{ Summary string }{Summary: "Fix Login Bug #42!"}
+	if err := resolved[0].Template.Execute(&buf, data); err != nil {
+		t.Fatalf("template execute error: %v", err)
+	}
+
+	want := "git checkout -b fix-login-bug-42"
+	if got := buf.String(); got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+}
