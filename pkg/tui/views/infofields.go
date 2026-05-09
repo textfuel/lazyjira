@@ -87,6 +87,21 @@ var builtinFieldRegistry = []builtinFieldDef{
 		},
 		nil,
 	},
+	{"Parent", "parent", FieldSingleText,
+		func(i *jira.Issue) (string, bool) {
+			if i.Parent != nil {
+				if i.Parent.Summary == "" {
+					return i.Parent.Key, true
+				}
+				return "[" + i.Parent.Key + "] " + i.Parent.Summary, true
+			}
+			if i.IssueType.CanHaveParent() {
+				return noneLabelUpper, true
+			}
+			return "", false
+		},
+		nil,
+	},
 	{"Sprint", "sprint", FieldSingleSelect,
 		func(i *jira.Issue) (string, bool) {
 			if i.Sprint != nil {
@@ -169,7 +184,7 @@ var builtinFieldMap = func() map[string]builtinFieldDef {
 	return m
 }()
 
-var defaultFieldIDs = []string{"status", "priority", "assignee", "reporter", "issuetype", "sprint"}
+var defaultFieldIDs = []string{"status", "priority", "assignee", "reporter", "issuetype", "parent", "sprint"}
 
 type InfoFieldType int
 
@@ -227,7 +242,10 @@ func buildDefaultInfoFields(issue *jira.Issue) []InfoField {
 	var fields []InfoField
 	for _, id := range defaultFieldIDs {
 		def := builtinFieldMap[id]
-		val, _ := def.getValue(issue)
+		val, show := def.getValue(issue)
+		if !show {
+			continue
+		}
 		fields = append(fields, InfoField{Name: def.name, FieldID: def.fieldID, Type: def.typ, Value: val})
 	}
 	for _, def := range builtinFieldRegistry {
