@@ -154,10 +154,26 @@ type IssueLinkType struct {
 }
 
 type IssueType struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	IconURL string `json:"iconUrl"`
-	Subtask bool   `json:"subtask"`
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	IconURL        string `json:"iconUrl"`
+	Subtask        bool   `json:"subtask"`
+	HierarchyLevel int    `json:"hierarchyLevel"`
+}
+
+// CanHaveParent reports whether this issue type may carry a parent link.
+// Subtask=true and Standard (hierarchyLevel<1) → yes. Epic and higher
+// (level>=1) → no, because the parent slot is only writable in projects
+// with Premium hierarchy. DC instances without hierarchyLevel deliver 0
+// (Standard) — the server validates on edit.
+func (t *IssueType) CanHaveParent() bool {
+	if t == nil {
+		return false
+	}
+	if t.Subtask {
+		return true
+	}
+	return t.HierarchyLevel < 1
 }
 
 type Component struct {
