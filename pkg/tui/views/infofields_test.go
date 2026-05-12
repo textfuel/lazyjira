@@ -117,6 +117,38 @@ func TestParentField_SetNilUnsets(t *testing.T) {
 	}
 }
 
+func TestEditValueForField_ParentReturnsKeyOnly(t *testing.T) {
+	issue := &jira.Issue{
+		Key:    "PROJ-2",
+		Parent: &jira.Issue{Key: "PROJ-1", Summary: "epic summary"},
+	}
+	got := EditValueForField(issue, "parent", "PROJ-1 -- epic summary")
+	if got != "PROJ-1" {
+		t.Errorf("EditValueForField('parent', ...) = %q, want %q", got, "PROJ-1")
+	}
+}
+
+func TestEditValueForField_ParentNilReturnsEmpty(t *testing.T) {
+	issue := &jira.Issue{Key: "PROJ-2"}
+	got := EditValueForField(issue, "parent", "")
+	if got != "" {
+		t.Errorf("EditValueForField('parent', empty) = %q, want empty", got)
+	}
+}
+
+func TestEditValueForField_FallbackToDisplay(t *testing.T) {
+	// Fields without an editValue callback (e.g. a hypothetical text custom
+	// field or any built-in that uses display = edit) fall through to the
+	// generic display-string filter, which only strips None/Unknown sentinels.
+	issue := &jira.Issue{Key: "PROJ-2"}
+	if got := EditValueForField(issue, "summary", "current summary"); got != "current summary" {
+		t.Errorf("fallback display: got %q, want %q", got, "current summary")
+	}
+	if got := EditValueForField(issue, "summary", noneLabelUpper); got != "" {
+		t.Errorf("fallback None: got %q, want empty", got)
+	}
+}
+
 func TestParentField_KeyOnlyDisplay(t *testing.T) {
 	// Optimistic update may leave Summary empty until re-fetch completes.
 	issue := &jira.Issue{
