@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -11,6 +13,25 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
+
+var parentKeyRegex = regexp.MustCompile(`^[A-Z][A-Z0-9_]+-\d+$`)
+
+// applyParentEdit dispatches a parent-field submission from the input modal.
+// Empty input clears the parent; non-empty input must match the issue-key
+// shape, otherwise the API call is skipped and an inline error is surfaced.
+func (a *App) applyParentEdit(issueKey, text string) tea.Cmd {
+	if text == "" {
+		a.optimisticFieldUpdate(issueKey, "parent", nil)
+		return removeIssueParent(a.client, issueKey)
+	}
+	if !parentKeyRegex.MatchString(text) {
+		return func() tea.Msg {
+			return errorMsg{err: fmt.Errorf("invalid parent key %q (expected PROJ-123)", text)}
+		}
+	}
+	a.optimisticFieldUpdate(issueKey, "parent", &jira.Issue{Key: text})
+	return updateIssueField(a.client, issueKey, "parent", map[string]string{"key": text})
+}
 
 // handleModalSelected dispatches modal selection via the onSelect callback
 func (a *App) handleModalSelected(msg components.ModalSelectedMsg) (tea.Model, tea.Cmd) {
@@ -117,6 +138,9 @@ func (a *App) handleInputConfirmed(msg components.InputConfirmedMsg) (tea.Model,
 			return a, updateIssueField(a.client, ctx.issueKey, "summary", msg.Text)
 		}
 	case editField:
+		if ctx.fieldID == "parent" {
+			return a, a.applyParentEdit(ctx.issueKey, strings.TrimSpace(msg.Text))
+		}
 		if msg.Text != "" {
 			a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, msg.Text)
 			return a, updateIssueField(a.client, ctx.issueKey, ctx.fieldID, msg.Text)

@@ -91,17 +91,45 @@ func TestParentField_HiddenForEpicWithoutParent(t *testing.T) {
 	}
 }
 
-func TestParentField_ReadOnly(t *testing.T) {
+func TestParentField_SetReplacesIssue(t *testing.T) {
 	issue := &jira.Issue{
 		Key:    "PROJ-2",
 		Parent: &jira.Issue{Key: "PROJ-1", Summary: "epic"},
 	}
-	// SetBuiltinFieldValue must be a no-op for "parent" because no setValue is wired.
-	if SetBuiltinFieldValue(issue, "parent", &jira.Issue{Key: "OTHER-1"}) {
-		t.Errorf("SetBuiltinFieldValue('parent', ...) returned true; expected false (read-only)")
+	if !SetBuiltinFieldValue(issue, "parent", &jira.Issue{Key: "OTHER-1"}) {
+		t.Fatalf("SetBuiltinFieldValue('parent', ...) returned false; expected true")
 	}
-	if issue.Parent.Key != "PROJ-1" {
-		t.Errorf("Parent was mutated: Key=%q", issue.Parent.Key)
+	if issue.Parent == nil || issue.Parent.Key != "OTHER-1" {
+		t.Errorf("Parent.Key = %v, want OTHER-1", issue.Parent)
+	}
+}
+
+func TestParentField_SetNilUnsets(t *testing.T) {
+	issue := &jira.Issue{
+		Key:    "PROJ-2",
+		Parent: &jira.Issue{Key: "PROJ-1", Summary: "epic"},
+	}
+	if !SetBuiltinFieldValue(issue, "parent", nil) {
+		t.Fatalf("SetBuiltinFieldValue('parent', nil) returned false; expected true")
+	}
+	if issue.Parent != nil {
+		t.Errorf("Parent = %+v, want nil", issue.Parent)
+	}
+}
+
+func TestParentField_KeyOnlyDisplay(t *testing.T) {
+	// Optimistic update may leave Summary empty until re-fetch completes.
+	issue := &jira.Issue{
+		Key:    "PROJ-2",
+		Parent: &jira.Issue{Key: "PROJ-1"},
+	}
+	fields := buildInfoFields(issue, nil)
+	f, ok := findField(fields, "parent")
+	if !ok {
+		t.Fatalf("expected 'parent' field, got: %+v", fields)
+	}
+	if f.Value != "PROJ-1" {
+		t.Errorf("Value = %q, want %q", f.Value, "PROJ-1")
 	}
 }
 
