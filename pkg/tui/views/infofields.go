@@ -100,7 +100,13 @@ var builtinFieldRegistry = []builtinFieldDef{
 			}
 			return "", false
 		},
-		nil,
+		func(i *jira.Issue, v any) {
+			if v == nil {
+				i.Parent = nil
+			} else if p, ok := v.(*jira.Issue); ok {
+				i.Parent = p
+			}
+		},
 	},
 	{"Sprint", "sprint", FieldSingleSelect,
 		func(i *jira.Issue) (string, bool) {
