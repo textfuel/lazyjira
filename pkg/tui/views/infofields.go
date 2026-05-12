@@ -16,31 +16,38 @@ import (
 const fieldStatus = "status"
 
 type builtinFieldDef struct {
-	name     string
-	fieldID  string
-	typ      InfoFieldType
+	name    string
+	fieldID string
+	typ     InfoFieldType
+	// getValue renders the field for display in the info pane.
 	getValue func(issue *jira.Issue) (string, bool)
+	// setValue applies the post-save value to the cached issue.
 	setValue func(issue *jira.Issue, value any)
+	// editValue returns the canonical input-modal prefill when it must differ
+	// from the display form (e.g. parent shows "KEY -- summary" but only the
+	// key is editable). nil means the display value is also the edit value.
+	editValue func(issue *jira.Issue) string
 }
 
 var builtinFieldRegistry = []builtinFieldDef{
-	{"Status", "status", FieldSingleSelect,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Status", fieldID: "status", typ: FieldSingleSelect,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if i.Status != nil {
 				return i.Status.Name, true
 			}
 			return unknownLabel, true
 		},
-		nil,
 	},
-	{"Priority", "priority", FieldSingleSelect,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Priority", fieldID: "priority", typ: FieldSingleSelect,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if i.Priority != nil {
 				return i.Priority.Name, true
 			}
 			return noneLabelUpper, true
 		},
-		func(i *jira.Issue, v any) {
+		setValue: func(i *jira.Issue, v any) {
 			if v == nil {
 				i.Priority = nil
 			} else if p, ok := v.(*jira.Priority); ok {
@@ -48,14 +55,15 @@ var builtinFieldRegistry = []builtinFieldDef{
 			}
 		},
 	},
-	{"Assignee", "assignee", FieldPerson,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Assignee", fieldID: "assignee", typ: FieldPerson,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if i.Assignee != nil {
 				return i.Assignee.DisplayName, true
 			}
 			return noneLabelUpper, true
 		},
-		func(i *jira.Issue, v any) {
+		setValue: func(i *jira.Issue, v any) {
 			if v == nil {
 				i.Assignee = nil
 			} else if u, ok := v.(*jira.User); ok {
@@ -63,14 +71,15 @@ var builtinFieldRegistry = []builtinFieldDef{
 			}
 		},
 	},
-	{"Reporter", "reporter", FieldPerson,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Reporter", fieldID: "reporter", typ: FieldPerson,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if i.Reporter != nil {
 				return i.Reporter.DisplayName, true
 			}
 			return unknownLabel, true
 		},
-		func(i *jira.Issue, v any) {
+		setValue: func(i *jira.Issue, v any) {
 			if v == nil {
 				i.Reporter = nil
 			} else if u, ok := v.(*jira.User); ok {
@@ -78,17 +87,18 @@ var builtinFieldRegistry = []builtinFieldDef{
 			}
 		},
 	},
-	{"Type", "issuetype", FieldSingleSelect,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Type", fieldID: "issuetype", typ: FieldSingleSelect,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if i.IssueType != nil {
 				return i.IssueType.Name, true
 			}
 			return unknownLabel, true
 		},
-		nil,
 	},
-	{"Parent", "parent", FieldSingleText,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Parent", fieldID: "parent", typ: FieldSingleText,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if i.Parent != nil {
 				if i.Parent.Summary == "" {
 					return i.Parent.Key, true
@@ -100,22 +110,29 @@ var builtinFieldRegistry = []builtinFieldDef{
 			}
 			return "", false
 		},
-		func(i *jira.Issue, v any) {
+		setValue: func(i *jira.Issue, v any) {
 			if v == nil {
 				i.Parent = nil
 			} else if p, ok := v.(*jira.Issue); ok {
 				i.Parent = p
 			}
 		},
+		editValue: func(i *jira.Issue) string {
+			if i.Parent == nil {
+				return ""
+			}
+			return i.Parent.Key
+		},
 	},
-	{"Sprint", "sprint", FieldSingleSelect,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Sprint", fieldID: "sprint", typ: FieldSingleSelect,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if i.Sprint != nil {
 				return i.Sprint.Name, true
 			}
 			return noneLabelUpper, true
 		},
-		func(i *jira.Issue, v any) {
+		setValue: func(i *jira.Issue, v any) {
 			if v == nil {
 				i.Sprint = nil
 			} else if s, ok := v.(*jira.Sprint); ok {
@@ -123,21 +140,23 @@ var builtinFieldRegistry = []builtinFieldDef{
 			}
 		},
 	},
-	{"Labels", "labels", FieldMultiSelect,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Labels", fieldID: "labels", typ: FieldMultiSelect,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if len(i.Labels) > 0 {
 				return strings.Join(i.Labels, ", "), true
 			}
 			return "", false
 		},
-		func(i *jira.Issue, v any) {
+		setValue: func(i *jira.Issue, v any) {
 			if labels, ok := v.([]string); ok {
 				i.Labels = labels
 			}
 		},
 	},
-	{"Components", "components", FieldMultiSelect,
-		func(i *jira.Issue) (string, bool) {
+	{
+		name: "Components", fieldID: "components", typ: FieldMultiSelect,
+		getValue: func(i *jira.Issue) (string, bool) {
 			if len(i.Components) > 0 {
 				names := make([]string, 0, len(i.Components))
 				for _, c := range i.Components {
@@ -147,7 +166,7 @@ var builtinFieldRegistry = []builtinFieldDef{
 			}
 			return "", false
 		},
-		func(i *jira.Issue, v any) {
+		setValue: func(i *jira.Issue, v any) {
 			if comps, ok := v.([]map[string]string); ok {
 				result := make([]jira.Component, 0, len(comps))
 				for _, c := range comps {
@@ -384,6 +403,17 @@ func EditValueForInput(val string) string {
 		return ""
 	}
 	return val
+}
+
+// EditValueForField returns the prefill text for an input-modal edit. Built-in
+// fields can provide an editValue callback when the display form is not what
+// the user should type back in (e.g. "PROJ-1 -- summary" displayed, "PROJ-1"
+// edited). Custom fields fall through to the generic display-string filter.
+func EditValueForField(issue *jira.Issue, fieldID, displayValue string) string {
+	if def, ok := builtinFieldMap[fieldID]; ok && def.editValue != nil {
+		return def.editValue(issue)
+	}
+	return EditValueForInput(displayValue)
 }
 
 func formatCustomFieldValue(v any) string {
