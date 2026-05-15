@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-05-15
+
 ### Added
 
 - Custom icons for issue priorities in the list view. Configure via `gui.priorityIcons` map in config.yml. Plain text works too.
@@ -400,7 +402,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.13.0...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.14.0...HEAD
+[2.14.0]: https://github.com/textfuel/lazyjira/compare/v2.13.0...v2.14.0
 [2.13.0]: https://github.com/textfuel/lazyjira/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/textfuel/lazyjira/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/textfuel/lazyjira/compare/v2.11.0...v2.11.1
