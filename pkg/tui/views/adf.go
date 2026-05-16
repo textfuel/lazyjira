@@ -2,7 +2,9 @@ package views
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/chroma/v2"
@@ -10,6 +12,9 @@ import (
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/charmbracelet/lipgloss"
+
+	adfconv "github.com/seflue/adf-converter/adf"
+	adfdisplay "github.com/seflue/adf-converter/display"
 
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
@@ -20,7 +25,17 @@ func RenderADFPreview(adf any, width int) []string {
 	return renderADF(adf, width)
 }
 
+// renderADF dispatches to the legacy hand-rolled renderer or the glamour-based
+// renderer depending on LAZYJIRA_RENDERER. Default is "legacy".
+// Spike toggle for #67; remove when migration completes.
 func renderADF(node any, width int) []string {
+	if os.Getenv("LAZYJIRA_RENDERER") == "glamour" {
+		return renderADFGlamour(node, width)
+	}
+	return renderADFLegacy(node, width)
+}
+
+func renderADFLegacy(node any, width int) []string {
 	doc, ok := node.(map[string]any)
 	if !ok {
 		return nil
@@ -34,6 +49,36 @@ func renderADF(node any, width int) []string {
 		r.renderBlock(child, 0)
 	}
 	return r.lines
+}
+
+// renderADFGlamour pipes ADF through adf-converter's display module,
+// which owns the ADF → display-Markdown → Glamour pipeline. Returns
+// plain-text fallback lines on any conversion error so the preview
+// never goes blank during the spike.
+func renderADFGlamour(node any, width int) []string {
+	raw, err := json.Marshal(node)
+	if err != nil {
+		return []string{fmt.Sprintf("[glamour: marshal: %v]", err)}
+	}
+	var doc adfconv.Document
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return []string{fmt.Sprintf("[glamour: unmarshal: %v]", err)}
+	}
+	if width < 10 {
+		width = 10
+	}
+	out, err := adfdisplay.Render(&doc,
+		adfdisplay.WithStyle("dark"),
+		adfdisplay.WithWordWrap(width),
+	)
+	if err != nil {
+		return []string{fmt.Sprintf("[glamour: render: %v]", err)}
+	}
+	out = strings.TrimRight(out, "\n")
+	if out == "" {
+		return nil
+	}
+	return strings.Split(out, "\n")
 }
 
 type adfRenderer struct {
