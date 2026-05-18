@@ -21,9 +21,7 @@ jobs:
           go-version-file: go.mod
 
       - name: make lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.11.3
+        run: make lint
 
       - name: make vet
         run: make vet
