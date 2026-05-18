@@ -34,6 +34,9 @@ jobs:
       - name: make test
         run: make test
 
+      - name: make check-demo
+        run: make check-demo
+
   nix:
     name: nix (make nix-deps)
     runs-on: ubuntu-latest
