@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   check:
     name: check (make check)
@@ -27,6 +30,9 @@ jobs:
 
       - name: make build
         run: make build
+
+      - name: make test
+        run: make test
 
   nix:
     name: nix (make nix-deps)

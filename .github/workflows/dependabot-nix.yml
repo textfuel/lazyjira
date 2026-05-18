@@ -1,0 +1,40 @@
+name: dependabot-nix
+
+on:
+  pull_request_target:
+    paths:
+      - go.mod
+      - go.sum
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate-gomod2nix:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: regenerate gomod2nix.toml
+        run: nix run nixpkgs#gomod2nix
+
+      - name: commit if changed
+        run: |
+          if [[ -n "$(git status --porcelain gomod2nix.toml)" ]]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add gomod2nix.toml
+            git commit -m 'ci: regenerate gomod2nix.toml after dependabot bump'
+            git push
+          fi
