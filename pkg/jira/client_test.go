@@ -2,6 +2,8 @@ package jira
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -113,6 +115,89 @@ func TestClient_GetChildren_ServerDCNoCall(t *testing.T) {
 	}
 	if rt.calls != 0 {
 		t.Errorf("Server/DC GetChildren: expected 0 HTTP calls, got %d", rt.calls)
+	}
+}
+
+func TestClient_UpdateIssue_ParentSet(t *testing.T) {
+	var gotPath string
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		raw, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(raw, &gotBody)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClientWithOpts(ClientOpts{Host: srv.URL, Email: "u", Token: "t", IsCloud: true})
+	err := c.UpdateIssue(context.Background(), "PROJ-2", map[string]any{
+		"parent": map[string]string{"key": "PROJ-1"},
+	})
+	if err != nil {
+		t.Fatalf("UpdateIssue: %v", err)
+	}
+	if !strings.HasSuffix(gotPath, "/issue/PROJ-2") {
+		t.Errorf("path = %q", gotPath)
+	}
+	fields, _ := gotBody["fields"].(map[string]any)
+	parent, _ := fields["parent"].(map[string]any)
+	if parent["key"] != "PROJ-1" {
+		t.Errorf("body fields.parent.key = %v, want PROJ-1", parent["key"])
+	}
+}
+
+func TestClient_RemoveIssueParent_Cloud(t *testing.T) {
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(raw, &gotBody)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClientWithOpts(ClientOpts{Host: srv.URL, Email: "u", Token: "t", IsCloud: true})
+	if err := c.RemoveIssueParent(context.Background(), "PROJ-2"); err != nil {
+		t.Fatalf("RemoveIssueParent: %v", err)
+	}
+	fields, ok := gotBody["fields"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected fields wrapper, got %#v", gotBody)
+	}
+	if v, ok := fields["parent"]; !ok || v != nil {
+		t.Errorf("fields.parent = %v (ok=%v), want nil literal", v, ok)
+	}
+	if _, ok := gotBody["update"]; ok {
+		t.Errorf("Cloud body should not contain 'update', got %#v", gotBody)
+	}
+}
+
+func TestClient_RemoveIssueParent_DC(t *testing.T) {
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(raw, &gotBody)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClientWithOpts(ClientOpts{Host: srv.URL, Token: "pat", IsCloud: false})
+	if err := c.RemoveIssueParent(context.Background(), "PROJ-2"); err != nil {
+		t.Fatalf("RemoveIssueParent: %v", err)
+	}
+	update, ok := gotBody["update"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected update wrapper, got %#v", gotBody)
+	}
+	ops, ok := update["parent"].([]any)
+	if !ok || len(ops) != 1 {
+		t.Fatalf("update.parent = %#v, want [{remove:{}}]", update["parent"])
+	}
+	op, _ := ops[0].(map[string]any)
+	if _, ok := op["remove"]; !ok {
+		t.Errorf("update.parent[0] = %#v, want remove op", op)
+	}
+	if _, ok := gotBody["fields"]; ok {
+		t.Errorf("DC body should not contain 'fields', got %#v", gotBody)
 	}
 }
 
