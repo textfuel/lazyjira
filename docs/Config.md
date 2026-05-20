@@ -366,6 +366,22 @@ Template variables.
 | `{{.Type}}` | Issue type name (e.g. Bug, Story, Task) |
 | `{{.ParentKey}}` | Parent issue key (empty if no parent) |
 
+## Markdown conversion (`converter`)
+
+Controls how Jira's ADF (Atlassian Document Format) is converted to and from Markdown for the editor. Affects both issue descriptions and comments when you open them in your `$EDITOR`.
+
+```yaml
+converter: adf-converter
+```
+
+| Value | Behavior |
+|-------|----------|
+| *(unset, default)* | Built-in converter. Stateless. |
+| `builtin` | Same as the default; explicit form. |
+| `adf-converter` | External [adf-converter](https://github.com/seflue/adf-converter) library. Supports the common Jira ADF element set as editable Markdown. Inline media, internal attachments, and unknown node types fall back to placeholders so the roundtrip stays lossless. |
+
+Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
+
 ## Custom commands
 
 Bind shell commands to keys, with Go template access to the focused issue, project, or comment. Custom bindings take precedence over built-in keys, so they can be used to override any action.

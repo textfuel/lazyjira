@@ -661,21 +661,33 @@ func (a *App) handleActionEdit() (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		md := ""
+		var convState any
 		if cmt.BodyADF != nil {
-			md = views.ADFToMarkdown(cmt.BodyADF)
+			var err error
+			md, convState, err = a.converter.ToMarkdown(cmt.BodyADF)
+			if err != nil {
+				a.statusPanel.SetError("convert comment: " + err.Error())
+				return a, nil
+			}
 		} else if cmt.Body != "" {
 			md = cmt.Body
 		}
-		a.editContext = editCtx{kind: editCommentMod, issueKey: cur.Key, commentID: cmt.ID}
+		a.editContext = editCtx{kind: editCommentMod, issueKey: cur.Key, commentID: cmt.ID, converterState: convState}
 		return a, launchEditor(md, ".md")
 	}
 	md := ""
+	var convState any
 	if cur.DescriptionADF != nil {
-		md = views.ADFToMarkdown(cur.DescriptionADF)
+		var err error
+		md, convState, err = a.converter.ToMarkdown(cur.DescriptionADF)
+		if err != nil {
+			a.statusPanel.SetError("convert description: " + err.Error())
+			return a, nil
+		}
 	} else if cur.Description != "" {
 		md = cur.Description
 	}
-	a.editContext = editCtx{kind: editDesc, issueKey: cur.Key}
+	a.editContext = editCtx{kind: editDesc, issueKey: cur.Key, converterState: convState}
 	return a, launchEditor(md, ".md")
 }
 

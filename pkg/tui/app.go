@@ -65,11 +65,12 @@ const (
 )
 
 type editCtx struct {
-	kind       editKind
-	issueKey   string
-	commentID  string
-	fieldID    string
-	fieldIndex int
+	kind           editKind
+	issueKey       string
+	commentID      string
+	fieldID        string
+	fieldIndex     int
+	converterState any
 }
 
 type createCtx struct {
@@ -156,6 +157,7 @@ type App struct {
 
 	editTempPath string
 	editContext  editCtx
+	converter    ADFConverter
 
 	onSelect    onSelectFunc
 	onChecklist onChecklistFunc
@@ -336,6 +338,12 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		issueCache:      make(map[string]*jira.Issue),
 		childrenCache:   make(map[string][]jira.Issue),
 		createMetaCache: make(map[string][]jira.CreateMetaField),
+		converter: BuiltinConverter{},
+	}
+	// cfg.Converter is validated at config-load time; "" and "builtin"
+	// both fall through to the BuiltinConverter set above.
+	if cfg.Converter == config.ConverterAdfConverter {
+		app.converter = AdfConvConverter{}
 	}
 	app.ctx, app.cancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is called in Shutdown()
 	navResolver := app.keymap.MatchNav
@@ -853,7 +861,12 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 
 	var body any = mdContent
 	if a.isCloud {
-		body = views.MarkdownToADF(mdContent)
+		adf, err := a.converter.FromMarkdown(mdContent, ctx.converterState)
+		if err != nil {
+			a.statusPanel.SetError("convert markdown: " + err.Error())
+			return nil
+		}
+		body = adf
 	}
 
 	switch ctx.kind { //nolint:exhaustive

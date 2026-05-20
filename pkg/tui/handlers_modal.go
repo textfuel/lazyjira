@@ -52,6 +52,7 @@ func (a *App) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 	// create form description: skip diff view, update field directly
 	if a.editContext.kind == editCreateDesc {
 		idx := a.editContext.fieldIndex
+		convState := a.editContext.converterState
 		a.editContext = editCtx{}
 		cleanupEditor(msg.tempPath)
 		a.editTempPath = ""
@@ -63,7 +64,12 @@ func (a *App) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 		if changed && content != "" {
 			var val any = content
 			if a.isCloud {
-				val = views.MarkdownToADF(content)
+				adf, convErr := a.converter.FromMarkdown(content, convState)
+				if convErr != nil {
+					a.statusPanel.SetError("convert description: " + convErr.Error())
+					return a, tea.Batch(cmds...)
+				}
+				val = adf
 			}
 			a.createForm.SetFieldValue(idx, val, content)
 		}
@@ -169,7 +175,13 @@ func (a *App) handleCreateFormEditExternal(msg components.CreateFormEditExternal
 	content := ""
 	if field.Value != nil {
 		if _, isStr := field.Value.(string); !isStr {
-			content = views.ADFToMarkdown(field.Value)
+			md, state, err := a.converter.ToMarkdown(field.Value)
+			if err != nil {
+				a.statusPanel.SetError("convert description: " + err.Error())
+				return a, nil
+			}
+			content = md
+			a.editContext.converterState = state
 		}
 	}
 	if content == "" && field.DisplayValue != "" {
