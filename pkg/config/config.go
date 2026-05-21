@@ -297,9 +297,9 @@ func DefaultIssueTabs() []IssueTabConfig {
 }
 
 // ConfigDir returns the lazyjira configuration directory path
-// Order of precedence: CONFIG_DIR env, XDG_CONFIG_HOME/lazyjira, os.UserConfigDir()/lazyjira, ~/.config/lazyjira
+// Order of precedence: LAZYJIRA_CONFIG_DIR env, XDG_CONFIG_HOME/lazyjira, os.UserConfigDir()/lazyjira, ~/.config/lazyjira
 func ConfigDir() string {
-	if dir := os.Getenv("CONFIG_DIR"); dir != "" {
+	if dir := os.Getenv("LAZYJIRA_CONFIG_DIR"); dir != "" {
 		return dir
 	}
 	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {

@@ -10,7 +10,9 @@ lazyjira is configured through a YAML file.
 | macOS | `~/Library/Application Support/lazyjira/config.yml` |
 | Windows | `%AppData%\lazyjira\config.yml` |
 
-You can override the config directory with the `CONFIG_DIR` environment variable. `XDG_CONFIG_HOME` is also respected on Linux.
+You can override the config directory with the `LAZYJIRA_CONFIG_DIR` environment variable. `XDG_CONFIG_HOME` is also respected on Linux.
+
+`CONFIG_DIR` is no longer supported. If you previously used it, rename it to `LAZYJIRA_CONFIG_DIR`.
 
 ## Environment variables
 
