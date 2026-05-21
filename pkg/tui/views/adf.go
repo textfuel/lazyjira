@@ -2,6 +2,7 @@ package views
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -11,9 +12,22 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/charmbracelet/lipgloss"
 
+	adfconv "github.com/seflue/adf-converter/adf"
+	adfdisplay "github.com/seflue/adf-converter/display"
+
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
+
+// activeRenderer selects the ADF renderer. Set once at startup from config.
+// Empty string and "builtin" both resolve to the built-in renderer.
+var activeRenderer string
+
+// SetRenderer selects which ADF renderer renderADF dispatches to.
+// Call once during startup with the value of Config.Renderer.
+func SetRenderer(name string) {
+	activeRenderer = name
+}
 
 // RenderADFPreview renders raw ADF data to styled terminal lines for preview in create form
 func RenderADFPreview(adf any, width int) []string {
@@ -21,6 +35,13 @@ func RenderADFPreview(adf any, width int) []string {
 }
 
 func renderADF(node any, width int) []string {
+	if activeRenderer == "glamour" {
+		return renderADFGlamour(node, width)
+	}
+	return renderADFBuiltin(node, width)
+}
+
+func renderADFBuiltin(node any, width int) []string {
 	doc, ok := node.(map[string]any)
 	if !ok {
 		return nil
@@ -34,6 +55,36 @@ func renderADF(node any, width int) []string {
 		r.renderBlock(child, 0)
 	}
 	return r.lines
+}
+
+// renderADFGlamour pipes ADF through adf-converter's display module,
+// which owns the ADF → display-Markdown → Glamour pipeline. Returns
+// a single-line marker on any conversion error so the preview never
+// goes blank.
+func renderADFGlamour(node any, width int) []string {
+	raw, err := json.Marshal(node)
+	if err != nil {
+		return []string{fmt.Sprintf("[glamour: marshal: %v]", err)}
+	}
+	var doc adfconv.Document
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return []string{fmt.Sprintf("[glamour: unmarshal: %v]", err)}
+	}
+	if width < 10 {
+		width = 10
+	}
+	out, err := adfdisplay.Render(&doc,
+		adfdisplay.WithStyle("dark"),
+		adfdisplay.WithWordWrap(width),
+	)
+	if err != nil {
+		return []string{fmt.Sprintf("[glamour: render: %v]", err)}
+	}
+	out = strings.TrimRight(out, "\n")
+	if out == "" {
+		return nil
+	}
+	return strings.Split(out, "\n")
 }
 
 type adfRenderer struct {
