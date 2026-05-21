@@ -24,6 +24,22 @@ func validateConverter(value string) error {
 	}
 }
 
+// Valid values for Config.Renderer. Empty string is treated as RendererBuiltin.
+const (
+	RendererBuiltin = "builtin"
+	RendererGlamour = "glamour"
+)
+
+func validateRenderer(value string) error {
+	switch value {
+	case "", RendererBuiltin, RendererGlamour:
+		return nil
+	default:
+		return fmt.Errorf("unknown renderer %q; valid: %q (default), %q, %q",
+			value, "", RendererBuiltin, RendererGlamour)
+	}
+}
+
 type Config struct {
 	Jira             JiraConfig            `yaml:"jira"`
 	Projects         []ProjectConfig       `yaml:"projects"`
@@ -38,6 +54,7 @@ type Config struct {
 	Git              GitConfig             `yaml:"git"`
 	CustomCommands   []CustomCommandConfig `yaml:"customCommands"`
 	Converter        string                `yaml:"converter"`
+	Renderer         string                `yaml:"renderer"`
 }
 
 type CustomCommandConfig struct {
@@ -372,6 +389,10 @@ func Load() (*Config, error) {
 	}
 
 	if err := validateConverter(cfg.Converter); err != nil {
+		return nil, err
+	}
+
+	if err := validateRenderer(cfg.Renderer); err != nil {
 		return nil, err
 	}
 

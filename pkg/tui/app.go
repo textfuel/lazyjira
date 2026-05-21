@@ -345,6 +345,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	if cfg.Converter == config.ConverterAdfConverter {
 		app.converter = AdfConvConverter{}
 	}
+	views.SetRenderer(cfg.Renderer)
 	app.ctx, app.cancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is called in Shutdown()
 	navResolver := app.keymap.MatchNav
 	app.issuesList.ResolveNav = navResolver
