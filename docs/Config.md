@@ -41,6 +41,9 @@ jira:
 projects: []
 gui:
     theme: default
+    themeColors: {}   # optional palette overrides (see Themes section)
+    themeDark: {}     # applied on dark presets only
+    themeLight: {}    # applied on light presets only
     language: en
     sidePanelWidth: 40
     collapsedPanelHeight: 5
@@ -187,11 +190,95 @@ gui:
 
 `collapsedPanelHeight` sets the height of non-focused left panels in lines (default 5, minimum 3).
 
-`theme` selects the color palette. Supported values: `default` (ANSI 16, original look), `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`. Omit or set to `default` to keep the original colors. Catppuccin themes use hex colors and require a terminal with truecolor support.
+`theme` selects the color palette. Supported values: `default` (ANSI 16, original look), `auto`, [Catppuccin](https://github.com/catppuccin/catppuccin) presets (`catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`). Omitting the `theme` key or setting it to `""` keeps the legacy `default` ANSI 16 palette for backward compatibility. Use `theme: auto` to opt into runtime detection: lazyjira inspects your terminal background and picks `catppuccin-mocha` (dark) or `catppuccin-latte` (light). An unknown theme name is an error. Hex-based themes require a terminal with truecolor support.
 
 ```yaml
 gui:
   theme: catppuccin-mocha
+```
+
+### Themes
+
+#### Built-in presets
+
+| Preset                 | Variant | Notes                                |
+|------------------------|---------|--------------------------------------|
+| `default`              | dark    | ANSI 16 palette — inherits your terminal colors |
+| `catppuccin-latte`     | light   | Catppuccin Latte                     |
+| `catppuccin-frappe`    | dark    | Catppuccin Frappé (warmest dark)     |
+| `catppuccin-macchiato` | dark    | Catppuccin Macchiato (medium)        |
+| `catppuccin-mocha`     | dark    | Catppuccin Mocha (deepest dark)      |
+
+#### Per-color overrides
+
+Three optional maps let you override individual palette entries on top of any preset:
+
+- **`themeColors`** — applied to every preset.
+- **`themeDark`** — applied only when the active preset is a dark variant.
+- **`themeLight`** — applied only when the active preset is a light variant.
+
+The precedence is preset → `themeColors` → (`themeDark` or `themeLight`). Empty values and unknown keys are ignored, so configs stay forward-compatible.
+
+Supported keys:
+
+| Key         | Role                                                  |
+|-------------|-------------------------------------------------------|
+| `green`     | Primary accent — titles, active borders, success     |
+| `blue`      | Secondary accent                                      |
+| `red`       | Errors, high priority                                 |
+| `yellow`    | Warnings, in-progress, medium priority                |
+| `cyan`      | Search mode indicators                                |
+| `magenta`   | JQL keywords                                          |
+| `orange`    | Names, metadata                                       |
+| `white`     | Foreground text — use a **dark** color on light themes |
+| `gray`      | Subtitles, hint bars                                  |
+| `highlight` | Selection / cursor background                         |
+
+Values are any lipgloss-accepted color: hex (`"#a6e3a1"`), ANSI 16 (`"4"`), or ANSI 256 (`"208"`).
+
+#### Example: Rose Pine
+
+Auto-detect between Main (dark) and Dawn (light). Palette from [Rose Pine](https://rosepinetheme.com) — All natural pine, faux fur and a bit of soho vibes for the classy minimalist.
+
+```yaml
+gui:
+  theme: auto
+
+  themeDark:
+    white:     "#e0def4"   # Text
+    gray:      "#6e6a86"   # Muted
+    green:     "#31748f"   # Pine
+    blue:      "#9ccfd8"   # Foam
+    cyan:      "#9ccfd8"
+    red:       "#eb6f92"   # Love
+    yellow:    "#f6c177"   # Gold
+    magenta:   "#c4a7e7"   # Iris
+    orange:    "#ebbcba"   # Rose
+    highlight: "#403d52"
+
+  themeLight:
+    white:     "#575279"
+    gray:      "#9893a5"
+    green:     "#286983"
+    blue:      "#56949f"
+    cyan:      "#56949f"
+    red:       "#b4637a"
+    yellow:    "#ea9d34"
+    magenta:   "#907aa9"
+    orange:    "#d7827e"
+    highlight: "#dfdad9"
+```
+
+#### Example: tweak a Catppuccin preset
+
+Keep Mocha but swap the accent to a softer green and brighten the selection background:
+
+```yaml
+gui:
+  theme: catppuccin-mocha
+  themeColors:
+    green:     "#94e2d5"
+    highlight: "#45475a"
 ```
 
 `selectCreatedIssue` controls whether the app auto-selects a newly created issue in the list. If the issue does not match the current tab, the app switches to the All tab. Enabled by default.

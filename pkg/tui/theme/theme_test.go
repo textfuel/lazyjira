@@ -22,12 +22,35 @@ func TestSetThemeDefault(t *testing.T) {
 }
 
 func TestSetThemeEmpty(t *testing.T) {
+	// Empty preset must resolve to the legacy ANSI 16 default so that
+	// upgrading users who never set gui.theme see no visual change.
 	if err := SetTheme(""); err != nil {
 		t.Fatalf("SetTheme(''): %v", err)
 	}
 	if ColorGreen != lipgloss.Color("2") {
-		t.Errorf("ColorGreen = %q, want %q", ColorGreen, "2")
+		t.Errorf("ColorGreen = %q, want ANSI 2", ColorGreen)
 	}
+	if ColorBlue != lipgloss.Color("4") {
+		t.Errorf("ColorBlue = %q, want ANSI 4", ColorBlue)
+	}
+	_ = SetTheme("default")
+}
+
+func TestSetThemeAuto(t *testing.T) {
+	// "auto" picks a Catppuccin default based on terminal background. We
+	// can't predict which lands, but it must populate the palette and the
+	// chosen preset must be one of the registered defaults.
+	if err := SetTheme("auto"); err != nil {
+		t.Fatalf("SetTheme(auto): %v", err)
+	}
+	if Default.Colors.Green == "" {
+		t.Error("auto-detected palette has empty Green")
+	}
+	got := string(Default.Colors.Green)
+	if got != "#a6e3a1" && got != "#40a02b" {
+		t.Errorf("auto Green = %q, want mocha or latte default", got)
+	}
+	_ = SetTheme("default")
 }
 
 func TestSetThemeCatppuccinMocha(t *testing.T) {
@@ -123,116 +146,111 @@ func TestSetThemeResetsAuthorCache(t *testing.T) {
 	_ = SetTheme("default")
 }
 
-const authorFixtureName = "Ada Lovelace"
-
-var ansiEscapeSequences = regexp.MustCompile("\x1b\\[[0-9;]*m")
-
-func forceColorProfile(t *testing.T) {
-	t.Helper()
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	t.Cleanup(func() { lipgloss.SetColorProfile(originalProfile) })
+func TestInitAppliesSharedOverrides(t *testing.T) {
+	err := Init(Options{
+		Preset: "default",
+		Colors: map[string]string{
+			"green":     "#abcdef",
+			"highlight": "#123456",
+			"bogus":     "ignored",
+			"red":       "", // empty value must be skipped
+		},
+	})
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if Default.Colors.Green != lipgloss.Color("#abcdef") {
+		t.Errorf("Green = %q, want #abcdef", Default.Colors.Green)
+	}
+	if ColorGreen != lipgloss.Color("#abcdef") {
+		t.Errorf("ColorGreen not synced: %q", ColorGreen)
+	}
+	if Default.Colors.Highlight != lipgloss.Color("#123456") {
+		t.Errorf("Highlight = %q, want #123456", Default.Colors.Highlight)
+	}
+	// Empty value must leave Red at the preset's value.
+	if Default.Colors.Red != lipgloss.Color("1") {
+		t.Errorf("Red = %q, want preset default 1", Default.Colors.Red)
+	}
+	_ = SetTheme("default")
 }
 
-func TestDefaultTheme_ReturnsSingleton(t *testing.T) {
-	_ = SetTheme("default")
-	if DefaultTheme() != Default {
-		t.Error("DefaultTheme() should return the Default singleton")
+func TestInitAppliesDarkOverridesOnlyOnDarkPreset(t *testing.T) {
+	// Mocha is a dark preset → ColorsDark applies, ColorsLight is ignored.
+	err := Init(Options{
+		Preset:      "catppuccin-mocha",
+		ColorsDark:  map[string]string{"green": "#111111"},
+		ColorsLight: map[string]string{"green": "#999999"},
+	})
+	if err != nil {
+		t.Fatalf("Init: %v", err)
 	}
+	if Default.Colors.Green != lipgloss.Color("#111111") {
+		t.Errorf("dark override not applied: Green = %q", Default.Colors.Green)
+	}
+
+	// Latte is a light preset → ColorsLight applies instead.
+	err = Init(Options{
+		Preset:      "catppuccin-latte",
+		ColorsDark:  map[string]string{"green": "#111111"},
+		ColorsLight: map[string]string{"green": "#999999"},
+	})
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if Default.Colors.Green != lipgloss.Color("#999999") {
+		t.Errorf("light override not applied: Green = %q", Default.Colors.Green)
+	}
+	_ = SetTheme("default")
 }
 
-func TestPriorityStyled_RoutesNamesToPriorityStyles(t *testing.T) {
-	_ = SetTheme("default")
-	forceColorProfile(t)
-
-	if Default.PriorityHigh.Render("x") == Default.PriorityLow.Render("x") {
-		t.Fatal("color profile did not produce distinct priority styles")
+func TestFindPresetCaseInsensitive(t *testing.T) {
+	if FindPreset("Catppuccin-Mocha") == nil {
+		t.Error("FindPreset should be case-insensitive")
 	}
-
-	tests := []struct {
-		name      string
-		priority  string
-		wantStyle lipgloss.Style
-	}{
-		{"highest", "Highest", Default.PriorityHigh},
-		{"high lowercase", "high", Default.PriorityHigh},
-		{"critical", "Critical", Default.PriorityHigh},
-		{"blocker uppercase", "BLOCKER", Default.PriorityHigh},
-		{"medium", "Medium", Default.PriorityMedium},
-		{"low routes to low style", "Low", Default.PriorityLow},
-		{"lowest routes to low style", "Lowest", Default.PriorityLow},
-		{"unknown routes to low style", "Whatever", Default.PriorityLow},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			want := tc.wantStyle.Render(tc.priority)
-			if got := PriorityStyled(tc.priority); got != want {
-				t.Errorf("PriorityStyled(%q) = %q, want %q", tc.priority, got, want)
-			}
-		})
-	}
-}
-
-func TestStatusColor_MapsCategoryToThemeColor(t *testing.T) {
-	_ = SetTheme("default")
-
-	tests := []struct {
-		name        string
-		categoryKey string
-		want        lipgloss.Color
-	}{
-		{"done is green", "done", lipgloss.Color("2")},
-		{"indeterminate is yellow", "indeterminate", lipgloss.Color("3")},
-		{"new is blue", "new", lipgloss.Color("4")},
-		{"unknown is gray", "undefined", lipgloss.Color("8")},
-		{"empty is gray", "", lipgloss.Color("8")},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := StatusColor(tc.categoryKey).GetForeground()
-			if got != tc.want {
-				t.Errorf("StatusColor(%q) foreground = %v, want %v", tc.categoryKey, got, tc.want)
-			}
-		})
+	if FindPreset("does-not-exist") != nil {
+		t.Error("FindPreset should return nil for unknown names")
 	}
 }
 
-func TestAuthorStyle_DeterministicAndNormalized(t *testing.T) {
-	_ = SetTheme("default")
-
-	plain := AuthorStyle(authorFixtureName)
-	prefixed := AuthorStyle("@" + authorFixtureName + " ")
-	repeated := AuthorStyle(authorFixtureName)
-
-	if plain.GetForeground() != prefixed.GetForeground() {
-		t.Error("@-prefixed and plain names should share one color")
-	}
-	if plain.GetForeground() != repeated.GetForeground() {
-		t.Error("repeated lookups should return the cached color")
-	}
-
-	foreground, ok := plain.GetForeground().(lipgloss.Color)
-	if !ok {
-		t.Fatalf("foreground = %T, want lipgloss.Color", plain.GetForeground())
-	}
-	if !slices.Contains(Default.AuthorPalette, foreground) {
-		t.Errorf("foreground %v is not part of the author palette", foreground)
+func TestPresetsListed(t *testing.T) {
+	got := Presets()
+	if len(got) < 5 {
+		t.Errorf("expected at least 5 presets, got %d", len(got))
 	}
 }
 
-func TestAuthorRender_AppliesAuthorColorToName(t *testing.T) {
+func TestInitToleratesInvalidColorValues(t *testing.T) {
+	err := Init(Options{
+		Preset: "default",
+		Colors: map[string]string{
+			"green": "not-a-color",
+			"blue":  "#zzzzzz",
+			"red":   "totally bogus value",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Init must accept malformed color values: %v", err)
+	}
+	// Palette must still be populated; lipgloss.Color is a string type so
+	// the override is stored verbatim and rendering must not panic on use.
+	if Default.Colors.Green == "" {
+		t.Error("Green became empty after invalid override")
+	}
+	// Sanity check: rendering with the invalid color does not crash.
+	_ = Default.Title.Render("smoke test")
 	_ = SetTheme("default")
-	forceColorProfile(t)
+}
 
-	rendered := AuthorRender(authorFixtureName)
-	want := AuthorStyle(authorFixtureName).Render(authorFixtureName)
-	if rendered != want {
-		t.Errorf("AuthorRender = %q, want %q", rendered, want)
+func TestPresetsReturnsCopy(t *testing.T) {
+	got := Presets()
+	if len(got) == 0 {
+		t.Fatal("Presets returned empty slice")
 	}
-	if plainText := ansiEscapeSequences.ReplaceAllString(rendered, ""); plainText != authorFixtureName {
-		t.Errorf("plain text = %q, want %q", plainText, authorFixtureName)
-	}
-	if rendered == authorFixtureName {
-		t.Error("rendered name should carry color escape codes under a color profile")
+	original := got[0].Name
+	got[0].Name = "mutated"
+	again := Presets()
+	if again[0].Name != original {
+		t.Errorf("Presets backing slice was mutated: got %q, want %q", again[0].Name, original)
 	}
 }

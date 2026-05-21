@@ -183,29 +183,127 @@ func syncColors() {
 	authorMutex.Unlock()
 }
 
-// SetTheme selects a theme by name and updates the global Default instance
-// along with all package-level color variables. Must be called before the
-// TUI starts.
+// Options configures the theme system. Values map 1:1 to the GUIConfig
+// fields in pkg/config; the indirection keeps the theme package free of
+// any config-package dependency.
 //
-// Supported names: "default", "catppuccin-latte", "catppuccin-frappe",
-// "catppuccin-macchiato", "catppuccin-mocha".
-func SetTheme(name string) error {
-	switch name {
-	case "", "default":
-		Default = defaultTheme()
-	case "catppuccin-latte":
-		Default = catppuccinLatte()
-	case "catppuccin-frappe":
-		Default = catppuccinFrappe()
-	case "catppuccin-macchiato":
-		Default = catppuccinMacchiato()
-	case "catppuccin-mocha":
-		Default = catppuccinMocha()
+// Precedence (low to high):
+//  1. The selected preset's palette.
+//  2. Colors (shared overrides applied to every preset).
+//  3. ColorsDark or ColorsLight, whichever matches the preset's IsLight flag.
+//
+// Override map keys are lowercase palette field names: "green", "blue",
+// "red", "yellow", "cyan", "magenta", "white", "gray", "orange", "highlight".
+// Unknown keys and empty values are silently ignored so configs stay
+// forward-compatible.
+type Options struct {
+	Preset      string
+	Colors      map[string]string
+	ColorsDark  map[string]string
+	ColorsLight map[string]string
+}
+
+// Init selects a preset, applies any user overrides, and refreshes the
+// global Default theme plus the package-level color variables. Must be
+// called before the TUI starts.
+//
+// Preset resolution:
+//   - "" (unset): the bundled "default" ANSI 16 preset, matching the
+//     pre-themeing behavior.
+//   - "auto": chosen at runtime from the terminal background
+//     (DefaultDarkPresetName or DefaultLightPresetName).
+//   - any other value: looked up case-insensitively; unknown names
+//     return an error.
+func Init(opts Options) error {
+	var preset *Preset
+	switch strings.ToLower(strings.TrimSpace(opts.Preset)) {
+	case "":
+		preset = FindPreset("default")
+	case "auto":
+		preset = autoDetectPreset()
 	default:
-		return fmt.Errorf("unknown theme: %q", name)
+		preset = FindPreset(opts.Preset)
+		if preset == nil {
+			return fmt.Errorf("unknown theme: %q", opts.Preset)
+		}
 	}
+	if preset == nil {
+		// "default" preset was stripped from presetList; fall back to
+		// whatever ships first so the binary keeps rendering.
+		preset = &presetList[0]
+	}
+
+	built := preset.Build()
+	palette := applyOverrides(built.Colors, opts.Colors)
+	if preset.IsLight {
+		palette = applyOverrides(palette, opts.ColorsLight)
+	} else {
+		palette = applyOverrides(palette, opts.ColorsDark)
+	}
+
+	Default = buildTheme(palette, built.AuthorPalette)
 	syncColors()
 	return nil
+}
+
+// SetTheme is a thin wrapper around Init kept for callers (and tests) that
+// only care about preset selection without overrides.
+func SetTheme(name string) error {
+	return Init(Options{Preset: name})
+}
+
+// autoDetectPreset returns the preset chosen when GUI.Theme is set to
+// "auto". Falls back to the dark default if neither preset is registered,
+// which should be impossible but keeps the binary working if someone
+// strips presets.go.
+func autoDetectPreset() *Preset {
+	if lipgloss.HasDarkBackground() {
+		if p := FindPreset(DefaultDarkPresetName); p != nil {
+			return p
+		}
+	} else {
+		if p := FindPreset(DefaultLightPresetName); p != nil {
+			return p
+		}
+	}
+	if p := FindPreset(DefaultDarkPresetName); p != nil {
+		return p
+	}
+	return &presetList[0]
+}
+
+// applyOverrides patches a ColorPalette with any non-empty values from the
+// provided map. Unknown keys and empty values are ignored.
+func applyOverrides(p ColorPalette, m map[string]string) ColorPalette {
+	for key, val := range m {
+		if val == "" {
+			continue
+		}
+		c := lipgloss.Color(val)
+		switch strings.ToLower(key) {
+		case "green":
+			p.Green = c
+		case "blue":
+			p.Blue = c
+		case "red":
+			p.Red = c
+		case "yellow":
+			p.Yellow = c
+		case "cyan":
+			p.Cyan = c
+		case "magenta":
+			p.Magenta = c
+		case "white":
+			p.White = c
+		case "gray":
+			p.Gray = c
+		case "orange":
+			p.Orange = c
+		case "highlight":
+			p.Highlight = c
+		}
+	}
+	return p
 }
 
 // PriorityStyled applies priority color based on name

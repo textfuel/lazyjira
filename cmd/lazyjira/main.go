@@ -82,7 +82,12 @@ func run() error {
 		}
 	}
 
-	if err := theme.SetTheme(cfg.GUI.Theme); err != nil {
+	if err := theme.Init(theme.Options{
+		Preset:      cfg.GUI.Theme,
+		Colors:      cfg.GUI.ThemeColors,
+		ColorsDark:  cfg.GUI.ThemeDark,
+		ColorsLight: cfg.GUI.ThemeLight,
+	}); err != nil {
 		return err
 	}
 
