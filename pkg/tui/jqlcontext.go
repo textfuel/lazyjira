@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
@@ -191,10 +192,10 @@ func findFieldBeforeOperator(tokens []string) string {
 		"is": true, "in": true, "not": true, "was": true,
 	}
 
-	for i := len(tokens) - 1; i >= 0; i-- {
-		lower := strings.ToLower(tokens[i])
+	for _, v := range slices.Backward(tokens) {
+		lower := strings.ToLower(v)
 		if !operators[lower] {
-			return tokens[i]
+			return v
 		}
 	}
 	return ""

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -767,8 +768,8 @@ func (d *DetailView) renderHistoryBlocks(width int) [][]string {
 	blocks := make([][]string, 0, len(d.issue.Changelog))
 
 	// Reverse order: newest first.
-	for i := len(d.issue.Changelog) - 1; i >= 0; i-- {
-		entry := d.issue.Changelog[i]
+	for _, v := range slices.Backward(d.issue.Changelog) {
+		entry := v
 		author := unknownLabel
 		if entry.Author != nil {
 			author = entry.Author.DisplayName
