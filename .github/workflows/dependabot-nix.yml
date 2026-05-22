@@ -27,7 +27,7 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: regenerate gomod2nix.toml
-        run: nix run nixpkgs#gomod2nix
+        run: nix run github:nix-community/gomod2nix
 
       - name: commit if changed
         run: |
