@@ -2,6 +2,8 @@ package theme
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -53,9 +55,22 @@ type Theme struct {
 	WarningText    lipgloss.Style
 	KeyStyle       lipgloss.Style
 	ValueStyle     lipgloss.Style
-	PriorityHigh   lipgloss.Style
-	PriorityMedium lipgloss.Style
-	PriorityLow    lipgloss.Style
+
+	// Semantic accent slots.
+	Accent   lipgloss.Style // active borders/tabs/markers, key labels
+	Muted    lipgloss.Style // separators, placeholders, inactive tab text
+	IssueKey lipgloss.Style // default colour for an issue key
+
+	// SelectedForeground, when non-empty, is applied to selected rows
+	// rendered with plain (uncolored) cells.
+	SelectedForeground lipgloss.Color
+
+	// Per-value style maps. Lookup helpers fall back to TypeFallback or
+	// the relevant style slot when a name is missing.
+	TypeColors     map[string]lipgloss.Style
+	TypeFallback   lipgloss.Style
+	PriorityColors map[string]lipgloss.Style
+	StatusColors   map[string]lipgloss.Style // keyed on status category key
 
 	Colors        ColorPalette
 	AuthorPalette []lipgloss.Color
@@ -106,60 +121,121 @@ func defaultTheme() *Theme {
 	return buildTheme(defaultPalette(), defaultAuthorPalette())
 }
 
+func fg(c lipgloss.Color) lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(c)
+}
+
 // buildTheme constructs a Theme from a color palette and author palette.
+// Used by builtin themes; YAML-loaded themes populate the struct directly.
 func buildTheme(p ColorPalette, authors []lipgloss.Color) *Theme {
 	return &Theme{
-		Title: lipgloss.NewStyle().
-			Bold(true).
-			Foreground(p.Green),
+		Title:          lipgloss.NewStyle().Bold(true).Foreground(p.Green),
+		Subtitle:       fg(p.Gray),
+		HintBar:        fg(p.Gray),
+		SelectedItem:   lipgloss.NewStyle().Bold(true).Background(p.Highlight),
+		NormalItem:     lipgloss.NewStyle(),
+		ActiveBorder:   lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.Green),
+		InactiveBorder: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p.None),
+		ErrorText:      lipgloss.NewStyle().Foreground(p.Red).Bold(true),
+		SuccessText:    fg(p.Green),
+		WarningText:    fg(p.Yellow),
+		KeyStyle:       fg(p.Green),
+		ValueStyle:     lipgloss.NewStyle(),
 
-		Subtitle: lipgloss.NewStyle().
-			Foreground(p.Gray),
+		Accent:   fg(p.Green),
+		Muted:    fg(p.Gray),
+		IssueKey: fg(p.Cyan),
 
-		HintBar: lipgloss.NewStyle().
-			Foreground(p.Gray),
+		TypeColors: map[string]lipgloss.Style{
+			"Bug":         fg(p.Red),
+			"Story":       fg(p.Green),
+			"Epic":        fg(p.Magenta),
+			"Task":        fg(p.Blue),
+			"Sub-task":    fg(p.Gray),
+			"Improvement": fg(p.Cyan),
+			"New Feature": fg(p.Orange),
+		},
+		TypeFallback: fg(p.Gray),
 
-		SelectedItem: lipgloss.NewStyle().
-			Bold(true).
-			Background(p.Highlight),
+		PriorityColors: map[string]lipgloss.Style{
+			"Highest": fg(p.Red),
+			"High":    fg(p.Orange),
+			"Medium":  fg(p.Yellow),
+			"Low":     fg(p.Green),
+			"Lowest":  fg(p.Gray),
+		},
 
-		NormalItem: lipgloss.NewStyle(),
-
-		ActiveBorder: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(p.Green),
-
-		InactiveBorder: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(p.None),
-
-		ErrorText: lipgloss.NewStyle().
-			Foreground(p.Red).
-			Bold(true),
-
-		SuccessText: lipgloss.NewStyle().
-			Foreground(p.Green),
-
-		WarningText: lipgloss.NewStyle().
-			Foreground(p.Yellow),
-
-		KeyStyle: lipgloss.NewStyle().
-			Foreground(p.Green),
-
-		ValueStyle: lipgloss.NewStyle(),
-
-		PriorityHigh: lipgloss.NewStyle().
-			Foreground(p.Red),
-
-		PriorityMedium: lipgloss.NewStyle().
-			Foreground(p.Yellow),
-
-		PriorityLow: lipgloss.NewStyle().
-			Foreground(p.Green),
+		StatusColors: map[string]lipgloss.Style{
+			"done":          fg(p.Green),
+			"indeterminate": fg(p.Yellow),
+			"new":           fg(p.Blue),
+		},
 
 		Colors:        p,
 		AuthorPalette: authors,
 	}
+}
+
+// TypeStyle returns the style for an issue type name, falling back to
+// TypeFallback when the name is not enumerated.
+func (t *Theme) TypeStyle(name string) lipgloss.Style {
+	if name != "" {
+		if s, ok := t.TypeColors[name]; ok {
+			return s
+		}
+	}
+	return t.TypeFallback
+}
+
+// PriorityStyle returns the style for a priority name. Matching is
+// case-insensitive against the configured keys; falls back to the Muted
+// style when no entry is present.
+func (t *Theme) PriorityStyle(name string) lipgloss.Style {
+	if name == "" {
+		return t.Muted
+	}
+	if s, ok := t.PriorityColors[name]; ok {
+		return s
+	}
+	low := strings.ToLower(name)
+	for k, v := range t.PriorityColors {
+		if strings.ToLower(k) == low {
+			return v
+		}
+	}
+	// Legacy aliases used by existing call sites.
+	switch low {
+	case "critical", "blocker":
+		if s, ok := t.PriorityColors["Highest"]; ok {
+			return s
+		}
+	}
+	return t.Muted
+}
+
+// StatusStyle returns the style for a Jira status category key
+// ("done", "indeterminate", "new"). Falls back to Muted.
+func (t *Theme) StatusStyle(categoryKey string) lipgloss.Style {
+	if s, ok := t.StatusColors[categoryKey]; ok {
+		return s
+	}
+	return t.Muted
+}
+
+// ActiveBorderColor returns the foreground color of the active border.
+func (t *Theme) ActiveBorderColor() lipgloss.Color {
+	if c, ok := t.ActiveBorder.GetBorderTopForeground().(lipgloss.Color); ok {
+		return c
+	}
+	return t.Colors.Green
+}
+
+// InactiveBorderColor returns the foreground color of the inactive border.
+func (t *Theme) InactiveBorderColor() lipgloss.Color {
+	if c, ok := t.InactiveBorder.GetBorderTopForeground().(lipgloss.Color); ok {
+		return c
+	}
+	return t.Colors.None
 }
 
 // syncColors updates the package-level color variables and the author palette
@@ -181,12 +257,35 @@ func syncColors() {
 	authorCache = make(map[string]lipgloss.Style)
 }
 
+// themesDir returns the directory where YAML themes are stored.
+// It is overridable by tests via the LAZYJIRA_THEMES_DIR env var.
+func themesDir() string {
+	if dir := os.Getenv("LAZYJIRA_THEMES_DIR"); dir != "" {
+		return dir
+	}
+	if dir := os.Getenv("CONFIG_DIR"); dir != "" {
+		return filepath.Join(dir, "themes")
+	}
+	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
+		return filepath.Join(dir, "lazyjira", "themes")
+	}
+	if dir, err := os.UserConfigDir(); err == nil {
+		return filepath.Join(dir, "lazyjira", "themes")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
+	}
+	return filepath.Join(home, ".config", "lazyjira", "themes")
+}
+
 // SetTheme selects a theme by name and updates the global Default instance
 // along with all package-level color variables. Must be called before the
 // TUI starts.
 //
-// Supported names: "default", "catppuccin-latte", "catppuccin-frappe",
-// "catppuccin-macchiato", "catppuccin-mocha".
+// Builtins: "default", "catppuccin-latte", "catppuccin-frappe",
+// "catppuccin-macchiato", "catppuccin-mocha". Any other name is looked up
+// as <themes-dir>/<name>.yml.
 func SetTheme(name string) error {
 	switch name {
 	case "", "default":
@@ -200,7 +299,12 @@ func SetTheme(name string) error {
 	case "catppuccin-mocha":
 		Default = catppuccinMocha()
 	default:
-		return fmt.Errorf("unknown theme: %q", name)
+		path := filepath.Join(themesDir(), name+".yml")
+		th, err := loadYAMLTheme(path)
+		if err != nil {
+			return fmt.Errorf("theme %q: %w", name, err)
+		}
+		Default = th
 	}
 	syncColors()
 	return nil
@@ -208,25 +312,11 @@ func SetTheme(name string) error {
 
 // PriorityStyled applies priority color based on name
 func PriorityStyled(name string) string {
-	switch strings.ToLower(name) {
-	case "highest", "high", "critical", "blocker":
-		return Default.PriorityHigh.Render(name)
-	case "medium":
-		return Default.PriorityMedium.Render(name)
-	default:
-		return Default.PriorityLow.Render(name)
-	}
+	return Default.PriorityStyle(name).Render(name)
 }
 
+// StatusColor returns a style for a Jira status category key. Retained for
+// call sites that have not yet moved to Theme.StatusStyle.
 func StatusColor(categoryKey string) lipgloss.Style {
-	switch categoryKey {
-	case "done":
-		return lipgloss.NewStyle().Foreground(ColorGreen)
-	case "indeterminate":
-		return lipgloss.NewStyle().Foreground(ColorYellow)
-	case "new":
-		return lipgloss.NewStyle().Foreground(ColorBlue)
-	default:
-		return lipgloss.NewStyle().Foreground(ColorGray)
-	}
+	return Default.StatusStyle(categoryKey)
 }

@@ -49,6 +49,19 @@ type IssuesList struct {
 	hierarchyTabIdx  int
 	hierarchyTitle   string
 	hierarchyStack   *navstack.NavStack
+
+	projectKeyStyles map[string]lipgloss.Style
+	assigneeStyles   map[string]lipgloss.Style
+}
+
+// SetProjectKeyStyles registers per-project-key cell styles.
+func (m *IssuesList) SetProjectKeyStyles(s map[string]lipgloss.Style) {
+	m.projectKeyStyles = s
+}
+
+// SetAssigneeStyles registers per-assignee cell styles.
+func (m *IssuesList) SetAssigneeStyles(s map[string]lipgloss.Style) {
+	m.assigneeStyles = s
 }
 
 func NewIssuesList() *IssuesList {
@@ -529,10 +542,10 @@ func (m *IssuesList) ClickTabAt(x int) bool {
 // the original tab order. The window expands leftward first (showing context
 // before the active tab), then fills any remaining budget rightward.
 func (m *IssuesList) buildTitle(maxTitleW int) string {
-	activeStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
-	inactiveStyle := lipgloss.NewStyle().Foreground(theme.ColorWhite)
-	sep := lipgloss.NewStyle().Foreground(theme.ColorGray).Render(" - ")
-	sepW := lipgloss.Width(sep)
+	activeStyle := m.theme.Accent.Bold(true)
+	inactiveStyle := m.theme.Subtitle
+	sep := m.theme.Muted.Render(" - ")
+	const sepW = 3 // visual width of " - "
 
 	if len(m.tabs) == 0 {
 		return "[2] Issues"
@@ -638,22 +651,40 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 	}
 	summaryWidth := max(width-fixedWidth, 5)
 
+	// plain branch: selected row with theme SelectedForeground is rendered
+	// without per-cell colors so the outer foreground actually shows.
+	plain := selected && m.Focused && m.theme.SelectedForeground != ""
+
+	apply := func(s lipgloss.Style, text string) string {
+		if plain {
+			return text
+		}
+		return s.Render(text)
+	}
+
 	var parts []string
 	for _, f := range fields {
 		switch f {
 		case "key":
-			parts = append(parts, padRight(issue.Key, m.keyColWidth))
+			padded := padRight(issue.Key, m.keyColWidth)
+			style := m.theme.IssueKey
+			if m.projectKeyStyles != nil {
+				if prefix := issueKeyPrefix(issue.Key); prefix != "" {
+					if s, ok := m.projectKeyStyles[prefix]; ok {
+						style = s
+					}
+				}
+			}
+			parts = append(parts, apply(style, padded))
 		case "summary":
 			parts = append(parts, padRight(components.TruncateEnd(issue.Summary, summaryWidth), summaryWidth))
 		case fieldStatus:
 			if currStatusIcon != "" {
 				parts = append(parts, padRight(currStatusIcon, m.statusIconCols))
+			} else if plain || (selected && m.Focused) {
+				parts = append(parts, padRight(statusEmojiPlain(issue.Status), m.statusIconCols))
 			} else {
-				if selected {
-					parts = append(parts, padRight(statusEmojiPlain(issue.Status), m.statusIconCols))
-				} else {
-					parts = append(parts, padRight(statusEmoji(issue.Status), m.statusIconCols))
-				}
+				parts = append(parts, padRight(statusEmoji(issue.Status), m.statusIconCols))
 			}
 		case "priority":
 			if currPriorityIcon != "" {
@@ -663,14 +694,30 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 				if issue.Priority != nil {
 					name = issue.Priority.Name
 				}
-				parts = append(parts, padRight(components.TruncateEnd(name, 8), 8))
+				text := padRight(components.TruncateEnd(name, 8), 8)
+				parts = append(parts, apply(m.theme.PriorityStyle(name), text))
 			}
 		case "assignee":
 			name := ""
 			if issue.Assignee != nil {
 				name = issue.Assignee.DisplayName
 			}
-			parts = append(parts, padRight(components.TruncateEnd(name, 12), 12))
+			text := padRight(components.TruncateEnd(name, 12), 12)
+			if plain {
+				parts = append(parts, text)
+				continue
+			}
+			if m.assigneeStyles != nil {
+				if s, ok := m.assigneeStyles[name]; ok {
+					parts = append(parts, s.Render(text))
+					continue
+				}
+			}
+			if name != "" {
+				parts = append(parts, AuthorStyleRender(name, text))
+			} else {
+				parts = append(parts, text)
+			}
 		case "type":
 			if currTypeIcon != "" {
 				parts = append(parts, padRight(currTypeIcon, m.typeIconCols))
@@ -679,10 +726,12 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 				if issue.IssueType != nil {
 					name = issue.IssueType.Name
 				}
-				parts = append(parts, padRight(components.TruncateEnd(name, 10), 10))
+				text := padRight(components.TruncateEnd(name, 10), 10)
+				parts = append(parts, apply(m.theme.TypeStyle(name), text))
 			}
 		case "updated":
-			parts = append(parts, padRight(issueTimeAgo(issue.Updated), 8))
+			text := padRight(issueTimeAgo(issue.Updated), 8)
+			parts = append(parts, apply(m.theme.Subtitle, text))
 		}
 	}
 	line := " " + strings.Join(parts, " ")
@@ -691,9 +740,27 @@ func (m *IssuesList) renderIssueRow(issue jira.Issue, width int, selected bool) 
 	}
 
 	if selected && m.Focused {
-		return m.theme.SelectedItem.Width(width).Render(line)
+		s := m.theme.SelectedItem.Width(width)
+		if m.theme.SelectedForeground != "" {
+			s = s.Foreground(m.theme.SelectedForeground)
+		}
+		return s.Render(line)
 	}
 	return m.theme.NormalItem.Width(width).Render(line)
+}
+
+// issueKeyPrefix extracts the project-key prefix from an issue key
+// (e.g. "PROJ-123" -> "PROJ"). Returns empty if no dash is present.
+func issueKeyPrefix(key string) string {
+	if i := strings.Index(key, "-"); i > 0 {
+		return key[:i]
+	}
+	return ""
+}
+
+// AuthorStyleRender renders text with the deterministic author color for name.
+func AuthorStyleRender(name, text string) string {
+	return theme.AuthorStyle(name).Render(text)
 }
 
 // padRight pads s with spaces to width w using visible ANSI-aware width

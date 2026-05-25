@@ -261,11 +261,26 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	issuesList.SetTabs(cfg.IssueTabs)
 	issuesList.SetFocused(true)
 	issuesList.SetUserEmail(cfg.Jira.Email)
+
+	projectKeyStyles := resolveStyleMap(cfg.GUI.ProjectKeyColors)
+	assigneeStyles := resolveStyleMap(cfg.GUI.AssigneeColors)
+	if extraTypes := resolveStyleMap(cfg.GUI.TypeColors); len(extraTypes) > 0 {
+		for k, v := range extraTypes {
+			theme.Default.TypeColors[k] = v
+		}
+	}
+	if cfg.GUI.SelectedForeground != "" {
+		theme.Default.SelectedForeground = theme.ResolveColor(cfg.GUI.SelectedForeground, nil)
+	}
+	issuesList.SetProjectKeyStyles(projectKeyStyles)
+	issuesList.SetAssigneeStyles(assigneeStyles)
+
 	infoPanel := views.NewInfoPanel()
 	if len(cfg.GUI.TypeIcons) > 0 {
 		infoPanel.SetTypeIcons(cfg.GUI.TypeIcons)
 	}
 	projectList := views.NewProjectList()
+	projectList.SetProjectKeyStyles(projectKeyStyles)
 	detailView := views.NewDetailView()
 	logPanel := views.NewLogPanel()
 	helpBar := components.NewHelpBar(nil)
@@ -393,6 +408,31 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 // Shutdown cancels the app-lifetime context, signalling any background
 // processes spawned with a.ctx to terminate, and waits for them to exit.
 // Safe to call multiple times.
+// resolveStyleMap converts a config color map (name->value) into a map of
+// lipgloss styles, resolving each value against the current theme's
+// ColorPalette where possible.
+func resolveStyleMap(in map[string]string) map[string]lipgloss.Style {
+	if len(in) == 0 {
+		return nil
+	}
+	palette := map[string]lipgloss.Color{
+		"green":   theme.Default.Colors.Green,
+		"blue":    theme.Default.Colors.Blue,
+		"red":     theme.Default.Colors.Red,
+		"yellow":  theme.Default.Colors.Yellow,
+		"cyan":    theme.Default.Colors.Cyan,
+		"magenta": theme.Default.Colors.Magenta,
+		"white":   theme.Default.Colors.White,
+		"gray":    theme.Default.Colors.Gray,
+		"orange":  theme.Default.Colors.Orange,
+	}
+	out := make(map[string]lipgloss.Style, len(in))
+	for k, v := range in {
+		out[k] = lipgloss.NewStyle().Foreground(theme.ResolveColor(v, palette))
+	}
+	return out
+}
+
 func (a *App) Shutdown() {
 	if a.cancel != nil {
 		a.cancel()
@@ -1059,8 +1099,8 @@ func (a *App) renderHelpOverlay(base string) string {
 
 	popupW := min(maxKey+40, a.width-4)
 
-	keyNormal := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
-	keySel := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true).Background(theme.ColorHighlight)
+	keyNormal := theme.Default.Accent.Bold(true)
+	keySel := theme.Default.Accent.Bold(true).Background(theme.ColorHighlight)
 	descSel := lipgloss.NewStyle().Background(theme.ColorHighlight)
 
 	lines := make([]string, 0, len(bindings)+2)

@@ -304,6 +304,10 @@ func renderFieldRows(fields []InfoField, issue *jira.Issue, th *theme.Theme, max
 				if issue.Reporter != nil {
 					val = theme.AuthorRender(val)
 				}
+			case "issuetype":
+				if issue.IssueType != nil {
+					val = th.TypeStyle(issue.IssueType.Name).Render(val)
+				}
 			default:
 				val = th.ValueStyle.Render(val)
 			}

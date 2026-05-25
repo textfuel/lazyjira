@@ -185,12 +185,35 @@ gui:
 
 `collapsedPanelHeight` sets the height of non-focused left panels in lines (default 5, minimum 3).
 
-`theme` selects the color palette. Supported values: `default` (ANSI 16, original look), `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`. Omit or set to `default` to keep the original colors. Catppuccin themes use hex colors and require a terminal with truecolor support.
+`theme` selects the color palette. Built-in values: `default` (ANSI 16, original look), `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`. Any other name is resolved as a YAML theme file at `<config-dir>/themes/<name>.yml`. See [Theming](./Theming.md) for the schema. Catppuccin and most user themes use hex colors and require a terminal with truecolor support.
 
 ```yaml
 gui:
   theme: catppuccin-mocha
 ```
+
+### Instance-specific color overrides
+
+These keys patch in colors that depend on your particular Jira instance and therefore cannot live in a shareable theme.
+
+```yaml
+gui:
+  projectKeyColors:
+    PROJ: orange
+    INFRA: blue
+  assigneeColors:
+    "John Smith": cyan
+  typeColors:
+    "Tech Debt": magenta
+  selectedForeground: white
+```
+
+- `projectKeyColors` colors the project-key prefix of each issue key in the issue list, and the project key in the project list.
+- `assigneeColors` overrides the deterministic per-author color for specific names.
+- `typeColors` adds or overrides issue type colors (use this for custom types your theme does not enumerate).
+- `selectedForeground` sets a foreground color applied to the entire selected row. When set, per-cell colors are stripped on the selected row so this foreground is visible.
+
+Values follow the same resolver as theme values: a name from the current theme's palette is looked up first, otherwise the value is passed through to lipgloss (typically a `#rrggbb` hex code or an ANSI numeric code).
 
 `selectCreatedIssue` controls whether the app auto-selects a newly created issue in the list. If the issue does not match the current tab, the app switches to the All tab. Enabled by default.
 

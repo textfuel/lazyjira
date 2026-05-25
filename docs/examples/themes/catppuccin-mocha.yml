@@ -1,0 +1,67 @@
+name: catppuccin-mocha
+
+palette:
+  rosewater: "#f5e0dc"
+  flamingo:  "#f2cdcd"
+  pink:      "#f5c2e7"
+  mauve:     "#cba6f7"
+  red:       "#f38ba8"
+  maroon:    "#eba0ac"
+  peach:     "#fab387"
+  yellow:    "#f9e2af"
+  green:     "#a6e3a1"
+  teal:      "#94e2d5"
+  sapphire:  "#74c7ec"
+  lavender:  "#b4befe"
+  blue:      "#89b4fa"
+  text:      "#cdd6f4"
+  overlay0:  "#6c7086"
+  surface2:  "#585b70"
+
+styles:
+  title:          green
+  subtitle:       overlay0
+  hintBar:        overlay0
+  accent:         green
+  muted:          overlay0
+  errorText:      red
+  successText:    green
+  warningText:    yellow
+  selectedItemBg: surface2
+  issueKey:       teal
+
+types:
+  Bug:         red
+  Story:       green
+  Epic:        mauve
+  Task:        blue
+  Sub-task:    overlay0
+  Improvement: teal
+  New Feature: peach
+  _fallback:   overlay0
+
+priorities:
+  Highest: red
+  High:    peach
+  Medium:  yellow
+  Low:     green
+  Lowest:  overlay0
+
+statuses:
+  done:          green
+  indeterminate: yellow
+  new:           blue
+
+authorPalette:
+  - rosewater
+  - flamingo
+  - pink
+  - mauve
+  - red
+  - maroon
+  - peach
+  - yellow
+  - green
+  - teal
+  - sapphire
+  - lavender

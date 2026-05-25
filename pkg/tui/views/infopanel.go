@@ -439,10 +439,9 @@ func (p *InfoPanel) buildTitle() string {
 		return "[3] Info"
 	}
 
-	activeStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
-	inactiveStyle := lipgloss.NewStyle().Foreground(theme.ColorWhite)
-	sepStyle := lipgloss.NewStyle().Foreground(theme.ColorGray)
-	sep := sepStyle.Render(" - ")
+	activeStyle := p.theme.Accent.Bold(true)
+	inactiveStyle := p.theme.Subtitle
+	sep := p.theme.Muted.Render(" - ")
 
 	var parts []string
 	for _, t := range tabs {
@@ -569,7 +568,7 @@ func (p *InfoPanel) issueTypeMarker(t *jira.IssueType) string {
 		return ""
 	}
 	if icon := typeIcon(p.typeIcons, t); icon != "" {
-		return icon + " "
+		return p.theme.TypeStyle(t.Name).Render(icon) + " "
 	}
-	return "[" + t.Name + "] "
+	return p.theme.TypeStyle(t.Name).Render("["+t.Name+"]") + " "
 }
