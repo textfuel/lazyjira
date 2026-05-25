@@ -398,6 +398,24 @@ renderer: glamour
 
 Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
 
+## ADF preview style (`rendererStyle`)
+
+Selects the Glamour theme used by the `glamour` renderer. Ignored when `renderer` is unset or `builtin`.
+
+```yaml
+rendererStyle: auto
+```
+
+| Value | Behavior |
+|-------|----------|
+| *(unset, default)* | Same as `auto`. |
+| `auto` | Picks `dark` or `light` based on `lipgloss.HasDarkBackground`. Terminal background detection can fail under `tmux` or `ssh`; set the value explicitly when autodetect picks wrong. |
+| `dark` | Forces the dark Glamour theme. |
+| `light` | Forces the light Glamour theme. |
+| `notty` | Plain output without ANSI styling. |
+
+Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
+
 ## Custom commands
 
 Bind shell commands to keys, with Go template access to the focused issue, project, or comment. Custom bindings take precedence over built-in keys, so they can be used to override any action.

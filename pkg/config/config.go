@@ -40,6 +40,26 @@ func validateRenderer(value string) error {
 	}
 }
 
+// Valid values for Config.RendererStyle. Empty string is treated as
+// RendererStyleAuto. Used by the glamour renderer to select the Glamour
+// theme; ignored when renderer is "builtin".
+const (
+	RendererStyleAuto  = "auto"
+	RendererStyleDark  = "dark"
+	RendererStyleLight = "light"
+	RendererStyleNoTTY = "notty"
+)
+
+func validateRendererStyle(value string) error {
+	switch value {
+	case "", RendererStyleAuto, RendererStyleDark, RendererStyleLight, RendererStyleNoTTY:
+		return nil
+	default:
+		return fmt.Errorf("unknown rendererStyle %q; valid: %q (default), %q, %q, %q",
+			value, RendererStyleAuto, RendererStyleDark, RendererStyleLight, RendererStyleNoTTY)
+	}
+}
+
 type Config struct {
 	Jira             JiraConfig            `yaml:"jira"`
 	Projects         []ProjectConfig       `yaml:"projects"`
@@ -55,6 +75,7 @@ type Config struct {
 	CustomCommands   []CustomCommandConfig `yaml:"customCommands"`
 	Converter        string                `yaml:"converter"`
 	Renderer         string                `yaml:"renderer"`
+	RendererStyle    string                `yaml:"rendererStyle"`
 }
 
 type CustomCommandConfig struct {
@@ -393,6 +414,10 @@ func Load() (*Config, error) {
 	}
 
 	if err := validateRenderer(cfg.Renderer); err != nil {
+		return nil, err
+	}
+
+	if err := validateRendererStyle(cfg.RendererStyle); err != nil {
 		return nil, err
 	}
 
