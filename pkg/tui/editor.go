@@ -6,9 +6,11 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/shlex"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -24,11 +26,11 @@ var errNoEditor = errors.New("no editor found - set $EDITOR environment variable
 // resolveEditor returns the editor command: $EDITOR -> $VISUAL -> vi.
 func resolveEditor() (string, error) {
 	if e := os.Getenv("EDITOR"); e != "" {
-		slog.Debug("editor: resolved", "source", "EDITOR", "editor", e)
+		slog.Debug("editor: resolved", "source", "EDITOR", "editor", strconv.Quote(e))
 		return e, nil
 	}
 	if e := os.Getenv("VISUAL"); e != "" {
-		slog.Debug("editor: resolved", "source", "VISUAL", "editor", e)
+		slog.Debug("editor: resolved", "source", "VISUAL", "editor", strconv.Quote(e))
 		return e, nil
 	}
 	if path, err := exec.LookPath("vi"); err == nil {
@@ -72,7 +74,13 @@ func launchEditor(content, suffix string) tea.Cmd {
 
 	original := strings.TrimRight(content, "\n")
 	start := time.Now()
-	parts := strings.Fields(editor)
+	parts, err := shlex.Split(editor)
+	if err != nil || len(parts) == 0 {
+		slog.Debug("editor: could not parse editor command", "editor", strconv.Quote(editor), "err", err)
+		return func() tea.Msg {
+			return editorFinishedMsg{err: errNoEditor}
+		}
+	}
 	cmd := exec.CommandContext(context.Background(), parts[0], append(parts[1:], tmpPath)...)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		elapsed := time.Since(start)
