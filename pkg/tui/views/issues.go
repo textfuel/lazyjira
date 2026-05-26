@@ -464,9 +464,8 @@ func (m *IssuesList) Update(msg tea.Msg) (*IssuesList, tea.Cmd) {
 
 func (m *IssuesList) View() string {
 	contentWidth, _ := components.PanelDimensions(m.Width, m.Height)
-	// Top border is: ╭─ {title} {padding}╮
-	// contentWidth accounts for the two side borders (width-2).
-	// The extra -1 is for the ╮ that shares the top row with the title.
+	// Top border: ╭─ {title} {padding}╮
+	// contentWidth spans from after ╭─ to the right border; -1 reserves the ╮.
 	maxTitleW := contentWidth - 1
 
 	if m.Height <= 1 {
@@ -533,7 +532,7 @@ func (m *IssuesList) buildTitle(maxTitleW int) string {
 	activeStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
 	inactiveStyle := lipgloss.NewStyle().Foreground(theme.ColorWhite)
 	sep := lipgloss.NewStyle().Foreground(theme.ColorGray).Render(" - ")
-	const sepW = 3 // visual width of " - "
+	sepW := lipgloss.Width(sep)
 
 	if len(m.tabs) == 0 {
 		return "[2] Issues"
@@ -551,7 +550,7 @@ func (m *IssuesList) buildTitle(maxTitleW int) string {
 	}
 
 	const prefix = "[2] "
-	const prefixW = 4
+	prefixW := lipgloss.Width(prefix)
 
 	fullTitle := prefix + strings.Join(labels, sep)
 	if maxTitleW <= 0 || lipgloss.Width(fullTitle) <= maxTitleW {
@@ -561,6 +560,15 @@ func (m *IssuesList) buildTitle(maxTitleW int) string {
 	// Overflow: find a contiguous sliding window that always contains the
 	// active tab. Expand left first (preserving context), then fill right.
 	budget := maxTitleW - prefixW
+
+	// If the active tab label alone exceeds the budget, truncate it so the
+	// title never returns wider than maxTitleW regardless of label length.
+	if budget > 0 && labelW[m.tab] > budget {
+		truncated := components.TruncateEnd(m.tabs[m.tab].Name, budget)
+		labels[m.tab] = activeStyle.Render(truncated)
+		labelW[m.tab] = lipgloss.Width(labels[m.tab])
+	}
+
 	start := m.tab
 	end := m.tab
 	used := labelW[m.tab]

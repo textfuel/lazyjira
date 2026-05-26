@@ -170,6 +170,23 @@ func TestIssuesList_SlidingWindow_EarlyTabsHiddenWhenActiveIsLate(t *testing.T) 
 	}
 }
 
+// TestIssuesList_ActiveTabTruncated_WhenLabelExceedsBudget verifies that when a
+// single tab label is wider than the entire available title budget the border
+// width is still exactly width (the label is truncated, not overflowed).
+func TestIssuesList_ActiveTabTruncated_WhenLabelExceedsBudget(t *testing.T) {
+	const width = 20
+	// "A Very Long Tab Name" is 20 chars; prefix "[2] " is 4, so the label
+	// budget is width-3-4 = 13. The label must be truncated to fit.
+	m := makeIssuesListWithTabs(width, 8, "A Very Long Tab Name")
+
+	line := topBorderLine(m)
+	got := lipgloss.Width(line)
+	if got != width {
+		t.Errorf("top border width = %d, want %d (label overflowed border)\nline: %q", got, width, line)
+	}
+}
+
+
 // stripANSI removes ANSI escape sequences for plain-text substring checks.
 func stripANSI(s string) string {
 	var b strings.Builder
