@@ -88,9 +88,9 @@ func TestIssuesList_SlidingWindow_ContiguousOrder(t *testing.T) {
 	tabNames := []string{"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"}
 	const width = 50
 
-	for activeIdx := range tabNames {
+	for activeIdx, activeTabName := range tabNames {
 		m := makeIssuesListWithTabs(width, 8, tabNames...)
-		for i := 0; i < activeIdx; i++ {
+		for range activeIdx {
 			m.NextTab()
 		}
 
@@ -118,7 +118,7 @@ func TestIssuesList_SlidingWindow_ContiguousOrder(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("activeIdx=%d: active tab %q not in visible set %v\nline: %q",
-				activeIdx, tabNames[activeIdx], visible, plain)
+				activeIdx, activeTabName, visible, plain)
 		}
 
 		// Visible set must be contiguous (no gaps).
