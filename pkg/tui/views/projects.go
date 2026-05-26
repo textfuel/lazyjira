@@ -22,11 +22,16 @@ type ProjectHoveredMsg struct {
 
 type ProjectList struct {
 	components.ListBase
-	projects    []jira.Project
-	allProjects []jira.Project
-	filter      string
-	activeKey   string
-	theme       *theme.Theme
+	projects         []jira.Project
+	allProjects      []jira.Project
+	filter           string
+	activeKey        string
+	theme            *theme.Theme
+	projectKeyStyles map[string]lipgloss.Style
+}
+
+func (p *ProjectList) SetProjectKeyStyles(s map[string]lipgloss.Style) {
+	p.projectKeyStyles = s
 }
 
 func NewProjectList() *ProjectList {
@@ -149,16 +154,28 @@ func (p *ProjectList) View() string {
 			markerChar = "*"
 		}
 
-		line := fmt.Sprintf("%s%-8s %s%s", markerChar, proj.Key, namePart, lead)
+		keyText := fmt.Sprintf("%-8s", proj.Key)
+		var keyStyled string
+		if s, ok := p.projectKeyStyles[proj.Key]; ok && i != p.Cursor {
+			keyStyled = s.Render(keyText)
+		} else {
+			keyStyled = keyText
+		}
 		switch {
 		case i == p.Cursor && p.Focused:
-			rows = append(rows, p.theme.SelectedItem.Width(contentWidth).Render(line))
+			line := fmt.Sprintf("%s%-8s %s%s", markerChar, proj.Key, namePart, lead)
+			s := p.theme.SelectedItem.Width(contentWidth)
+			if p.theme.SelectedForeground != "" {
+				s = s.Foreground(p.theme.SelectedForeground)
+			}
+			rows = append(rows, s.Render(line))
 		case active:
-			coloredMarker := lipgloss.NewStyle().Foreground(theme.ColorGreen).Render(markerChar)
-			rest := fmt.Sprintf("%-8s %s%s", proj.Key, namePart, lead)
-			rows = append(rows, p.theme.NormalItem.Width(contentWidth).Render(coloredMarker+rest))
+			coloredMarker := p.theme.Accent.Render(markerChar)
+			rest := fmt.Sprintf(" %s%s", namePart, lead)
+			rows = append(rows, p.theme.NormalItem.Width(contentWidth).Render(coloredMarker+keyStyled+rest))
 		default:
-			rows = append(rows, p.theme.NormalItem.Width(contentWidth).Render(line))
+			rest := fmt.Sprintf(" %s%s", namePart, lead)
+			rows = append(rows, p.theme.NormalItem.Width(contentWidth).Render(markerChar+keyStyled+rest))
 		}
 	}
 

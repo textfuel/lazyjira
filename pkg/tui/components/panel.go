@@ -18,9 +18,9 @@ type ScrollInfo struct {
 
 // RenderCollapsedBar draws a single-line collapsed panel
 func RenderCollapsedBar(title, footer string, width int, focused bool) string {
-	borderColor := theme.ColorNone
+	borderColor := theme.Default.InactiveBorderColor()
 	if focused {
-		borderColor = theme.ColorGreen
+		borderColor = theme.Default.ActiveBorderColor()
 	}
 	borderStyle := lipgloss.NewStyle().Foreground(borderColor)
 
@@ -58,9 +58,9 @@ func RenderPanelWithColor(title, footer, content string, width, innerHeight int,
 
 // RenderPanelFull draws a panel with title, footer, and optional scrollbar
 func RenderPanelFull(title, footer, content string, width, innerHeight int, focused bool, scroll *ScrollInfo) string {
-	borderColor := theme.ColorNone
+	borderColor := theme.Default.InactiveBorderColor()
 	if focused {
-		borderColor = theme.ColorGreen
+		borderColor = theme.Default.ActiveBorderColor()
 	}
 	return renderPanelImpl(title, footer, content, width, innerHeight, borderColor, scroll)
 }
@@ -69,10 +69,10 @@ func renderPanelImpl(title, footer, content string, width, innerHeight int, bord
 	th := theme.Default
 
 	var styledTitle string
-	switch borderColor {
-	case theme.ColorGreen:
+	switch {
+	case borderColor == th.ActiveBorderColor():
 		styledTitle = th.Title.Render(title)
-	case theme.ColorNone:
+	case borderColor == th.InactiveBorderColor():
 		styledTitle = lipgloss.NewStyle().Foreground(borderColor).Render(title)
 	default:
 		styledTitle = lipgloss.NewStyle().Foreground(borderColor).Bold(true).Render(title)

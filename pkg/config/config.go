@@ -209,6 +209,10 @@ type GUIConfig struct {
 	TypeIcons            map[string]string `yaml:"typeIcons"`
 	StatusIcons          map[string]string `yaml:"statusIcons"`
 	PriorityIcons        map[string]string `yaml:"priorityIcons"`
+	ProjectKeyColors     map[string]string `yaml:"projectKeyColors"`
+	AssigneeColors       map[string]string `yaml:"assigneeColors"`
+	TypeColors           map[string]string `yaml:"typeColors"`
+	SelectedForeground   string            `yaml:"selectedForeground"`
 }
 
 // ShouldPrefillFromTab returns true when the creation form should prefill from tab JQL

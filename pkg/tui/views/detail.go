@@ -615,9 +615,9 @@ func (d *DetailView) tabLabels() []tabLabel {
 func (d *DetailView) buildTitle(maxWidth int) string {
 	tabs := d.tabLabels()
 
-	activeStyle := lipgloss.NewStyle().Foreground(theme.ColorGreen).Bold(true)
-	inactiveStyle := lipgloss.NewStyle().Foreground(theme.ColorWhite)
-	sepStyle := lipgloss.NewStyle().Foreground(theme.ColorGray)
+	activeStyle := theme.Default.Accent.Bold(true)
+	inactiveStyle := theme.Default.Subtitle
+	sepStyle := theme.Default.Muted
 
 	prefix := "[0] " + d.issue.Key
 
