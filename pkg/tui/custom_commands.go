@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -315,8 +316,8 @@ func (a *App) handleCustomCommandFinished(msg customCommandFinishedMsg) (tea.Mod
 // surface a single concise message from arbitrary command output.
 func lastNonEmptyLine(s string) string {
 	lines := strings.Split(s, "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		if line := strings.TrimSpace(lines[i]); line != "" {
+	for _, v := range slices.Backward(lines) {
+		if line := strings.TrimSpace(v); line != "" {
 			return line
 		}
 	}

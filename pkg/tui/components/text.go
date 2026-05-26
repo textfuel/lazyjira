@@ -1,5 +1,7 @@
 package components
 
+import "slices"
+
 import "github.com/charmbracelet/lipgloss"
 
 // TruncateEnd truncates s to fit within maxWidth display columns,
@@ -53,12 +55,12 @@ func TruncateMiddle(s string, maxWidth int) string {
 	// Build end: runes from the end.
 	var end []rune
 	w = 0
-	for i := len(runes) - 1; i >= 0; i-- {
-		rw := lipgloss.Width(string(runes[i]))
+	for _, v := range slices.Backward(runes) {
+		rw := lipgloss.Width(string(v))
 		if w+rw > endBudget {
 			break
 		}
-		end = append([]rune{runes[i]}, end...)
+		end = append([]rune{v}, end...)
 		w += rw
 	}
 
