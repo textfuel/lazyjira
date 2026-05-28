@@ -655,6 +655,9 @@ schema = 3
   [mod."golang.org/x/mod"]
     version = "v0.35.0"
     hash = "sha256-ICEQxokHywOFInDPqoP+go9l1tZSz3roknF5SXPtNV4="
+  [mod."golang.org/x/net"]
+    version = "v0.53.0"
+    hash = "sha256-G9gKLmyaf6lIV429NKX+YlL6oUPJwlv+BrG6qGhzvmU="
   [mod."golang.org/x/sync"]
     version = "v0.20.0"
     hash = "sha256-ybcjhCfK6lroUM0yswUvWooW8MOQZBXyiSqoxG6Uy0Y="
