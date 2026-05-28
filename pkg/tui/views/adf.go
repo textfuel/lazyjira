@@ -19,26 +19,30 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
-// activeRenderer selects the ADF renderer. Set once at startup from config.
-// Empty string and "builtin" both resolve to the built-in renderer.
-var activeRenderer string
-
-// SetRenderer selects which ADF renderer renderADF dispatches to.
-// Call once during startup with the value of Config.Renderer.
-func SetRenderer(name string) {
-	activeRenderer = name
+// ADFRenderer renders an ADF document tree to terminal lines.
+// Implementations select the rendering strategy (builtin walker vs.
+// adf-converter + Glamour).
+type ADFRenderer interface {
+	Render(node any, width int) []string
 }
 
-// RenderADFPreview renders raw ADF data to styled terminal lines for preview in create form
-func RenderADFPreview(adf any, width int) []string {
-	return renderADF(adf, width)
-}
+// BuiltinRenderer uses the in-tree ADF walker. Zero value is ready to use.
+type BuiltinRenderer struct{}
 
-func renderADF(node any, width int) []string {
-	if activeRenderer == "glamour" {
-		return renderADFGlamour(node, width)
-	}
+// Render implements ADFRenderer.
+func (BuiltinRenderer) Render(node any, width int) []string {
 	return renderADFBuiltin(node, width)
+}
+
+// GlamourRenderer pipes ADF through adf-converter's display module.
+// Style is the Glamour style name (e.g. "dark", "light", "notty").
+type GlamourRenderer struct {
+	Style string
+}
+
+// Render implements ADFRenderer.
+func (g GlamourRenderer) Render(node any, width int) []string {
+	return renderADFGlamour(node, width, g.Style)
 }
 
 func renderADFBuiltin(node any, width int) []string {
@@ -61,7 +65,7 @@ func renderADFBuiltin(node any, width int) []string {
 // which owns the ADF → display-Markdown → Glamour pipeline. Returns
 // a single-line marker on any conversion error so the preview never
 // goes blank.
-func renderADFGlamour(node any, width int) []string {
+func renderADFGlamour(node any, width int, style string) []string {
 	raw, err := json.Marshal(node)
 	if err != nil {
 		return []string{fmt.Sprintf("[glamour: marshal: %v]", err)}
@@ -74,7 +78,7 @@ func renderADFGlamour(node any, width int) []string {
 		width = 10
 	}
 	out, err := adfdisplay.Render(&doc,
-		adfdisplay.WithStyle("dark"),
+		adfdisplay.WithStyle(style),
 		adfdisplay.WithWordWrap(width),
 	)
 	if err != nil {

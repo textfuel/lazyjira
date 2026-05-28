@@ -9,8 +9,8 @@ func TestResolveGlamourStyle_Explicit(t *testing.T) {
 		"notty": "notty",
 	}
 	for in, want := range cases {
-		if got := resolveGlamourStyle(in); got != want {
-			t.Errorf("resolveGlamourStyle(%q) = %q, want %q", in, got, want)
+		if got := ResolveGlamourStyle(in); got != want {
+			t.Errorf("ResolveGlamourStyle(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
@@ -21,8 +21,8 @@ func TestResolveGlamourStyle_AutoDark(t *testing.T) {
 	hasDarkBackground = func() bool { return true }
 
 	for _, in := range []string{"", "auto"} {
-		if got := resolveGlamourStyle(in); got != "dark" {
-			t.Errorf("resolveGlamourStyle(%q) with dark bg = %q, want %q", in, got, "dark")
+		if got := ResolveGlamourStyle(in); got != "dark" {
+			t.Errorf("ResolveGlamourStyle(%q) with dark bg = %q, want %q", in, got, "dark")
 		}
 	}
 }
@@ -33,8 +33,8 @@ func TestResolveGlamourStyle_AutoLight(t *testing.T) {
 	hasDarkBackground = func() bool { return false }
 
 	for _, in := range []string{"", "auto"} {
-		if got := resolveGlamourStyle(in); got != "light" {
-			t.Errorf("resolveGlamourStyle(%q) with light bg = %q, want %q", in, got, "light")
+		if got := ResolveGlamourStyle(in); got != "light" {
+			t.Errorf("ResolveGlamourStyle(%q) with light bg = %q, want %q", in, got, "light")
 		}
 	}
 }
@@ -44,7 +44,7 @@ func TestResolveGlamourStyle_UnknownFallsBackToAuto(t *testing.T) {
 	t.Cleanup(func() { hasDarkBackground = orig })
 	hasDarkBackground = func() bool { return true }
 
-	if got := resolveGlamourStyle("dracula"); got != "dark" {
-		t.Errorf("resolveGlamourStyle(unknown) = %q, want %q", got, "dark")
+	if got := ResolveGlamourStyle("dracula"); got != "dark" {
+		t.Errorf("ResolveGlamourStyle(unknown) = %q, want %q", got, "dark")
 	}
 }
