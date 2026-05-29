@@ -3,7 +3,7 @@ module github.com/textfuel/lazyjira/v2
 go 1.25.5
 
 require (
-	github.com/alecthomas/chroma/v2 v2.24.1
+	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/catppuccin/go v0.3.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
@@ -66,6 +66,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denis-tingaikin/go-header v0.5.0 // indirect
 	github.com/dlclark/regexp2 v1.12.0 // indirect
+	github.com/dlclark/regexp2/v2 v2.1.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
