@@ -10,7 +10,9 @@ lazyjira is configured through a YAML file.
 | macOS | `~/Library/Application Support/lazyjira/config.yml` |
 | Windows | `%AppData%\lazyjira\config.yml` |
 
-You can override the config directory with the `CONFIG_DIR` environment variable. `XDG_CONFIG_HOME` is also respected on Linux.
+You can override the config directory with the `LAZYJIRA_CONFIG_DIR` environment variable. `XDG_CONFIG_HOME` is also respected on Linux.
+
+`CONFIG_DIR` is no longer supported. If you previously used it, rename it to `LAZYJIRA_CONFIG_DIR`.
 
 ## Environment variables
 
@@ -466,6 +468,40 @@ converter: adf-converter
 | *(unset, default)* | Built-in converter. Stateless. |
 | `builtin` | Same as the default; explicit form. |
 | `adf-converter` | External [adf-converter](https://github.com/seflue/adf-converter) library. Supports the common Jira ADF element set as editable Markdown. Inline media, internal attachments, and unknown node types fall back to placeholders so the roundtrip stays lossless. |
+
+Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
+
+## ADF preview rendering (`renderer`)
+
+Controls how ADF documents are rendered to styled terminal lines in the description preview (create form and detail view).
+
+```yaml
+renderer: glamour
+```
+
+| Value | Behavior |
+|-------|----------|
+| *(unset, default)* | Built-in renderer. Hand-rolled ADF traversal with chroma syntax highlighting. |
+| `builtin` | Same as the default; explicit form. |
+| `glamour` | Routes ADF through [adf-converter](https://github.com/seflue/adf-converter)'s display module, which produces Markdown and renders it through Glamour. Richer styling for headings, lists, code blocks, and colored text spans. |
+
+Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
+
+## ADF preview style (`rendererStyle`)
+
+Selects the Glamour theme used by the `glamour` renderer. Ignored when `renderer` is unset or `builtin`.
+
+```yaml
+rendererStyle: auto
+```
+
+| Value | Behavior |
+|-------|----------|
+| *(unset, default)* | Same as `auto`. |
+| `auto` | Picks `dark` or `light` based on `lipgloss.HasDarkBackground`. Terminal background detection can fail under `tmux` or `ssh`; set the value explicitly when autodetect picks wrong. |
+| `dark` | Forces the dark Glamour theme. |
+| `light` | Forces the light Glamour theme. |
+| `notty` | Plain output without ANSI styling. |
 
 Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
 

@@ -105,8 +105,10 @@ type CreateForm struct {
 	filtering   bool
 }
 
-func NewCreateForm() CreateForm {
-	return CreateForm{summaryIdx: -1, descIdx: -1}
+// NewCreateForm constructs a CreateForm. descADFRenderer renders raw ADF
+// description values; pass nil to disable ADF preview.
+func NewCreateForm(descADFRenderer DescADFRenderFunc) CreateForm {
+	return CreateForm{summaryIdx: -1, descIdx: -1, descADFRenderer: descADFRenderer}
 }
 
 // Pause stops intercepting keys so sub-overlays can receive input
@@ -130,8 +132,6 @@ func (f *CreateForm) FilterBarView() string { return RenderFilterBarInput(&f.fil
 // SetDescRenderer sets an optional rich renderer for description preview
 func (f *CreateForm) SetDescRenderer(r DescRenderFunc) { f.descRenderer = r }
 
-// SetDescADFRenderer sets an optional renderer for raw ADF description values
-func (f *CreateForm) SetDescADFRenderer(r DescADFRenderFunc) { f.descADFRenderer = r }
 
 func (f *CreateForm) ShowForm(fields []CreateFormField, issueTypeName, projectKey string) {
 	f.visible = true

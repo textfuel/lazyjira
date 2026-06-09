@@ -26,3 +26,4 @@ e2e/tapes/*.tape
 
 # OS
 .DS_Store
+/lazyjira.exe

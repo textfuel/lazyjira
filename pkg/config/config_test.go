@@ -3,12 +3,42 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
+func TestConfigDir_LazyJiraConfigDirPrecedence(t *testing.T) {
+	lazyjiraDir := t.TempDir()
+	xdgDir := t.TempDir()
+
+	t.Setenv("LAZYJIRA_CONFIG_DIR", lazyjiraDir)
+	t.Setenv("XDG_CONFIG_HOME", xdgDir)
+
+	if got := ConfigDir(); got != lazyjiraDir {
+		t.Errorf("ConfigDir() = %q, want %q", got, lazyjiraDir)
+	}
+}
+
+func TestConfigDir_IgnoresLegacyConfigDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("XDG_CONFIG_HOME precedence is not used on Windows")
+	}
+
+	legacyDir := t.TempDir()
+	xdgDir := t.TempDir()
+
+	t.Setenv("CONFIG_DIR", legacyDir)
+	t.Setenv("XDG_CONFIG_HOME", xdgDir)
+
+	want := filepath.Join(xdgDir, "lazyjira")
+	if got := ConfigDir(); got != want {
+		t.Errorf("ConfigDir() = %q, want %q", got, want)
+	}
+}
+
 func TestLoad_TLSEnvVars(t *testing.T) {
-	t.Setenv("CONFIG_DIR", t.TempDir())
+	t.Setenv("LAZYJIRA_CONFIG_DIR", t.TempDir())
 	t.Setenv("JIRA_SERVER_TYPE", "server")
 	t.Setenv("JIRA_TLS_CERT", "/tmp/cert.pem")
 	t.Setenv("JIRA_TLS_KEY", "/tmp/key.pem")
@@ -38,7 +68,7 @@ func TestLoad_TLSEnvVars(t *testing.T) {
 
 func TestLoad_CustomCommandRefreshFromYAML(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("CONFIG_DIR", dir)
+	t.Setenv("LAZYJIRA_CONFIG_DIR", dir)
 
 	cfgYAML := `customCommands:
   - key: "y"
@@ -68,7 +98,7 @@ func TestLoad_CustomCommandRefreshFromYAML(t *testing.T) {
 
 func TestLoad_InvalidCustomCommandTemplate(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("CONFIG_DIR", dir)
+	t.Setenv("LAZYJIRA_CONFIG_DIR", dir)
 
 	cfgYAML := `customCommands:
   - key: "y"
@@ -148,7 +178,7 @@ func TestDefaultConfig_MaxResults(t *testing.T) {
 
 func TestLoad_ProjectsAcceptsStringShorthand(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("CONFIG_DIR", dir)
+	t.Setenv("LAZYJIRA_CONFIG_DIR", dir)
 
 	cfgYAML := `projects:
   - ORCH
@@ -202,9 +232,37 @@ func TestValidateConverter(t *testing.T) {
 	}
 }
 
+func TestValidateRenderer(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"empty defaults to builtin", "", false},
+		{"explicit builtin", RendererBuiltin, false},
+		{"glamour", RendererGlamour, false},
+		{"unknown value errors", "foo", true},
+		{"typo errors", "glamor", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateRenderer(tc.value)
+			if tc.wantErr && err == nil {
+				t.Errorf("validateRenderer(%q) = nil, want error", tc.value)
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("validateRenderer(%q) = %v, want nil", tc.value, err)
+			}
+			if tc.wantErr && err != nil && !strings.Contains(err.Error(), tc.value) {
+				t.Errorf("error %q should include the bad value %q", err.Error(), tc.value)
+			}
+		})
+	}
+}
+
 func TestLoad_RejectsUnknownConverter(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("CONFIG_DIR", dir)
+	t.Setenv("LAZYJIRA_CONFIG_DIR", dir)
 	cfgYAML := "converter: not-a-real-converter\n"
 	if err := os.WriteFile(filepath.Join(dir, "config.yml"), []byte(cfgYAML), 0o644); err != nil {
 		t.Fatal(err)

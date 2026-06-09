@@ -15,7 +15,7 @@ func newTestApp() *App {
 		cfg:         &config.Config{Jira: config.JiraConfig{Host: "example.atlassian.net"}},
 		issuesList:  views.NewIssuesList(),
 		projectList: views.NewProjectList(),
-		detailView:  views.NewDetailView(),
+		detailView:  views.NewDetailView(views.BuiltinRenderer{}),
 		side:        sideLeft,
 		leftFocus:   focusIssues,
 	}

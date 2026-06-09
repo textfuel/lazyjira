@@ -761,7 +761,11 @@ func (a *App) handleIssueCreated(msg issueCreatedMsg) (tea.Model, tea.Cmd) {
 	return a, a.fetchActiveTab()
 }
 
-// handleIssueUpdated re-fetches issue data after an update
+// handleIssueUpdated re-fetches issue data after an update. Parent changes also
+// drop the hierarchy tab cache so the next switch shows the new parent/children.
 func (a *App) handleIssueUpdated(msg issueUpdatedMsg) (tea.Model, tea.Cmd) {
+	if msg.field == "parent" {
+		a.issuesList.InvalidateTabCache()
+	}
 	return a, fetchIssueDetail(a.client, msg.issueKey)
 }

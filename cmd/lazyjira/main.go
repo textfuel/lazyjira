@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -50,7 +51,17 @@ func run() error {
 	dryRun := flag.Bool("dry-run", false, "Log API requests without making write operations")
 	logFile := flag.String("log", "", "Log API requests to file")
 	demo := flag.Bool("demo", false, "Run with demo data (no Jira account needed)")
+	debugLog := flag.String("debug", "", "Write debug logs to file (e.g. /tmp/lazyjira-debug.log)")
 	flag.Parse()
+
+	if *debugLog != "" {
+		f, err := os.OpenFile(*debugLog, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+		if err != nil {
+			return fmt.Errorf("opening debug log: %w", err)
+		}
+		defer func() { _ = f.Close() }()
+		slog.SetDefault(slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	}
 
 	var cfg *config.Config
 	if *demo {
