@@ -21,3 +21,11 @@ func newRecordingClient(t *testing.T, opts ClientOpts, response testkit.StubResp
 	opts.Host = server.URL
 	return NewClientWithOpts(opts), recorded
 }
+
+func newSequenceClient(t *testing.T, opts ClientOpts, responses ...testkit.StubResponse) (*Client, *[]testkit.RecordedRequest) {
+	t.Helper()
+
+	server, recorded := testkit.RecordingSequenceServer(t, responses)
+	opts.Host = server.URL
+	return NewClientWithOpts(opts), recorded
+}

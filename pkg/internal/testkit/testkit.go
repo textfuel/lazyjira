@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"slices"
+	"sync"
 	"testing"
 )
 
@@ -37,6 +38,38 @@ func RecordingServer(t *testing.T, response StubResponse) (*httptest.Server, *Re
 		recorded.Header = r.Header.Clone()
 		recorded.Body = body
 
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(response.Status)
+		_, _ = io.WriteString(w, response.Body)
+	}))
+	t.Cleanup(server.Close)
+
+	return server, recorded
+}
+
+func RecordingSequenceServer(t *testing.T, responses []StubResponse) (*httptest.Server, *[]RecordedRequest) {
+	t.Helper()
+
+	var mutex sync.Mutex
+	recorded := &[]RecordedRequest{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read request body: %v", err)
+		}
+
+		mutex.Lock()
+		index := len(*recorded)
+		*recorded = append(*recorded, RecordedRequest{
+			Method: r.Method,
+			Path:   r.URL.Path,
+			Query:  r.URL.Query(),
+			Header: r.Header.Clone(),
+			Body:   body,
+		})
+		mutex.Unlock()
+
+		response := responses[min(index, len(responses)-1)]
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(response.Status)
 		_, _ = io.WriteString(w, response.Body)
