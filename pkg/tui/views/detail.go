@@ -75,11 +75,13 @@ type DetailView struct {
 	height     int
 	focused    bool
 	theme      *theme.Theme
+	renderer   ADFRenderer
 	ResolveNav components.NavResolver
 }
 
-func NewDetailView() *DetailView {
-	return &DetailView{theme: theme.Default, mode: ModeIssue}
+// NewDetailView constructs a DetailView with the given ADF renderer.
+func NewDetailView(renderer ADFRenderer) *DetailView {
+	return &DetailView{theme: theme.Default, mode: ModeIssue, renderer: renderer}
 }
 
 func (d *DetailView) Mode() MainMode { return d.mode }
@@ -637,7 +639,7 @@ func (d *DetailView) buildTitle(maxWidth int) string {
 func (d *DetailView) renderDescription(width int) []string {
 	// Try rich ADF rendering first.
 	if d.issue.DescriptionADF != nil {
-		if lines := renderADF(d.issue.DescriptionADF, width-1); len(lines) > 0 {
+		if lines := d.renderer.Render(d.issue.DescriptionADF, width-1); len(lines) > 0 {
 			result := make([]string, len(lines))
 			for i, l := range lines {
 				result[i] = " " + l
@@ -942,7 +944,7 @@ func (d *DetailView) renderCommentBlocks(width int) [][]string {
 		// Try rich ADF rendering first.
 		var bodyLines []string
 		if c.BodyADF != nil {
-			bodyLines = renderADF(c.BodyADF, width-1)
+			bodyLines = d.renderer.Render(c.BodyADF, width-1)
 		}
 		if len(bodyLines) > 0 {
 			for _, l := range bodyLines {
@@ -1317,13 +1319,13 @@ func wikiToPlain(s string) string {
 // RenderDescriptionPreview renders description text for preview in create form
 // Cloud converts markdown to ADF then renders richly
 // Server strips wiki markup and colors URLs
-func RenderDescriptionPreview(text string, width int, isCloud bool) []string {
+func RenderDescriptionPreview(text string, width int, isCloud bool, renderer ADFRenderer) []string {
 	if text == "" || width <= 0 {
 		return nil
 	}
 	if isCloud {
 		adf := MarkdownToADF(text)
-		if lines := renderADF(adf, width); len(lines) > 0 {
+		if lines := renderer.Render(adf, width); len(lines) > 0 {
 			return lines
 		}
 	}
