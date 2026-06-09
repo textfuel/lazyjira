@@ -4,7 +4,6 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <br>
   <a href="https://github.com/textfuel/lazyjira/releases"><img src="https://img.shields.io/github/downloads/textfuel/lazyjira/total?label=downloads" alt="Downloads"></a>
-  <a href="https://aur.archlinux.org/packages/lazyjira-git"><img src="https://img.shields.io/aur/votes/lazyjira-git?label=aur%20votes" alt="AUR votes"></a>
 </p>
 
 # lazyjira

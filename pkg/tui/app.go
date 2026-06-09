@@ -234,6 +234,17 @@ const (
 	AuthDemo   AuthMethod = "Demo mode"
 )
 
+// newADFRenderer selects the ADF renderer impl based on cfg.Renderer.
+// cfg.Renderer is validated at load time; "" and "builtin" both map to
+// BuiltinRenderer. cfg.RendererStyle is resolved to a concrete Glamour
+// style name here so terminal background detection happens once.
+func newADFRenderer(cfg *config.Config) views.ADFRenderer {
+	if cfg.Renderer == config.RendererGlamour {
+		return views.GlamourRenderer{Style: views.ResolveGlamourStyle(cfg.RendererStyle)}
+	}
+	return views.BuiltinRenderer{}
+}
+
 func NewApp(cfg *config.Config, client jira.ClientInterface) *App {
 	return NewAppWithAuth(cfg, client, AuthEnv)
 }
@@ -266,7 +277,8 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 		infoPanel.SetTypeIcons(cfg.GUI.TypeIcons)
 	}
 	projectList := views.NewProjectList()
-	detailView := views.NewDetailView()
+	adfRenderer := newADFRenderer(cfg)
+	detailView := views.NewDetailView(adfRenderer)
 	logPanel := views.NewLogPanel()
 	helpBar := components.NewHelpBar(nil)
 	searchBar := components.NewSearchBar()
@@ -274,7 +286,7 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 	diffView := components.NewDiffView()
 	inputModal := components.NewInputModal()
 	jqlModal := components.NewJQLModal()
-	createForm := components.NewCreateForm()
+	createForm := components.NewCreateForm(adfRenderer.Render)
 
 	logFlag := new(bool)
 	client.SetOnRequest(func(rl jira.RequestLog) {
@@ -362,9 +374,8 @@ func NewAppWithAuth(cfg *config.Config, client jira.ClientInterface, authMethod 
 
 	isCloud := cfg.Jira.IsCloud()
 	app.createForm.SetDescRenderer(func(text string, width int) []string {
-		return views.RenderDescriptionPreview(text, width, isCloud)
+		return views.RenderDescriptionPreview(text, width, isCloud, adfRenderer)
 	})
-	app.createForm.SetDescADFRenderer(views.RenderADFPreview)
 
 	app.overlays = components.OverlayStack{
 		&app.createForm,
@@ -813,12 +824,12 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 		if isCustomField(field.FieldID) {
 			return a.fetchCustomFieldOptionsForEdit(sel, field)
 		}
-		a.inputModal.Show("Edit "+field.Name, views.EditValueForInput(field.Value))
+		a.inputModal.Show("Edit "+field.Name, views.EditValueForField(sel, field.FieldID, field.Value))
 		a.editContext = editCtx{kind: editField, issueKey: sel.Key, fieldID: field.FieldID}
 		return a, nil
 	case views.FieldMultiText:
 		a.editContext = editCtx{kind: editFieldText, issueKey: sel.Key, fieldID: field.FieldID}
-		return a, launchEditor(views.EditValueForInput(field.Value), ".md")
+		return a, launchEditor(views.EditValueForField(sel, field.FieldID, field.Value), ".md")
 	}
 	return a, nil
 }

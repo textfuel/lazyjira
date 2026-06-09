@@ -66,6 +66,11 @@ type GetChildrenCall struct {
 	ParentKey string
 }
 
+type RemoveIssueParentCall struct {
+	Ctx context.Context
+	Key string
+}
+
 type UpdateIssueCall struct {
 	Ctx    context.Context
 	Key    string
@@ -154,6 +159,7 @@ type FakeClient struct {
 	GetBoardIssuesFunc                func(ctx context.Context, boardID int, jql string) ([]jira.Issue, error)
 	GetChildrenFunc                   func(ctx context.Context, parentKey string) ([]jira.Issue, error)
 	UpdateIssueFunc                   func(ctx context.Context, key string, fields map[string]any) error
+	RemoveIssueParentFunc             func(ctx context.Context, key string) error
 	GetPrioritiesFunc                 func(ctx context.Context) ([]jira.Priority, error)
 	CreateIssueFunc                   func(ctx context.Context, fields map[string]any) (*jira.Issue, error)
 	GetCreateMetaFunc                 func(ctx context.Context, projectKey, issueTypeID string) ([]jira.CreateMetaField, error)
@@ -187,6 +193,7 @@ type FakeClient struct {
 	GetBoardIssuesCalls                []GetBoardIssuesCall
 	GetChildrenCalls                   []GetChildrenCall
 	UpdateIssueCalls                   []UpdateIssueCall
+	RemoveIssueParentCalls             []RemoveIssueParentCall
 	GetPrioritiesCalls                 []context.Context
 	CreateIssueCalls                   []CreateIssueCall
 	GetCreateMetaCalls                 []GetCreateMetaCall
@@ -329,6 +336,15 @@ func (f *FakeClient) UpdateIssue(ctx context.Context, key string, fields map[str
 		return nil
 	}
 	return f.UpdateIssueFunc(ctx, key, fields)
+}
+
+func (f *FakeClient) RemoveIssueParent(ctx context.Context, key string) error {
+	f.RemoveIssueParentCalls = append(f.RemoveIssueParentCalls, RemoveIssueParentCall{Ctx: ctx, Key: key})
+	if f.RemoveIssueParentFunc == nil {
+		f.fatal("RemoveIssueParent")
+		return nil
+	}
+	return f.RemoveIssueParentFunc(ctx, key)
 }
 
 func (f *FakeClient) GetPriorities(ctx context.Context) ([]jira.Priority, error) {
