@@ -26,6 +26,8 @@ func newAppWithFake(t *testing.T, fake *jiratest.FakeClient) *App {
 	a.logPanel = views.NewLogPanel()
 	a.issueCache = map[string]*jira.Issue{}
 	a.childrenCache = map[string][]jira.Issue{}
+	a.usersCache = map[string][]jira.User{}
+	a.createMetaCache = map[string][]jira.CreateMetaField{}
 	return a
 }
 
