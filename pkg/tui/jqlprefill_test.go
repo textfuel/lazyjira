@@ -28,6 +28,11 @@ func TestParseJQLPrefill(t *testing.T) {
 		{"quoted value unquoted", `project = "My Proj"`, map[string]string{"project": "My Proj"}},
 		{"or clause skipped entirely", "project = PLAT OR status = Done", map[string]string{}},
 		{"other function skipped", "assignee = membersOf(grp)", map[string]string{}},
+		{
+			name: "valid clause survives alongside a skipped function",
+			jql:  "project = PLAT AND assignee = membersOf(grp)",
+			want: map[string]string{"project": "PLAT"},
+		},
 	}
 
 	for _, tt := range tests {
