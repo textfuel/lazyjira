@@ -232,6 +232,34 @@ func TestValidateConverter(t *testing.T) {
 	}
 }
 
+func TestValidateRenderer(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"empty defaults to builtin", "", false},
+		{"explicit builtin", RendererBuiltin, false},
+		{"glamour", RendererGlamour, false},
+		{"unknown value errors", "foo", true},
+		{"typo errors", "glamor", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateRenderer(tc.value)
+			if tc.wantErr && err == nil {
+				t.Errorf("validateRenderer(%q) = nil, want error", tc.value)
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("validateRenderer(%q) = %v, want nil", tc.value, err)
+			}
+			if tc.wantErr && err != nil && !strings.Contains(err.Error(), tc.value) {
+				t.Errorf("error %q should include the bad value %q", err.Error(), tc.value)
+			}
+		})
+	}
+}
+
 func TestLoad_RejectsUnknownConverter(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("LAZYJIRA_CONFIG_DIR", dir)

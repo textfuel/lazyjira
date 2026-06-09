@@ -27,6 +27,7 @@ type ClientInterface interface {
 	GetBoardIssues(ctx context.Context, boardID int, jql string) ([]Issue, error)
 	GetChildren(ctx context.Context, parentKey string) ([]Issue, error)
 	UpdateIssue(ctx context.Context, issueKey string, fields map[string]any) error
+	RemoveIssueParent(ctx context.Context, issueKey string) error
 	GetPriorities(ctx context.Context) ([]Priority, error)
 	CreateIssue(ctx context.Context, fields map[string]any) (*Issue, error)
 	GetCreateMeta(ctx context.Context, projectKey, issueTypeID string) ([]CreateMetaField, error)
@@ -510,6 +511,26 @@ func (c *Client) UpdateIssue(ctx context.Context, issueKey string, fields map[st
 	err := c.do(ctx, http.MethodPut, "/issue/"+issueKey, body, nil)
 	if err != nil {
 		return fmt.Errorf("update issue %s: %w", issueKey, err)
+	}
+	return nil
+}
+
+// RemoveIssueParent clears the parent link of an issue.
+//
+// Cloud uses the v3 fields.parent = null shape; DC/Server uses the v2
+// update.parent.remove shape (different wire format). The Cloud path can
+// sporadically return 500 for parents that were set via Epic Link historically
+// (JRACLOUD-78657); the underlying error is returned as-is so callers can
+// surface a generic retry hint.
+func (c *Client) RemoveIssueParent(ctx context.Context, issueKey string) error {
+	var body map[string]any
+	if c.isCloud {
+		body = map[string]any{"fields": map[string]any{"parent": nil}}
+	} else {
+		body = map[string]any{"update": map[string]any{"parent": []map[string]any{{"remove": map[string]any{}}}}}
+	}
+	if err := c.do(ctx, http.MethodPut, "/issue/"+issueKey, body, nil); err != nil {
+		return fmt.Errorf("remove parent of %s: %w", issueKey, err)
 	}
 	return nil
 }

@@ -225,7 +225,10 @@ type myselfLoadedMsg struct{ user *jira.User }
 
 type fieldsDiscoveredMsg struct{ err error }
 
-type issueUpdatedMsg struct{ issueKey string }
+type issueUpdatedMsg struct {
+	issueKey string
+	field    string
+}
 type commentAddedMsg struct{ issueKey string }
 type commentUpdatedMsg struct{ issueKey string }
 type prioritiesLoadedMsg struct{ priorities []jira.Priority }
@@ -263,7 +266,16 @@ func updateIssueField(client jira.ClientInterface, issueKey, field string, value
 		if err != nil {
 			return errorMsg{err: err}
 		}
-		return issueUpdatedMsg{issueKey: issueKey}
+		return issueUpdatedMsg{issueKey: issueKey, field: field}
+	}
+}
+
+func removeIssueParent(client jira.ClientInterface, issueKey string) tea.Cmd {
+	return func() tea.Msg {
+		if err := client.RemoveIssueParent(context.Background(), issueKey); err != nil {
+			return errorMsg{err: err}
+		}
+		return issueUpdatedMsg{issueKey: issueKey, field: "parent"}
 	}
 }
 
