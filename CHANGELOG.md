@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-06-09
+
 ### Added
 
 - Optional Glamour renderer for ADF previews in the detail view and the create form. Set `renderer: glamour` in config.yml to route descriptions and comments through the adf-converter display module and Glamour for richer styling of headings, lists, code blocks and colored text spans. The builtin renderer stays the default. `rendererStyle` (auto, dark, light, notty) selects the Glamour theme. Auto detects the terminal background via lipgloss and can be set explicitly when detection fails under tmux or ssh (#80)
@@ -421,7 +423,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.15.0...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.16.0...HEAD
+[2.16.0]: https://github.com/textfuel/lazyjira/compare/v2.15.0...v2.16.0
 [2.15.0]: https://github.com/textfuel/lazyjira/compare/v2.14.0...v2.15.0
 [2.14.0]: https://github.com/textfuel/lazyjira/compare/v2.13.0...v2.14.0
 [2.13.0]: https://github.com/textfuel/lazyjira/compare/v2.12.0...v2.13.0
