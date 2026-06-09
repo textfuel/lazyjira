@@ -382,6 +382,40 @@ converter: adf-converter
 
 Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
 
+## ADF preview rendering (`renderer`)
+
+Controls how ADF documents are rendered to styled terminal lines in the description preview (create form and detail view).
+
+```yaml
+renderer: glamour
+```
+
+| Value | Behavior |
+|-------|----------|
+| *(unset, default)* | Built-in renderer. Hand-rolled ADF traversal with chroma syntax highlighting. |
+| `builtin` | Same as the default; explicit form. |
+| `glamour` | Routes ADF through [adf-converter](https://github.com/seflue/adf-converter)'s display module, which produces Markdown and renders it through Glamour. Richer styling for headings, lists, code blocks, and colored text spans. |
+
+Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
+
+## ADF preview style (`rendererStyle`)
+
+Selects the Glamour theme used by the `glamour` renderer. Ignored when `renderer` is unset or `builtin`.
+
+```yaml
+rendererStyle: auto
+```
+
+| Value | Behavior |
+|-------|----------|
+| *(unset, default)* | Same as `auto`. |
+| `auto` | Picks `dark` or `light` based on `lipgloss.HasDarkBackground`. Terminal background detection can fail under `tmux` or `ssh`; set the value explicitly when autodetect picks wrong. |
+| `dark` | Forces the dark Glamour theme. |
+| `light` | Forces the light Glamour theme. |
+| `notty` | Plain output without ANSI styling. |
+
+Any other value causes lazyjira to exit on startup with an error naming the invalid setting.
+
 ## Custom commands
 
 Bind shell commands to keys, with Go template access to the focused issue, project, or comment. Custom bindings take precedence over built-in keys, so they can be used to override any action.
