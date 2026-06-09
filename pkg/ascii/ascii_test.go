@@ -3,6 +3,7 @@ package ascii
 import "testing"
 
 func TestConvert(t *testing.T) {
+	t.Parallel()
 	cases := []struct{ in, want string }{
 		{"", ""},
 		{"hello", "hello"},

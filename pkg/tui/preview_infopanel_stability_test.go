@@ -14,6 +14,7 @@ import (
 // user's navigation context. Only the DetailView on the right may follow the
 // previewed issue.
 func TestPreviewDetailLoaded_DoesNotMutateInfoPanel(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 
@@ -42,6 +43,7 @@ func TestPreviewDetailLoaded_DoesNotMutateInfoPanel(t *testing.T) {
 // the detail response comes through the non-preview channel. It still must not
 // overwrite the InfoPanel.
 func TestIssueDetailLoaded_DoesNotMutateInfoPanelForSubPreview(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 
@@ -67,6 +69,7 @@ func TestIssueDetailLoaded_DoesNotMutateInfoPanelForSubPreview(t *testing.T) {
 // that does not match the current list cursor; before the fix it overwrote
 // the InfoPanel and reset its tab/cursor.
 func TestShowCachedIssue_DoesNotMutateInfoPanelForForeignKey(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	main := &jira.Issue{Key: mainKey, Summary: "main"}
@@ -87,6 +90,7 @@ func TestShowCachedIssue_DoesNotMutateInfoPanelForForeignKey(t *testing.T) {
 // synchronously from cache. No fetch, no debounce delay, matching the
 // feel of scrolling through the main issue list.
 func TestPreviewRequestMsg_CacheHit_UpdatesDetailViewImmediately(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	// No *Func set: any HTTP path would t.Fatalf.
 	a := newAppWithFake(t, fake)
@@ -108,6 +112,7 @@ func TestPreviewRequestMsg_CacheHit_UpdatesDetailViewImmediately(t *testing.T) {
 // Subtasks tab immediately previews the first subtask without requiring an
 // extra cursor move.
 func TestTabSwitchToSubtasks_DispatchesPreviewRequest(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	main := &jira.Issue{
@@ -141,6 +146,7 @@ func TestTabSwitchToSubtasks_DispatchesPreviewRequest(t *testing.T) {
 // TestTabSwitchToLinks_DispatchesPreviewRequest covers the same behaviour for
 // the Links tab.
 func TestTabSwitchToLinks_DispatchesPreviewRequest(t *testing.T) {
+	t.Parallel()
 	const linkKey = "LNK-1"
 
 	fake := &jiratest.FakeClient{T: t}
@@ -179,6 +185,7 @@ func TestTabSwitchToLinks_DispatchesPreviewRequest(t *testing.T) {
 // when the main issue has no subtasks, entering the Subtasks tab must not fire
 // a PreviewRequestMsg.
 func TestTabSwitchToSubtasks_EmptyListNoDispatch(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	main := &jira.Issue{Key: mainKey} // no subtasks, no links

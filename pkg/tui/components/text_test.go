@@ -7,6 +7,7 @@ import (
 )
 
 func TestTruncateMiddle(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -27,6 +28,7 @@ func TestTruncateMiddle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := TruncateMiddle(tt.input, tt.maxWidth)
 
 			if tt.want != "" && got != tt.want {
@@ -53,6 +55,7 @@ func TestTruncateMiddle(t *testing.T) {
 }
 
 func TestTruncateEnd(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -65,6 +68,7 @@ func TestTruncateEnd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := TruncateEnd(tt.input, tt.maxWidth)
 			w := lipgloss.Width(got)
 			if w > tt.maxWidth {

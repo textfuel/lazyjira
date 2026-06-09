@@ -7,6 +7,7 @@ import (
 )
 
 func TestModal_ShowAndSelect(t *testing.T) {
+	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
 	items := []ModalItem{
@@ -44,6 +45,7 @@ func TestModal_ShowAndSelect(t *testing.T) {
 }
 
 func TestModal_Cancel(t *testing.T) {
+	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
 	m.Show("Pick", []ModalItem{{ID: "1", Label: "One"}})
@@ -63,6 +65,7 @@ func TestModal_Cancel(t *testing.T) {
 }
 
 func TestModal_SkipsSeparators(t *testing.T) {
+	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
 	items := []ModalItem{
@@ -83,6 +86,7 @@ func TestModal_SkipsSeparators(t *testing.T) {
 }
 
 func TestModal_InterceptWhenVisible(t *testing.T) {
+	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
 
@@ -102,6 +106,7 @@ func TestModal_InterceptWhenVisible(t *testing.T) {
 }
 
 func TestModal_SearchFilter(t *testing.T) {
+	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
 	m.Show("Pick", []ModalItem{
@@ -132,6 +137,7 @@ func TestModal_SearchFilter(t *testing.T) {
 }
 
 func TestModal_Checklist(t *testing.T) {
+	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
 	items := []ModalItem{

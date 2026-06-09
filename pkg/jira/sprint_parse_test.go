@@ -7,6 +7,7 @@ import (
 )
 
 func TestParseSprintRaw(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -41,6 +42,7 @@ func TestParseSprintRaw(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := parseSprintRaw(json.RawMessage(tt.input))
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("got %+v, want %+v", got, tt.want)
@@ -50,6 +52,7 @@ func TestParseSprintRaw(t *testing.T) {
 }
 
 func TestParseLegacySprint(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -88,6 +91,7 @@ func TestParseLegacySprint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, ok := parseLegacySprint(tt.input)
 			if ok != tt.ok {
 				t.Fatalf("ok=%v, want %v", ok, tt.ok)
@@ -100,6 +104,7 @@ func TestParseLegacySprint(t *testing.T) {
 }
 
 func TestPickSprint(t *testing.T) {
+	t.Parallel()
 	active := Sprint{ID: 1, Name: "A", State: "active"}
 	future := Sprint{ID: 2, Name: "F", State: "future"}
 	closed := Sprint{ID: 3, Name: "C", State: "closed"}
@@ -147,6 +152,7 @@ func TestPickSprint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := pickSprint(tt.input)
 			if (got == nil) != (tt.want == nil) {
 				t.Fatalf("nil mismatch: got %v, want %v", got, tt.want)
@@ -159,6 +165,7 @@ func TestPickSprint(t *testing.T) {
 }
 
 func TestFindSprintInCustomFields(t *testing.T) {
+	t.Parallel()
 	sprintJSON := json.RawMessage(`[{"id":42,"name":"Sprint 1","state":"active"}]`)
 	emptySprintJSON := json.RawMessage(`[{"id":0,"name":""}]`)
 	otherJSON := json.RawMessage(`"not a sprint"`)
@@ -194,6 +201,7 @@ func TestFindSprintInCustomFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := findSprintInCustomFields(tt.input)
 			if (got == nil) != (tt.want == nil) {
 				t.Fatalf("nil mismatch: got %v, want %v", got, tt.want)
@@ -206,6 +214,7 @@ func TestFindSprintInCustomFields(t *testing.T) {
 }
 
 func TestRemapSprintField(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		fields     map[string]any
@@ -240,6 +249,7 @@ func TestRemapSprintField(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := remapSprintField(tt.fields, tt.resolvedID)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("got %+v, want %+v", got, tt.want)

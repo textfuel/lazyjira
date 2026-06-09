@@ -17,6 +17,7 @@ import (
 // ChildrenRequestMsg on a Cloud app dispatches GetChildren with the right
 // key and routes the loaded children into InfoPanel.
 func TestChildrenRequestMsg_Cloud_FiresGetChildren(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	want := []jira.Issue{{Key: "C-1", Summary: "first"}, {Key: "C-2", Summary: "second"}}
 	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
@@ -52,6 +53,7 @@ func TestChildrenRequestMsg_Cloud_FiresGetChildren(t *testing.T) {
 // TestChildrenRequestMsg_ServerDC_NoCall pins the Server/DC fast-path: the
 // app shortcircuits before touching the client when isCloud=false.
 func TestChildrenRequestMsg_ServerDC_NoCall(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	// No GetChildrenFunc — any call would t.Fatalf via fake.fatal.
 
@@ -73,6 +75,7 @@ func TestChildrenRequestMsg_ServerDC_NoCall(t *testing.T) {
 // childrenLoadedMsg with a stale epoch (because a newer ChildrenRequestMsg
 // has bumped the counter) is ignored.
 func TestChildrenLoadedMsg_StaleEpochDropped(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.isCloud = true
@@ -97,6 +100,7 @@ func TestChildrenLoadedMsg_StaleEpochDropped(t *testing.T) {
 // a non-nil err lands as a StatusPanel error message and propagates to
 // InfoPanel for the error row.
 func TestChildrenLoadedMsg_FetchError_SetsStatusPanelError(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.isCloud = true
@@ -116,6 +120,7 @@ func TestChildrenLoadedMsg_FetchError_SetsStatusPanelError(t *testing.T) {
 }
 
 func TestIssueSelectedMsg_OnSubTab_DispatchesChildrenRequest(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.isCloud = true
@@ -137,6 +142,7 @@ func TestIssueSelectedMsg_OnSubTab_DispatchesChildrenRequest(t *testing.T) {
 }
 
 func TestIssueSelectedMsg_OnFieldsTab_NoChildrenRequest(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.isCloud = true
@@ -150,6 +156,7 @@ func TestIssueSelectedMsg_OnFieldsTab_NoChildrenRequest(t *testing.T) {
 }
 
 func TestChildrenRequestMsg_CacheHit_NoClientCall(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	// No GetChildrenFunc — any call would t.Fatalf via fake.fatal.
 
@@ -173,6 +180,7 @@ func TestChildrenRequestMsg_CacheHit_NoClientCall(t *testing.T) {
 }
 
 func TestChildrenRequestMsg_CacheMiss_PopulatesCacheOnLoad(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	want := []jira.Issue{{Key: "C-1"}, {Key: "C-2"}}
 	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
@@ -203,6 +211,7 @@ func TestChildrenRequestMsg_CacheMiss_PopulatesCacheOnLoad(t *testing.T) {
 }
 
 func TestChildrenLoadedMsg_PrefetchesChildDetails(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	var seenJQL string
 	fake.SearchIssuesFunc = func(_ context.Context, jql string, _, _ int) (*jira.SearchResult, error) {
@@ -235,6 +244,7 @@ func TestChildrenLoadedMsg_PrefetchesChildDetails(t *testing.T) {
 }
 
 func TestChildrenLoadedMsg_PrefetchSkipsAlreadyCached(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.isCloud = true
@@ -255,6 +265,7 @@ func TestChildrenLoadedMsg_PrefetchSkipsAlreadyCached(t *testing.T) {
 }
 
 func TestActRefresh_ClearsChildrenCacheForPreviewKey(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetIssueFunc = func(_ context.Context, _ string) (*jira.Issue, error) {
 		return &jira.Issue{Key: "EPIC-1"}, nil
@@ -277,6 +288,7 @@ func TestActRefresh_ClearsChildrenCacheForPreviewKey(t *testing.T) {
 
 // ActRefresh on a Cloud issue refetches children.
 func TestActRefresh_OnCloud_RefetchesChildren(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: "REFRESH-1"})
 	a := newAppWithFake(t, fake)
@@ -297,6 +309,7 @@ func TestActRefresh_OnCloud_RefetchesChildren(t *testing.T) {
 
 // ActRefresh on a Server/DC issue does not refetch children.
 func TestActRefresh_OnServerDC_NoChildrenRequest(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: "REFRESH-2"})
 	a := newAppWithFake(t, fake)

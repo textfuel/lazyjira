@@ -12,6 +12,7 @@ import (
 // TestApplyParentEdit_SetSendsKey ensures a non-empty input dispatches an
 // UpdateIssue with parent.key body and applies the optimistic cache write.
 func TestApplyParentEdit_SetSendsKey(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.UpdateIssueFunc = func(_ context.Context, _ string, _ map[string]any) error { return nil }
 
@@ -39,6 +40,7 @@ func TestApplyParentEdit_SetSendsKey(t *testing.T) {
 // TestApplyParentEdit_EmptyCallsRemove verifies that empty input clears the
 // cached Parent and routes through RemoveIssueParent (not UpdateIssue).
 func TestApplyParentEdit_EmptyCallsRemove(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.RemoveIssueParentFunc = func(_ context.Context, _ string) error { return nil }
 
@@ -65,6 +67,7 @@ func TestApplyParentEdit_EmptyCallsRemove(t *testing.T) {
 // TestApplyParentEdit_InvalidKeyShortCircuits ensures malformed input never
 // reaches the client and surfaces as an inline errorMsg.
 func TestApplyParentEdit_InvalidKeyShortCircuits(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issueCache[mainKey] = &jira.Issue{Key: mainKey}

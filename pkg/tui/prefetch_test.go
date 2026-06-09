@@ -30,6 +30,7 @@ func runAll(cmd tea.Cmd) {
 // with subtasks and links so that navigating up the hierarchy feels the same
 // as navigating into sub-tasks.
 func TestPrefetchRelated_IncludesParent(t *testing.T) {
+	t.Parallel()
 	const parentKey = "PARENT-1"
 
 	var got string
@@ -64,6 +65,7 @@ func TestPrefetchRelated_IncludesParent(t *testing.T) {
 // warms the cache with its subtasks, links and parent so navigating into them
 // feels instant.
 func TestIssueSelectedMsg_PrefetchesRelated(t *testing.T) {
+	t.Parallel()
 	var got string
 	fake := &jiratest.FakeClient{T: t}
 	fake.SearchIssuesFunc = func(_ context.Context, jql string, _, _ int) (*jira.SearchResult, error) {
@@ -91,6 +93,7 @@ func TestIssueSelectedMsg_PrefetchesRelated(t *testing.T) {
 // TestPreviewSelectedIssue_ReturnsPrefetchCmd ensures the helper used on tab
 // switches and focus returns also warms the cache for the now-selected task.
 func TestPreviewSelectedIssue_ReturnsPrefetchCmd(t *testing.T) {
+	t.Parallel()
 	var got string
 	fake := &jiratest.FakeClient{T: t}
 	fake.SearchIssuesFunc = func(_ context.Context, jql string, _, _ int) (*jira.SearchResult, error) {

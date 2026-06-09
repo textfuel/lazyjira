@@ -22,6 +22,7 @@ func newTestApp() *App {
 }
 
 func TestActiveContexts(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name  string
 		setup func(a *App)
@@ -76,6 +77,7 @@ func TestActiveContexts(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			a := newTestApp()
 			tc.setup(a)
 			got := a.activeContexts()
@@ -101,6 +103,7 @@ func parseTmpl(t *testing.T, s string) *template.Template {
 }
 
 func TestBuildCommandData_SingleScopeFlat(t *testing.T) {
+	t.Parallel()
 	a := newTestApp()
 	a.issuesList.SetIssues([]jira.Issue{{Key: "ABC-1", Summary: "hi"}})
 	rc := config.ResolvedCustomCommand{
@@ -123,6 +126,7 @@ func TestBuildCommandData_SingleScopeFlat(t *testing.T) {
 }
 
 func TestBuildCommandData_DetailCommentsFlat(t *testing.T) {
+	t.Parallel()
 	a := newTestApp()
 	issue := jira.Issue{Key: "ABC-1", Comments: []jira.Comment{{ID: "10", Body: "hello"}}}
 	a.issuesList.SetIssues([]jira.Issue{issue})
@@ -149,6 +153,7 @@ func TestBuildCommandData_DetailCommentsFlat(t *testing.T) {
 }
 
 func TestBuildCommandData_SharedFieldsProjectScope(t *testing.T) {
+	t.Parallel()
 	a := newTestApp()
 	a.gitBranch = "feature/x"
 	a.gitRepoPath = "/tmp/repo"
@@ -176,6 +181,7 @@ func TestBuildCommandData_SharedFieldsProjectScope(t *testing.T) {
 }
 
 func TestBuildCommandData_SharedFieldsDetailComments(t *testing.T) {
+	t.Parallel()
 	a := newTestApp()
 	a.gitBranch = "feature/y"
 	a.gitRepoPath = "/tmp/repo2"
@@ -204,6 +210,7 @@ func TestBuildCommandData_SharedFieldsDetailComments(t *testing.T) {
 }
 
 func TestBuildCommandData_MissingSelectionSwallows(t *testing.T) {
+	t.Parallel()
 	a := newTestApp()
 	a.side = sideLeft
 	a.leftFocus = focusProjects
@@ -219,6 +226,7 @@ func TestBuildCommandData_MissingSelectionSwallows(t *testing.T) {
 }
 
 func TestHandleCustomCommand_SpecificityDispatch(t *testing.T) {
+	t.Parallel()
 	a := newTestApp()
 	issue := jira.Issue{Key: "ABC-1", Comments: []jira.Comment{{ID: "9", Body: "b"}}}
 	a.issuesList.SetIssues([]jira.Issue{issue})
@@ -260,6 +268,7 @@ done:
 }
 
 func TestQuitReachableWarning(t *testing.T) {
+	t.Parallel()
 	allCtxs := []config.Context{
 		config.CtxIssues,
 		config.CtxInfo,
@@ -318,6 +327,7 @@ func TestQuitReachableWarning(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			warning := quitReachableWarning(tc.km, tc.cmds)
 			got := warning != ""
 			if got != tc.wantWarn {

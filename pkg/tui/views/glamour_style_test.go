@@ -3,6 +3,7 @@ package views
 import "testing"
 
 func TestResolveGlamourStyle_Explicit(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"dark":  "dark",
 		"light": "light",
@@ -16,35 +17,29 @@ func TestResolveGlamourStyle_Explicit(t *testing.T) {
 }
 
 func TestResolveGlamourStyle_AutoDark(t *testing.T) {
-	orig := hasDarkBackground
-	t.Cleanup(func() { hasDarkBackground = orig })
-	hasDarkBackground = func() bool { return true }
-
+	t.Parallel()
+	darkBackground := func() bool { return true }
 	for _, in := range []string{"", "auto"} {
-		if got := ResolveGlamourStyle(in); got != "dark" {
-			t.Errorf("ResolveGlamourStyle(%q) with dark bg = %q, want %q", in, got, "dark")
+		if got := resolveGlamourStyle(in, darkBackground); got != "dark" {
+			t.Errorf("resolveGlamourStyle(%q) with dark bg = %q, want %q", in, got, "dark")
 		}
 	}
 }
 
 func TestResolveGlamourStyle_AutoLight(t *testing.T) {
-	orig := hasDarkBackground
-	t.Cleanup(func() { hasDarkBackground = orig })
-	hasDarkBackground = func() bool { return false }
-
+	t.Parallel()
+	lightBackground := func() bool { return false }
 	for _, in := range []string{"", "auto"} {
-		if got := ResolveGlamourStyle(in); got != "light" {
-			t.Errorf("ResolveGlamourStyle(%q) with light bg = %q, want %q", in, got, "light")
+		if got := resolveGlamourStyle(in, lightBackground); got != "light" {
+			t.Errorf("resolveGlamourStyle(%q) with light bg = %q, want %q", in, got, "light")
 		}
 	}
 }
 
 func TestResolveGlamourStyle_UnknownFallsBackToAuto(t *testing.T) {
-	orig := hasDarkBackground
-	t.Cleanup(func() { hasDarkBackground = orig })
-	hasDarkBackground = func() bool { return true }
-
-	if got := ResolveGlamourStyle("dracula"); got != "dark" {
-		t.Errorf("ResolveGlamourStyle(unknown) = %q, want %q", got, "dark")
+	t.Parallel()
+	darkBackground := func() bool { return true }
+	if got := resolveGlamourStyle("dracula", darkBackground); got != "dark" {
+		t.Errorf("resolveGlamourStyle(unknown) = %q, want %q", got, "dark")
 	}
 }

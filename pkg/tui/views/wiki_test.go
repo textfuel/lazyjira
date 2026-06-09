@@ -3,6 +3,7 @@ package views
 import "testing"
 
 func TestWikiToPlain(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -23,6 +24,7 @@ func TestWikiToPlain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := wikiToPlain(tt.input)
 			if got != tt.want {
 				t.Errorf("wikiToPlain(%q) = %q, want %q", tt.input, got, tt.want)

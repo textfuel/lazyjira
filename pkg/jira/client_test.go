@@ -1,16 +1,17 @@
 package jira
 
 import (
-	"context"
 	"encoding/json"
-	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 )
 
 func TestNewClientWithOpts_CloudVsServer(t *testing.T) {
+	t.Parallel()
+
 	cloud := NewClientWithOpts(ClientOpts{
 		Host:    "https://test.atlassian.net",
 		Email:   "user@test.com",
@@ -38,6 +39,8 @@ func TestNewClientWithOpts_CloudVsServer(t *testing.T) {
 }
 
 func TestNewClientWithOpts_HostNormalization(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		input string
 		want  string
@@ -48,98 +51,80 @@ func TestNewClientWithOpts_HostNormalization(t *testing.T) {
 		{"https://jira.com/", "https://jira.com"},
 	}
 	for _, tt := range tests {
-		c := NewClientWithOpts(ClientOpts{Host: tt.input, Token: "x", IsCloud: false})
-		if c.hostURL != tt.want {
-			t.Errorf("Host %q: got %q, want %q", tt.input, c.hostURL, tt.want)
-		}
+		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+			client := NewClientWithOpts(ClientOpts{Host: tt.input, Token: "x", IsCloud: false})
+			testkit.AssertEqual(t, "hostURL", client.hostURL, tt.want)
+		})
 	}
 }
 
-// countingRoundTripper records every HTTP call without performing one.
+func TestClient_GetChildren_CloudFiresJQL(t *testing.T) {
+	t.Parallel()
+
+	client, recorded := newRecordingClient(t, cloudOpts(), testkit.StubResponse{
+		Status: http.StatusOK,
+		Body:   `{"issues":[],"total":0,"maxResults":100,"startAt":0}`,
+	})
+
+	if _, err := client.GetChildren(t.Context(), "PROJ-123"); err != nil {
+		t.Fatalf("GetChildren returned error: %v", err)
+	}
+
+	if !strings.HasSuffix(recorded.Path, "/search/jql") {
+		t.Errorf("Cloud: expected /search/jql, got %s", recorded.Path)
+	}
+	testkit.AssertEqual(t, "jql query", recorded.Query.Get("jql"), "parent = PROJ-123")
+}
+
 type countingRoundTripper struct {
 	calls int
 }
 
-func (c *countingRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
-	c.calls++
-	return nil, http.ErrUseLastResponse // any error suffices; we only count
-}
-
-func TestClient_GetChildren_CloudFiresJQL(t *testing.T) {
-	var (
-		gotPath string
-		gotJQL  string
-	)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		gotJQL = r.URL.Query().Get("jql")
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"issues":[],"total":0,"maxResults":100,"startAt":0}`))
-	}))
-	t.Cleanup(srv.Close)
-
-	c := NewClientWithOpts(ClientOpts{
-		Host:    srv.URL,
-		Email:   "u",
-		Token:   "t",
-		IsCloud: true,
-	})
-
-	if _, err := c.GetChildren(context.Background(), "PROJ-123"); err != nil {
-		t.Fatalf("GetChildren returned error: %v", err)
-	}
-
-	if !strings.HasSuffix(gotPath, "/search/jql") {
-		t.Errorf("Cloud: expected /search/jql, got %s", gotPath)
-	}
-	if gotJQL != "parent = PROJ-123" {
-		t.Errorf("Cloud JQL: got %q, want %q", gotJQL, "parent = PROJ-123")
-	}
+func (transport *countingRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	transport.calls++
+	return nil, http.ErrUseLastResponse
 }
 
 func TestClient_GetChildren_ServerDCNoCall(t *testing.T) {
-	rt := &countingRoundTripper{}
-	c := NewClientWithOpts(ClientOpts{
+	t.Parallel()
+
+	transport := &countingRoundTripper{}
+	client := NewClientWithOpts(ClientOpts{
 		Host:       "https://jira.corp.example",
-		Token:      "pat",
+		Token:      "pat-token",
 		IsCloud:    false,
-		HTTPClient: &http.Client{Transport: rt},
+		HTTPClient: &http.Client{Transport: transport},
 	})
 
-	issues, err := c.GetChildren(context.Background(), "PROJ-123")
+	issues, err := client.GetChildren(t.Context(), "PROJ-123")
 	if err != nil {
 		t.Fatalf("Server/DC GetChildren: unexpected error %v", err)
 	}
 	if issues != nil {
 		t.Errorf("Server/DC GetChildren: expected nil slice, got %v", issues)
 	}
-	if rt.calls != 0 {
-		t.Errorf("Server/DC GetChildren: expected 0 HTTP calls, got %d", rt.calls)
-	}
+	testkit.AssertEqual(t, "HTTP call count", transport.calls, 0)
 }
 
 func TestClient_UpdateIssue_ParentSet(t *testing.T) {
-	var gotPath string
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		raw, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(raw, &gotBody)
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	t.Cleanup(srv.Close)
+	t.Parallel()
 
-	c := NewClientWithOpts(ClientOpts{Host: srv.URL, Email: "u", Token: "t", IsCloud: true})
-	err := c.UpdateIssue(context.Background(), "PROJ-2", map[string]any{
+	client, recorded := newRecordingClient(t, cloudOpts(), testkit.StubResponse{Status: http.StatusNoContent})
+
+	err := client.UpdateIssue(t.Context(), "PROJ-2", map[string]any{
 		"parent": map[string]string{"key": "PROJ-1"},
 	})
 	if err != nil {
 		t.Fatalf("UpdateIssue: %v", err)
 	}
-	if !strings.HasSuffix(gotPath, "/issue/PROJ-2") {
-		t.Errorf("path = %q", gotPath)
+
+	if !strings.HasSuffix(recorded.Path, "/issue/PROJ-2") {
+		t.Errorf("path = %q", recorded.Path)
 	}
-	fields, _ := gotBody["fields"].(map[string]any)
+
+	body := decodeBody(t, recorded.Body)
+	fields, _ := body["fields"].(map[string]any)
 	parent, _ := fields["parent"].(map[string]any)
 	if parent["key"] != "PROJ-1" {
 		t.Errorf("body fields.parent.key = %v, want PROJ-1", parent["key"])
@@ -147,72 +132,69 @@ func TestClient_UpdateIssue_ParentSet(t *testing.T) {
 }
 
 func TestClient_RemoveIssueParent_Cloud(t *testing.T) {
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(raw, &gotBody)
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	t.Cleanup(srv.Close)
+	t.Parallel()
 
-	c := NewClientWithOpts(ClientOpts{Host: srv.URL, Email: "u", Token: "t", IsCloud: true})
-	if err := c.RemoveIssueParent(context.Background(), "PROJ-2"); err != nil {
+	client, recorded := newRecordingClient(t, cloudOpts(), testkit.StubResponse{Status: http.StatusNoContent})
+
+	if err := client.RemoveIssueParent(t.Context(), "PROJ-2"); err != nil {
 		t.Fatalf("RemoveIssueParent: %v", err)
 	}
-	fields, ok := gotBody["fields"].(map[string]any)
+
+	body := decodeBody(t, recorded.Body)
+	fields, ok := body["fields"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected fields wrapper, got %#v", gotBody)
+		t.Fatalf("expected fields wrapper, got %#v", body)
 	}
-	if v, ok := fields["parent"]; !ok || v != nil {
-		t.Errorf("fields.parent = %v (ok=%v), want nil literal", v, ok)
+	if value, exists := fields["parent"]; !exists || value != nil {
+		t.Errorf("fields.parent = %v (exists=%v), want nil literal", value, exists)
 	}
-	if _, ok := gotBody["update"]; ok {
-		t.Errorf("Cloud body should not contain 'update', got %#v", gotBody)
+	if _, exists := body["update"]; exists {
+		t.Errorf("Cloud body should not contain 'update', got %#v", body)
 	}
 }
 
 func TestClient_RemoveIssueParent_DC(t *testing.T) {
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(raw, &gotBody)
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	t.Cleanup(srv.Close)
+	t.Parallel()
 
-	c := NewClientWithOpts(ClientOpts{Host: srv.URL, Token: "pat", IsCloud: false})
-	if err := c.RemoveIssueParent(context.Background(), "PROJ-2"); err != nil {
+	client, recorded := newRecordingClient(t, serverOpts(), testkit.StubResponse{Status: http.StatusNoContent})
+
+	if err := client.RemoveIssueParent(t.Context(), "PROJ-2"); err != nil {
 		t.Fatalf("RemoveIssueParent: %v", err)
 	}
-	update, ok := gotBody["update"].(map[string]any)
+
+	body := decodeBody(t, recorded.Body)
+	update, ok := body["update"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected update wrapper, got %#v", gotBody)
+		t.Fatalf("expected update wrapper, got %#v", body)
 	}
-	ops, ok := update["parent"].([]any)
-	if !ok || len(ops) != 1 {
+	operations, ok := update["parent"].([]any)
+	if !ok || len(operations) != 1 {
 		t.Fatalf("update.parent = %#v, want [{remove:{}}]", update["parent"])
 	}
-	op, _ := ops[0].(map[string]any)
-	if _, ok := op["remove"]; !ok {
-		t.Errorf("update.parent[0] = %#v, want remove op", op)
+	operation, _ := operations[0].(map[string]any)
+	if _, exists := operation["remove"]; !exists {
+		t.Errorf("update.parent[0] = %#v, want remove op", operation)
 	}
-	if _, ok := gotBody["fields"]; ok {
-		t.Errorf("DC body should not contain 'fields', got %#v", gotBody)
+	if _, exists := body["fields"]; exists {
+		t.Errorf("DC body should not contain 'fields', got %#v", body)
 	}
 }
 
 func TestUserResponse_ToUser_FallbackToName(t *testing.T) {
-	// Cloud: accountId set
-	cloud := &userResponse{AccountID: "abc123", Name: "jsmith", DisplayName: "Alice"}
-	u := cloud.toUser()
-	if u.AccountID != "abc123" {
-		t.Errorf("with accountId: got %q, want abc123", u.AccountID)
-	}
+	t.Parallel()
 
-	// Server: only name set
+	cloud := &userResponse{AccountID: "abc123", Name: "jsmith", DisplayName: "Alice"}
+	testkit.AssertEqual(t, "cloud AccountID", cloud.toUser().AccountID, "abc123")
+
 	server := &userResponse{Name: "jsmith", DisplayName: "John"}
-	u = server.toUser()
-	if u.AccountID != "jsmith" {
-		t.Errorf("name fallback: got %q, want jsmith", u.AccountID)
+	testkit.AssertEqual(t, "server AccountID fallback", server.toUser().AccountID, "jsmith")
+}
+
+func decodeBody(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+	var body map[string]any
+	if err := json.Unmarshal(raw, &body); err != nil {
+		t.Fatalf("unmarshal request body %q: %v", raw, err)
 	}
+	return body
 }

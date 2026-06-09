@@ -25,6 +25,7 @@ func setupPreviewedSub(t *testing.T, fake *jiratest.FakeClient, sub *jira.Issue)
 // TestEditAction_TargetsPreviewedIssue verifies that pressing the edit action
 // while previewing a sub-issue edits the sub's summary, not the main issue.
 func TestEditAction_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main summary"}})
@@ -43,6 +44,7 @@ func TestEditAction_TargetsPreviewedIssue(t *testing.T) {
 // TestCustomCommand_TargetsPreviewedIssue verifies that a custom command's
 // template is rendered with the previewed issue's key, not the list cursor.
 func TestCustomCommand_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main"}})
@@ -78,6 +80,7 @@ func TestCustomCommand_TargetsPreviewedIssue(t *testing.T) {
 // window the user might press an issue-scoped key; the action must target
 // the preview key (shown on screen) rather than the list cursor.
 func TestCurrentIssue_StubWhenPreviewKeyUncached(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
@@ -96,6 +99,7 @@ func TestCurrentIssue_StubWhenPreviewKeyUncached(t *testing.T) {
 // before any preview is active, issue-scoped actions operate on the list
 // selection.
 func TestCurrentIssue_FallsBackToListWhenNoPreview(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
@@ -114,6 +118,7 @@ func TestCurrentIssue_FallsBackToListWhenNoPreview(t *testing.T) {
 // the info panel has focus on the Sub or Lnk tab edits the summary of the
 // issue currently previewed, not the main list issue.
 func TestEditAction_OnInfoSubTab_EditsPreviewedIssueSummary(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "sub summary"})
 	a.side = sideLeft
@@ -138,6 +143,7 @@ func TestEditAction_OnInfoSubTab_EditsPreviewedIssueSummary(t *testing.T) {
 // detail view (side=right, Details tab) edits the previewed issue's
 // description.
 func TestEditAction_Description_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Description: "sub desc"})
 	a.side = sideRight
@@ -156,6 +162,7 @@ func TestEditAction_Description_TargetsPreviewedIssue(t *testing.T) {
 // TestTransitionAction_TargetsPreviewedIssue: ActTransition fetches
 // transitions for the previewed issue.
 func TestTransitionAction_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	var calledKey string
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetTransitionsFunc = func(_ context.Context, key string) ([]jira.Transition, error) {
@@ -181,6 +188,7 @@ func TestTransitionAction_TargetsPreviewedIssue(t *testing.T) {
 // TestAssigneeAction_TargetsPreviewedIssue: ActAssignee fetches users
 // scoped to the previewed issue.
 func TestAssigneeAction_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	var calledProject string
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetUsersFunc = func(_ context.Context, projectKey string) ([]jira.User, error) {
@@ -210,6 +218,7 @@ func TestAssigneeAction_TargetsPreviewedIssue(t *testing.T) {
 // TestCommentsAction_TargetsPreviewedIssue: ActComments opens the detail
 // view's Comments tab and shows the previewed issue.
 func TestCommentsAction_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "cached"})
 	a.detailView.SetIssue(a.issueCache[subKey1])
@@ -233,6 +242,7 @@ func TestCommentsAction_TargetsPreviewedIssue(t *testing.T) {
 // TestNewCommentAction_TargetsPreviewedIssue: ActNew in the Comments tab
 // opens the editor bound to the previewed issue.
 func TestNewCommentAction_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1})
 	a.side = sideRight
@@ -253,6 +263,7 @@ func TestNewCommentAction_TargetsPreviewedIssue(t *testing.T) {
 // TestDuplicateIssueAction_TargetsPreviewedIssue: starting a duplicate uses
 // the previewed issue as the source.
 func TestDuplicateIssueAction_TargetsPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetIssueTypesFunc = func(_ context.Context, _ string) ([]jira.IssueType, error) {
 		return nil, nil

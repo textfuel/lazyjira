@@ -16,6 +16,7 @@ import (
 )
 
 func TestHasCustomTLS(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		cfg  TLSConfig
@@ -29,6 +30,7 @@ func TestHasCustomTLS(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := tt.cfg.HasCustomTLS(); got != tt.want {
 				t.Errorf("HasCustomTLS() = %v, want %v", got, tt.want)
 			}
@@ -37,6 +39,7 @@ func TestHasCustomTLS(t *testing.T) {
 }
 
 func TestBuildHTTPClient_Insecure(t *testing.T) {
+	t.Parallel()
 	c, err := TLSConfig{Insecure: true}.BuildHTTPClient()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -48,6 +51,7 @@ func TestBuildHTTPClient_Insecure(t *testing.T) {
 }
 
 func TestBuildHTTPClient_CertAndCA(t *testing.T) {
+	t.Parallel()
 	certFile, keyFile, caFile := writeSelfSignedCert(t)
 
 	c, err := TLSConfig{CertFile: certFile, KeyFile: keyFile, CAFile: caFile}.BuildHTTPClient()
@@ -64,6 +68,7 @@ func TestBuildHTTPClient_CertAndCA(t *testing.T) {
 }
 
 func TestBuildHTTPClient_CAOnly(t *testing.T) {
+	t.Parallel()
 	_, _, caFile := writeSelfSignedCert(t)
 
 	c, err := TLSConfig{CAFile: caFile}.BuildHTTPClient()
@@ -80,6 +85,7 @@ func TestBuildHTTPClient_CAOnly(t *testing.T) {
 }
 
 func TestBuildHTTPClient_MissingFiles(t *testing.T) {
+	t.Parallel()
 	if _, err := (TLSConfig{CertFile: "/no.crt", KeyFile: "/no.key"}).BuildHTTPClient(); err == nil {
 		t.Error("expected error for missing cert")
 	}
@@ -89,6 +95,7 @@ func TestBuildHTTPClient_MissingFiles(t *testing.T) {
 }
 
 func TestBuildHTTPClient_InvalidCA(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	bad := filepath.Join(dir, "bad.pem")
 	_ = os.WriteFile(bad, []byte("not a certificate"), 0o600)

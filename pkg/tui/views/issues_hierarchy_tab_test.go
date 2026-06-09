@@ -8,6 +8,7 @@ import (
 )
 
 func TestAddHierarchyTab_SetsTabAndFocus(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	issues := []jira.Issue{{Key: "CHILD-1"}}
@@ -32,6 +33,7 @@ func TestAddHierarchyTab_SetsTabAndFocus(t *testing.T) {
 }
 
 func TestAddHierarchyTab_AppendedAfterJQLTab(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	m.AddJQLTab("project = FOO")
@@ -48,6 +50,7 @@ func TestAddHierarchyTab_AppendedAfterJQLTab(t *testing.T) {
 }
 
 func TestReplaceHierarchyTabContent_UpdatesTitleAndIssues(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	idx := m.AddHierarchyTab("Child", []jira.Issue{{Key: "C-1"}})
@@ -67,6 +70,7 @@ func TestReplaceHierarchyTabContent_UpdatesTitleAndIssues(t *testing.T) {
 }
 
 func TestReplaceHierarchyTabContent_NoHierarchyTab_NoOp(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 
@@ -78,6 +82,7 @@ func TestReplaceHierarchyTabContent_NoHierarchyTab_NoOp(t *testing.T) {
 }
 
 func TestRemoveHierarchyTab_RemovesTabAndStack(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	m.AddHierarchyTab("Child", []jira.Issue{{Key: "C-1"}})
@@ -96,6 +101,7 @@ func TestRemoveHierarchyTab_RemovesTabAndStack(t *testing.T) {
 }
 
 func TestRemoveHierarchyTab_NoHierarchyTab_NoOp(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 
@@ -107,6 +113,7 @@ func TestRemoveHierarchyTab_NoHierarchyTab_NoOp(t *testing.T) {
 }
 
 func TestRemoveHierarchyTab_WithJQLTabPresent_JQLIdxStable(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	m.AddJQLTab("project = FOO")
@@ -124,6 +131,7 @@ func TestRemoveHierarchyTab_WithJQLTabPresent_JQLIdxStable(t *testing.T) {
 }
 
 func TestHierarchyTab_SurvivesJQLTabSwitch(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	m.AddJQLTab("project = FOO")
@@ -149,6 +157,7 @@ func TestHierarchyTab_SurvivesJQLTabSwitch(t *testing.T) {
 }
 
 func TestHierarchyTab_StackAccessibleAfterSwitch(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	m.AddJQLTab("project = FOO")
@@ -165,6 +174,7 @@ func TestHierarchyTab_StackAccessibleAfterSwitch(t *testing.T) {
 }
 
 func TestInvalidateTabCache_RemovesHierarchyTab(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	m.AddHierarchyTab("Child", []jira.Issue{{Key: "C-1"}})
@@ -180,6 +190,7 @@ func TestInvalidateTabCache_RemovesHierarchyTab(t *testing.T) {
 }
 
 func TestInvalidateTabCache_WithBothTabs_RemovesBoth(t *testing.T) {
+	t.Parallel()
 	m := NewIssuesList()
 	m.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
 	m.AddJQLTab("project = FOO")

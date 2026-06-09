@@ -10,6 +10,7 @@ import (
 // produce non-empty markdown and ADF for ordinary input, and state is nil since
 // the builtin converter does not use sessions.
 func TestBuiltinConverter_Roundtrip(t *testing.T) {
+	t.Parallel()
 	c := BuiltinConverter{}
 	adf := map[string]any{
 		"type":    "doc",
@@ -50,6 +51,7 @@ func TestBuiltinConverter_Roundtrip(t *testing.T) {
 // Regression test for the silent fallback that hid AdfConvConverter being
 // unused on the preview path entirely.
 func TestAdfConvConverter_FromMarkdown_GreenfieldBootstrap(t *testing.T) {
+	t.Parallel()
 	c := AdfConvConverter{}
 
 	doc, err := c.FromMarkdown("# Heading\n\nparagraph", nil)
@@ -72,6 +74,7 @@ func TestAdfConvConverter_FromMarkdown_GreenfieldBootstrap(t *testing.T) {
 // TestAdfConvConverter_FromMarkdown_EmptyInput covers the boundary case where
 // the user has not yet typed anything in the create form. Must not error.
 func TestAdfConvConverter_FromMarkdown_EmptyInput(t *testing.T) {
+	t.Parallel()
 	doc, err := AdfConvConverter{}.FromMarkdown("", nil)
 	if err != nil {
 		t.Fatalf("empty markdown should not error, got: %v", err)
@@ -85,6 +88,7 @@ func TestAdfConvConverter_FromMarkdown_EmptyInput(t *testing.T) {
 // ToMarkdown produces a session, FromMarkdown consumes it. Asserts that the
 // any-typed state opaque blob passes through unmodified.
 func TestAdfConvConverter_RoundtripWithSession(t *testing.T) {
+	t.Parallel()
 	c := AdfConvConverter{}
 	adf := map[string]any{
 		"type":    "doc",

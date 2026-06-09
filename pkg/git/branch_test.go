@@ -45,6 +45,7 @@ func addRemoteRef(t *testing.T, dir, ref string) {
 }
 
 func TestResolveBranchAction_slashedNewName_isCreate(t *testing.T) {
+	t.Parallel()
 	// Bug case from lj-0023: a name containing "/" that does not match any
 	// remote branch must route to ActionCreate, not ActionCheckoutTracking.
 	dir := initRepo(t)
@@ -57,6 +58,7 @@ func TestResolveBranchAction_slashedNewName_isCreate(t *testing.T) {
 }
 
 func TestResolveBranchAction_existingLocal_isCheckout(t *testing.T) {
+	t.Parallel()
 	dir := initRepo(t)
 
 	got := ResolveBranchAction(dir, "main")
@@ -66,6 +68,7 @@ func TestResolveBranchAction_existingLocal_isCheckout(t *testing.T) {
 }
 
 func TestResolveBranchAction_existingRemote_isTracking(t *testing.T) {
+	t.Parallel()
 	dir := initRepo(t)
 	// Use a name that does not exist locally.
 	addRemoteRef(t, dir, "origin/feature-x")
@@ -77,6 +80,7 @@ func TestResolveBranchAction_existingRemote_isTracking(t *testing.T) {
 }
 
 func TestResolveBranchAction_plainName_isCreate(t *testing.T) {
+	t.Parallel()
 	dir := initRepo(t)
 
 	got := ResolveBranchAction(dir, "PROJ-1-foo")
@@ -86,6 +90,7 @@ func TestResolveBranchAction_plainName_isCreate(t *testing.T) {
 }
 
 func TestIsRemoteBranch_exactMatchRequired(t *testing.T) {
+	t.Parallel()
 	dir := initRepo(t)
 	addRemoteRef(t, dir, "origin/feature/x")
 
@@ -98,6 +103,7 @@ func TestIsRemoteBranch_exactMatchRequired(t *testing.T) {
 }
 
 func TestIsRemoteBranch_nonGitDir_returnsFalse(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if IsRemoteBranch(dir, "origin/main") {
 		t.Errorf("IsRemoteBranch returned true for non-git dir")

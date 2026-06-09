@@ -19,6 +19,7 @@ const hierarchyTitleChildren = "Children"
 // Enter on issue with Subtasks creates hierarchy tab populated
 // from the in-memory Subtasks slice; no API call.
 func TestHierarchy_EnterWithSubtasks_CreatesHierarchyTab(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 
@@ -57,6 +58,7 @@ func TestHierarchy_EnterWithSubtasks_CreatesHierarchyTab(t *testing.T) {
 // right side. SearchIssues is never called (lookup is sync via
 // Issue.Subtasks only).
 func TestHierarchy_EnterWithoutChildren_FocusesDetail(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: "LEAF-1"}})
@@ -77,6 +79,7 @@ func TestHierarchy_EnterWithoutChildren_FocusesDetail(t *testing.T) {
 // Enter from InfoPanel Subtasks tab creates a hierarchy tab
 // containing the single selected subtask issue (title hierarchyTitleChildren).
 func TestHierarchy_EnterFromInfoPanelSub_OneElementList(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.leftFocus = focusInfo
@@ -111,6 +114,7 @@ func TestHierarchy_EnterFromInfoPanelSub_OneElementList(t *testing.T) {
 // Enter from InfoPanel Links tab creates a hierarchy tab with
 // the single linked issue (title "Link").
 func TestHierarchy_EnterFromInfoPanelLink_OneElementList(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.leftFocus = focusInfo
@@ -146,6 +150,7 @@ func TestHierarchy_EnterFromInfoPanelLink_OneElementList(t *testing.T) {
 // payload, so the user sees the issue title and not just the key while
 // the detail fetch is still in flight.
 func TestHierarchy_LinkRowCarriesSummaryFromInfoPanel(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.leftFocus = focusInfo
@@ -178,6 +183,7 @@ func TestHierarchy_LinkRowCarriesSummaryFromInfoPanel(t *testing.T) {
 // stub: the hierarchy row reflects whatever fields the cache holds,
 // even when the in-flight fetch hasn't returned yet.
 func TestHierarchy_LinkRowPrefersCacheOverStub(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.leftFocus = focusInfo
@@ -213,6 +219,7 @@ func TestHierarchy_LinkRowPrefersCacheOverStub(t *testing.T) {
 // fetchParent cmd. Executing the cmd yields a parentLoadedMsg.
 // Dispatching that msg through Update creates the hierarchy tab.
 func TestHierarchy_BackspaceWithParent_ShowsParent(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetIssueFunc = func(_ context.Context, key string) (*jira.Issue, error) {
 		return &jira.Issue{Key: key, Summary: "parent issue"}, nil
@@ -260,6 +267,7 @@ func TestHierarchy_BackspaceWithParent_ShowsParent(t *testing.T) {
 
 // Backspace on issue without Parent is a no-op.
 func TestHierarchy_BackspaceWithoutParent_NoOp(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: "ORPHAN-1"}})
@@ -279,6 +287,7 @@ func TestHierarchy_BackspaceWithoutParent_NoOp(t *testing.T) {
 // On Cloud, showChildrenFromList ignores Issue.Subtasks: a cache hit
 // pushes immediately from a.childrenCache.
 func TestHierarchy_Cloud_ChildrenWalk_CacheHit_PushesImmediately(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.isCloud = true
@@ -307,6 +316,7 @@ func TestHierarchy_Cloud_ChildrenWalk_CacheHit_PushesImmediately(t *testing.T) {
 // handler tags pendingWalk with the active childrenEpoch; the eventual
 // childrenLoadedMsg pushes the hierarchy frame and primes the cache.
 func TestHierarchy_Cloud_ChildrenWalk_CacheMiss_FetchesThenPushes(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetChildrenFunc = func(_ context.Context, parentKey string) ([]jira.Issue, error) {
 		return []jira.Issue{{Key: "C-9", Summary: "nine"}}, nil
@@ -359,6 +369,7 @@ func TestHierarchy_Cloud_ChildrenWalk_CacheMiss_FetchesThenPushes(t *testing.T) 
 // of pushing a hierarchy frame — matching the Server/DC and cache-hit
 // empty paths.
 func TestHierarchy_Cloud_ChildrenWalk_EmptyResult_OpensDetail(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
 		return nil, nil
@@ -387,6 +398,7 @@ func TestHierarchy_Cloud_ChildrenWalk_EmptyResult_OpensDetail(t *testing.T) {
 // A passive Sub-tab fetch for the same key as an in-flight walk
 // must not be treated as a walk when its response arrives.
 func TestHierarchy_Cloud_ChildrenWalk_NoLeakIntoPassiveFetchSameKey(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
 		return []jira.Issue{{Key: "C-1"}}, nil
@@ -417,6 +429,7 @@ func TestHierarchy_Cloud_ChildrenWalk_NoLeakIntoPassiveFetchSameKey(t *testing.T
 // Project switch invalidates an in-flight walk; its stale response
 // must not push a hierarchy frame on the new project.
 func TestHierarchy_Cloud_SelectProject_InvalidatesInFlightWalk(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetChildrenFunc = func(_ context.Context, _ string) ([]jira.Issue, error) {
 		return []jira.Issue{{Key: "C-1"}}, nil
@@ -447,6 +460,7 @@ func TestHierarchy_Cloud_SelectProject_InvalidatesInFlightWalk(t *testing.T) {
 // goBack only fires when the Issues panel itself has focus; on the
 // other left panels h/Esc/Left fall through to their natural behavior.
 func TestHierarchy_GoBack_SkipsWhenLeftFocusNotIssues(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.AddHierarchyTab(hierarchyTitleChildren, []jira.Issue{{Key: "CHILD-1"}})
@@ -469,6 +483,7 @@ func TestHierarchy_GoBack_SkipsWhenLeftFocusNotIssues(t *testing.T) {
 }
 
 func TestHierarchy_Backspace_PushesEvenWhenTopMatches(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetIssueFunc = func(_ context.Context, key string) (*jira.Issue, error) {
 		return &jira.Issue{Key: key}, nil
@@ -505,6 +520,7 @@ func TestHierarchy_Backspace_PushesEvenWhenTopMatches(t *testing.T) {
 // parentLoadedMsg carrying epoch=1 (stale) must be dropped — no
 // hierarchy tab is created.
 func TestHierarchy_StaleParent_Dropped(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetIssueFunc = func(_ context.Context, key string) (*jira.Issue, error) {
 		return &jira.Issue{Key: key}, nil
@@ -551,6 +567,7 @@ func seedHierarchyTab(t *testing.T, a *App) {
 // pre-hierarchy snapshot of level 1) and restores its UI snapshot. The new
 // top's Source determines the hierarchy tab title.
 func TestHierarchy_Esc_PopsFrame(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	seedHierarchyTab(t, a)
@@ -607,6 +624,7 @@ func TestHierarchy_Esc_PopsFrame(t *testing.T) {
 // Esc with Depth==1 pops the last frame (origin snapshot),
 // closes the hierarchy tab and restores the origin cursor/focus.
 func TestHierarchy_Esc_LastFrame_ClosesTab(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	seedHierarchyTab(t, a)
@@ -637,6 +655,7 @@ func TestHierarchy_Esc_LastFrame_ClosesTab(t *testing.T) {
 // snapshot; popping restores the origin cursor, info tab, info cursor
 // and focus.
 func TestHierarchy_SnapshotPreservesContext(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 
@@ -700,6 +719,7 @@ func TestHierarchy_SnapshotPreservesContext(t *testing.T) {
 // Esc outside the hierarchy tab falls through to the default
 // ActFocusLeft mapping (sideRight -> sideLeft); no goBack side effects.
 func TestHierarchy_Esc_OutsideHierarchyTab(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.keymap = DefaultKeymap()
@@ -722,6 +742,7 @@ func TestHierarchy_Esc_OutsideHierarchyTab(t *testing.T) {
 // Pushing a new hierarchy view from a non-hierarchy tab adds onto the
 // existing stack and refocuses the hierarchy tab.
 func TestHierarchy_NavFromDifferentJQLTab_StacksUp(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetTabs([]config.IssueTabConfig{{Name: "My", JQL: ""}})
@@ -769,6 +790,7 @@ func findHelpItem(items []components.HelpItem, desc string) (components.HelpItem
 // The help-bar advertises "parent" only when the current
 // issue has a Parent.
 func TestHelpBar_Backspace_OnlyWhenParent(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.keymap = DefaultKeymap()
@@ -791,6 +813,7 @@ func TestHelpBar_Backspace_OnlyWhenParent(t *testing.T) {
 // The help-bar advertises the ActSelect key as "children" when
 // the current issue has Subtasks, and "detail" otherwise.
 func TestHelpBar_Enter_ChildrenVsDetail(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.keymap = DefaultKeymap()
@@ -817,6 +840,7 @@ func TestHelpBar_Enter_ChildrenVsDetail(t *testing.T) {
 // Navigating from a non-first JQL tab and fully popping the
 // hierarchy-stack must return the user to the origin tab.
 func TestHierarchy_FullPop_RestoresOriginTab(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetTabs([]config.IssueTabConfig{

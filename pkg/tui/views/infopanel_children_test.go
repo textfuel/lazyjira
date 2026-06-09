@@ -11,6 +11,7 @@ import (
 // path: cloud=false → Sub tab uses issue.Subtasks even if SetChildren has
 // never been called.
 func TestInfoPanel_RenderSubtaskRowPairs_FallbackToSubtasks(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	issue := &jira.Issue{Key: "MAIN-1", Subtasks: []jira.Issue{{Key: "SUB-1", Summary: "s1"}}}
 	p.SetIssue(issue)
@@ -29,6 +30,7 @@ func TestInfoPanel_RenderSubtaskRowPairs_FallbackToSubtasks(t *testing.T) {
 // TestInfoPanel_RenderSubtaskRowPairs_UsesChildrenSlice pins the Cloud path:
 // after SetChildren the Sub tab renders the children, ignoring Subtasks.
 func TestInfoPanel_RenderSubtaskRowPairs_UsesChildrenSlice(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	issue := &jira.Issue{
@@ -52,6 +54,7 @@ func TestInfoPanel_RenderSubtaskRowPairs_UsesChildrenSlice(t *testing.T) {
 // TestInfoPanel_MaybeChildrenRequest_CloudFiresOnSubTab verifies the request
 // trigger: cloud + Sub tab + no children loaded → emits ChildrenRequestMsg.
 func TestInfoPanel_MaybeChildrenRequest_CloudFiresOnSubTab(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
@@ -76,6 +79,7 @@ func TestInfoPanel_MaybeChildrenRequest_CloudFiresOnSubTab(t *testing.T) {
 // TestInfoPanel_MaybeChildrenRequest_ServerDCNoFire pins the Server/DC path:
 // cloud=false → never emits ChildrenRequestMsg, even on Sub tab.
 func TestInfoPanel_MaybeChildrenRequest_ServerDCNoFire(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
 	for p.activeTab != InfoTabSubtasks {
@@ -90,6 +94,7 @@ func TestInfoPanel_MaybeChildrenRequest_ServerDCNoFire(t *testing.T) {
 // TestInfoPanel_MaybeChildrenRequest_NotOnFieldsTab pins that the request
 // only fires on the Sub tab, not on Fields/Links.
 func TestInfoPanel_MaybeChildrenRequest_NotOnFieldsTab(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
@@ -103,6 +108,7 @@ func TestInfoPanel_MaybeChildrenRequest_NotOnFieldsTab(t *testing.T) {
 // TestInfoPanel_MaybeChildrenRequest_AlreadyLoadedNoFire pins that once
 // children are loaded for the current key, no further request fires.
 func TestInfoPanel_MaybeChildrenRequest_AlreadyLoadedNoFire(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
@@ -120,6 +126,7 @@ func TestInfoPanel_MaybeChildrenRequest_AlreadyLoadedNoFire(t *testing.T) {
 // the panel boundary: a SetChildren call for a key other than the currently
 // displayed issue is ignored.
 func TestInfoPanel_SetChildren_StaleKeyDropped(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "NEW-EPIC"})
@@ -134,6 +141,7 @@ func TestInfoPanel_SetChildren_StaleKeyDropped(t *testing.T) {
 // TestInfoPanel_SetChildrenError_RendersErrorRow pins that fetch errors
 // surface as a single error row in the Sub tab.
 func TestInfoPanel_SetChildrenError_RendersErrorRow(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
@@ -154,6 +162,7 @@ func TestInfoPanel_SetChildrenError_RendersErrorRow(t *testing.T) {
 // TestInfoPanel_EmptyChildren_RendersEmptyState pins the 0-children empty
 // state for the Cloud path.
 func TestInfoPanel_EmptyChildren_RendersEmptyState(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
@@ -175,6 +184,7 @@ func TestInfoPanel_EmptyChildren_RendersEmptyState(t *testing.T) {
 // issue clears any previously loaded children — so MaybeChildrenRequest
 // fires again for the new key.
 func TestInfoPanel_SetIssue_ResetsChildrenState(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
@@ -199,6 +209,7 @@ func TestInfoPanel_SetIssue_ResetsChildrenState(t *testing.T) {
 }
 
 func TestInfoPanel_RenderSubtaskRowPairs_PrependsIssueTypeMarker(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetIssue(&jira.Issue{Key: "EPIC-1"})
@@ -226,6 +237,7 @@ func TestInfoPanel_RenderSubtaskRowPairs_PrependsIssueTypeMarker(t *testing.T) {
 }
 
 func TestInfoPanel_RenderSubtaskRowPairs_TypeIconReplacesNameMarker(t *testing.T) {
+	t.Parallel()
 	p := makeInfoPanelFocused()
 	p.SetCloud(true)
 	p.SetTypeIcons(map[string]string{"Story": "📖", "Bug": "🐞"})

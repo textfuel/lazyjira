@@ -7,7 +7,6 @@ import (
 )
 
 func TestSetThemeDefault(t *testing.T) {
-	// Ensure SetTheme("default") restores ANSI palette.
 	if err := SetTheme("default"); err != nil {
 		t.Fatalf("SetTheme(default): %v", err)
 	}
@@ -42,7 +41,6 @@ func TestSetThemeCatppuccinMocha(t *testing.T) {
 		t.Errorf("Default.Colors.Red = %q, want %q", Default.Colors.Red, "#f38ba8")
 	}
 
-	// Restore default for other tests.
 	_ = SetTheme("default")
 }
 
@@ -58,7 +56,6 @@ func TestSetThemeAllFlavors(t *testing.T) {
 			if err := SetTheme(name); err != nil {
 				t.Fatalf("SetTheme(%s): %v", name, err)
 			}
-			// Verify palette is populated (not empty).
 			if Default.Colors.Green == "" {
 				t.Error("Colors.Green is empty")
 			}
@@ -79,7 +76,6 @@ func TestSetThemeUnknown(t *testing.T) {
 
 func TestSetThemeSyncsColors(t *testing.T) {
 	_ = SetTheme("catppuccin-mocha")
-	// Package-level vars must match Default.Colors.
 	if ColorGreen != Default.Colors.Green {
 		t.Errorf("ColorGreen not synced: %q != %q", ColorGreen, Default.Colors.Green)
 	}
@@ -112,13 +108,11 @@ func TestSetThemeSyncsAuthorPalette(t *testing.T) {
 
 func TestSetThemeResetsAuthorCache(t *testing.T) {
 	_ = SetTheme("default")
-	// Prime the author cache.
 	_ = AuthorStyle("Alice")
 	if len(authorCache) == 0 {
 		t.Fatal("author cache should have an entry")
 	}
 
-	// Switching theme must clear the cache.
 	_ = SetTheme("catppuccin-mocha")
 	if len(authorCache) != 0 {
 		t.Error("author cache should be empty after theme switch")

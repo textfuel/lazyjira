@@ -121,6 +121,7 @@ func TestLoad_InvalidCustomCommandTemplate(t *testing.T) {
 func ptr[T any](v T) *T { return &v }
 
 func TestResolveMaxResults(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		global *int
@@ -137,6 +138,7 @@ func TestResolveMaxResults(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			c := &Config{MaxResults: tc.global}
 			if got := c.ResolveMaxResults(tc.tab); got != tc.want {
 				t.Errorf("ResolveMaxResults = %d, want %d", got, tc.want)
@@ -146,6 +148,7 @@ func TestResolveMaxResults(t *testing.T) {
 }
 
 func TestResolveGlobalMaxResults(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		global *int
@@ -158,6 +161,7 @@ func TestResolveGlobalMaxResults(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			c := &Config{MaxResults: tc.global}
 			if got := c.ResolveGlobalMaxResults(); got != tc.want {
 				t.Errorf("ResolveGlobalMaxResults = %d, want %d", got, tc.want)
@@ -167,6 +171,7 @@ func TestResolveGlobalMaxResults(t *testing.T) {
 }
 
 func TestDefaultConfig_MaxResults(t *testing.T) {
+	t.Parallel()
 	cfg := DefaultConfig()
 	if cfg.MaxResults != nil {
 		t.Errorf("default MaxResults should be nil (unset), got %d", *cfg.MaxResults)
@@ -205,6 +210,7 @@ func TestLoad_ProjectsAcceptsStringShorthand(t *testing.T) {
 }
 
 func TestValidateConverter(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		value   string
@@ -218,6 +224,7 @@ func TestValidateConverter(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			err := validateConverter(tc.value)
 			if tc.wantErr && err == nil {
 				t.Errorf("validateConverter(%q) = nil, want error", tc.value)
@@ -233,6 +240,7 @@ func TestValidateConverter(t *testing.T) {
 }
 
 func TestValidateRenderer(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		value   string
@@ -246,6 +254,7 @@ func TestValidateRenderer(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			err := validateRenderer(tc.value)
 			if tc.wantErr && err == nil {
 				t.Errorf("validateRenderer(%q) = nil, want error", tc.value)

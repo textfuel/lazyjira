@@ -12,6 +12,7 @@ import (
 // PreviewRequestMsg sets a.previewKey and returns a non-nil Cmd that calls
 // GetIssue with the given key.
 func TestPreviewRequestMsg_SetsPreviewKeyAndFetches(t *testing.T) {
+	t.Parallel()
 	subKey := subKey1
 
 	fake := &jiratest.FakeClient{T: t}
@@ -30,6 +31,7 @@ func TestPreviewRequestMsg_SetsPreviewKeyAndFetches(t *testing.T) {
 // debounce tick fires (simulated via previewDebounceMsg), a GetIssue call is
 // made for the correct key.
 func TestPreviewRequestMsg_CmdEventuallyCallsGetIssue(t *testing.T) {
+	t.Parallel()
 	subKey := subKey1
 
 	fake := &jiratest.FakeClient{T: t}

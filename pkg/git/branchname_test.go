@@ -6,6 +6,7 @@ import (
 )
 
 func TestGenerateBranchName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		data BranchTemplateData
@@ -69,6 +70,7 @@ func TestGenerateBranchName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := GenerateBranchName(tt.data, tt.tmpl)
 			if got != tt.want {
 				t.Errorf("GenerateBranchName() = %q, want %q", got, tt.want)
@@ -78,6 +80,7 @@ func TestGenerateBranchName(t *testing.T) {
 }
 
 func TestSanitize(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -94,6 +97,7 @@ func TestSanitize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := Sanitize(tt.input)
 			if got != tt.want {
 				t.Errorf("Sanitize(%q) = %q, want %q", tt.input, got, tt.want)
@@ -103,6 +107,7 @@ func TestSanitize(t *testing.T) {
 }
 
 func TestSanitizeSummary(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		input     string
@@ -120,6 +125,7 @@ func TestSanitizeSummary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := SanitizeSummary(tt.input, tt.asciiOnly)
 			if got != tt.want {
 				t.Errorf("SanitizeSummary(%q) = %q, want %q", tt.input, got, tt.want)

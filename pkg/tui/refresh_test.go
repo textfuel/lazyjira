@@ -47,6 +47,7 @@ func stubFullIssueFetch(fake *jiratest.FakeClient, issue *jira.Issue) {
 // usual navigation sets previewKey to the displayed issue, pressing refresh
 // re-fetches that issue.
 func TestActRefresh_FetchesPreviewedIssue(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: mainKey, Summary: "updated"})
 
@@ -82,6 +83,7 @@ func TestActRefresh_FetchesPreviewedIssue(t *testing.T) {
 // TestIssueSelectedMsg_UpdatesPreviewKey pins down the invariant that the
 // previewKey follows whatever issue the user has selected in the list.
 func TestIssueSelectedMsg_UpdatesPreviewKey(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 
@@ -96,6 +98,7 @@ func TestIssueSelectedMsg_UpdatesPreviewKey(t *testing.T) {
 // preview to the current list selection (called on tab switches and after
 // issues load). It must keep previewKey aligned.
 func TestPreviewSelectedIssue_UpdatesPreviewKey(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	a.issuesList.SetIssues([]jira.Issue{{Key: "XYZ-9"}})
@@ -112,6 +115,7 @@ func TestPreviewSelectedIssue_UpdatesPreviewKey(t *testing.T) {
 // but leaves the InfoPanel untouched (the InfoPanel belongs to the main list
 // issue and must keep its tab/cursor).
 func TestHandleIssueDetailLoaded_RoutesByPreviewKey(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	main := &jira.Issue{Key: mainKey, Summary: "main"}
@@ -136,6 +140,7 @@ func TestHandleIssueDetailLoaded_RoutesByPreviewKey(t *testing.T) {
 // even if the list has a selection. This removes the implicit fallback to
 // the list cursor.
 func TestActRefresh_NoFetchWhenPreviewKeyEmpty(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	// No *Func set — any call would t.Fatalf.
 	a := newAppWithFake(t, fake)
@@ -159,6 +164,7 @@ func TestActRefresh_NoFetchWhenPreviewKeyEmpty(t *testing.T) {
 // the refresh action must re-fetch that preview's issue, not the main list
 // selection.
 func TestActRefresh_UsesPreviewKey_WhenSet(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: "ABC-2", Summary: "sub-item"})
 
@@ -188,6 +194,7 @@ func TestActRefresh_UsesPreviewKey_WhenSet(t *testing.T) {
 // cmd is dispatched. Any cache read between the keypress and the response must
 // see a miss, never stale data.
 func TestActRefresh_InvalidatesCacheBeforeFetch(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: mainKey, Summary: "fresh"})
 

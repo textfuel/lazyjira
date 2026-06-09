@@ -7,6 +7,7 @@ import (
 )
 
 func TestResolveCustomCommands_Defaults(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "y", Name: "Copy", Command: "echo {{.Key}}"},
@@ -29,6 +30,7 @@ func TestResolveCustomCommands_Defaults(t *testing.T) {
 }
 
 func TestResolveCustomCommands_SingleContextProjects(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "n", Name: "Notes", Command: "echo {{.ProjectKey}}", Contexts: []string{"projects"}},
@@ -45,6 +47,7 @@ func TestResolveCustomCommands_SingleContextProjects(t *testing.T) {
 }
 
 func TestResolveCustomCommands_DetailComments(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "c", Name: "Comment", Command: "echo {{.Key}}-{{.CommentID}}", Contexts: []string{"detail.comments"}},
@@ -61,6 +64,7 @@ func TestResolveCustomCommands_DetailComments(t *testing.T) {
 }
 
 func TestResolveCustomCommands_MixedScopes(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "x", Name: "Mixed", Command: "echo x", Contexts: []string{"issues", "detail.comments"}},
@@ -76,6 +80,7 @@ func TestResolveCustomCommands_MixedScopes(t *testing.T) {
 }
 
 func TestResolveCustomCommands_EmptyFieldsError(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		cmd  CustomCommandConfig
@@ -85,6 +90,7 @@ func TestResolveCustomCommands_EmptyFieldsError(t *testing.T) {
 		{"empty command", CustomCommandConfig{Key: "a", Name: "x"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			cfg := &Config{CustomCommands: []CustomCommandConfig{tc.cmd}}
 			if _, err := cfg.ResolveCustomCommands(); err == nil {
 				t.Error("expected error")
@@ -94,6 +100,7 @@ func TestResolveCustomCommands_EmptyFieldsError(t *testing.T) {
 }
 
 func TestResolveCustomCommands_UnknownContextError(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "a", Name: "x", Command: "echo", Contexts: []string{"bogus"}},
@@ -106,6 +113,7 @@ func TestResolveCustomCommands_UnknownContextError(t *testing.T) {
 }
 
 func TestResolveCustomCommands_DuplicateKeySameContextError(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "a", Name: "first", Command: "echo 1", Contexts: []string{"issues"}},
@@ -118,6 +126,7 @@ func TestResolveCustomCommands_DuplicateKeySameContextError(t *testing.T) {
 }
 
 func TestResolveCustomCommands_DuplicateKeyDisjointContextsAllowed(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "a", Name: "first", Command: "echo 1", Contexts: []string{"issues"}},
@@ -130,6 +139,7 @@ func TestResolveCustomCommands_DuplicateKeyDisjointContextsAllowed(t *testing.T)
 }
 
 func TestResolveCustomCommands_RefreshDefault(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "y", Name: "Copy", Command: "echo {{.Key}}"},
@@ -145,6 +155,7 @@ func TestResolveCustomCommands_RefreshDefault(t *testing.T) {
 }
 
 func TestResolveCustomCommands_RefreshTrue(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "w", Name: "Log work", Command: "echo {{.Key}}", Refresh: true},
@@ -160,6 +171,7 @@ func TestResolveCustomCommands_RefreshTrue(t *testing.T) {
 }
 
 func TestResolveCustomCommands_InvalidTemplateError(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "a", Name: "x", Command: "echo {{.Unclosed"},
@@ -171,6 +183,7 @@ func TestResolveCustomCommands_InvalidTemplateError(t *testing.T) {
 }
 
 func TestResolveCustomCommands_ShellescapeFunc(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "s", Name: "Shellescape", Command: "echo {{.Key | shellescape}}"},
@@ -194,6 +207,7 @@ func TestResolveCustomCommands_ShellescapeFunc(t *testing.T) {
 }
 
 func TestSlugify(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		in, want string
 	}{
@@ -225,6 +239,7 @@ func TestSlugify(t *testing.T) {
 }
 
 func TestResolveCustomCommands_SlugifyFunc(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		CustomCommands: []CustomCommandConfig{
 			{Key: "b", Name: "Branch", Command: "git checkout -b {{.Summary | slugify}}"},

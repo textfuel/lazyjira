@@ -56,6 +56,7 @@ func setupInfoFocused(t *testing.T, tab views.InfoPanelTab) *App {
 // action while the InfoPanel has focus and the Sub tab is active resets
 // previewKey to the list selection's key.
 func TestEscFromSubTab_ResetsPreviewToMainIssue(t *testing.T) {
+	t.Parallel()
 	a := setupInfoFocused(t, views.InfoTabSubtasks)
 	if a.previewKey != subKey1 {
 		t.Fatalf("precondition: previewKey = %q, want SUB-1", a.previewKey)
@@ -71,6 +72,7 @@ func TestEscFromSubTab_ResetsPreviewToMainIssue(t *testing.T) {
 // TestEscFromLnkTab_ResetsPreviewToMainIssue verifies the same reset when the
 // Lnk tab is active.
 func TestEscFromLnkTab_ResetsPreviewToMainIssue(t *testing.T) {
+	t.Parallel()
 	a := setupInfoFocused(t, views.InfoTabLinks)
 	a.previewKey = "LNK-1"
 
@@ -84,6 +86,7 @@ func TestEscFromLnkTab_ResetsPreviewToMainIssue(t *testing.T) {
 // TestInfoPanelTabSwitchToFields_ResetsPreviewKey verifies that switching the
 // InfoPanel tab to Fields resets previewKey to the current list selection.
 func TestInfoPanelTabSwitchToFields_ResetsPreviewKey(t *testing.T) {
+	t.Parallel()
 	// Start on Sub tab with previewKey pointing at a sub-issue
 	a := setupInfoFocused(t, views.InfoTabSubtasks)
 	a.previewKey = subKey1
@@ -103,6 +106,7 @@ func TestInfoPanelTabSwitchToFields_ResetsPreviewKey(t *testing.T) {
 // TestEmptySubList_NoPreviewDispatch verifies that switching to the Sub tab on
 // an issue with no subtasks does not produce a PreviewRequestMsg.
 func TestEmptySubList_NoPreviewDispatch(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	// No GetIssueFunc set — any call would t.Fatalf via FakeClient.
 	a := newAppWithFake(t, fake)

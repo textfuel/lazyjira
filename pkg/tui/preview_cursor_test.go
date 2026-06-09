@@ -29,6 +29,7 @@ func navResolverJK(key string) components.NavAction {
 // pipeline: previewKey follows the new selection and previewEpoch bumps so
 // the debounce+cancel mechanics engage.
 func TestPreviewFollowsCursor_IssuesList_Down(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	issues := []jira.Issue{{Key: mainKey}, {Key: "ABC-2"}}
@@ -50,6 +51,7 @@ func TestPreviewFollowsCursor_IssuesList_Down(t *testing.T) {
 // TestPreviewFollowsCursor_IssuesList_Up covers the symmetric up-cursor path
 // and also pins that the epoch advances once per move.
 func TestPreviewFollowsCursor_IssuesList_Up(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	issues := []jira.Issue{{Key: mainKey}, {Key: "ABC-2"}}
@@ -70,6 +72,7 @@ func TestPreviewFollowsCursor_IssuesList_Up(t *testing.T) {
 // movement inside the InfoPanel Subtasks tab dispatches a PreviewRequestMsg
 // carrying the newly-selected subtask key.
 func TestPreviewFollowsCursor_InfoSubtasks_ExistingPath(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	main := &jira.Issue{
@@ -98,6 +101,7 @@ func TestPreviewFollowsCursor_InfoSubtasks_ExistingPath(t *testing.T) {
 // TestPreviewFollowsCursor_InfoLinks_ExistingPath is the Links-tab analog of
 // the Subtasks cursor test above.
 func TestPreviewFollowsCursor_InfoLinks_ExistingPath(t *testing.T) {
+	t.Parallel()
 	const linkKey1 = "LNK-1"
 	const linkKey2 = "LNK-2"
 
@@ -134,6 +138,7 @@ func TestPreviewFollowsCursor_InfoLinks_ExistingPath(t *testing.T) {
 // epoch to 5, stale debounce ticks from epochs 1-4 are dropped, only the
 // fresh tick for epoch 5 issues a GetIssue call.
 func TestPreviewFollowsCursor_RapidCursor_OnlyLastFetch(t *testing.T) {
+	t.Parallel()
 	const lastKey = "ABC-5"
 
 	fake := &jiratest.FakeClient{T: t}
@@ -186,6 +191,7 @@ func TestPreviewFollowsCursor_RapidCursor_OnlyLastFetch(t *testing.T) {
 // the hovered project into DetailView in project mode. The hover message
 // is emitted by ProjectList on every cursor move (see views.ProjectList.Update).
 func TestPreviewFollowsCursor_Projects(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	projects := []jira.Project{{Key: "P1", Name: "Project One"}, {Key: "P2", Name: "Project Two"}}
@@ -211,6 +217,7 @@ func TestPreviewFollowsCursor_Projects(t *testing.T) {
 // context issue rather than blanking out. The spec calls for "letzter
 // Content bleibt stehen" until the fetch resolves.
 func TestPreviewFollowsCursor_UnknownKey_FallsBackToContext(t *testing.T) {
+	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	a := newAppWithFake(t, fake)
 	main := &jira.Issue{Key: mainKey, Summary: "main issue"}

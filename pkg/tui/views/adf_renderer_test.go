@@ -50,6 +50,7 @@ func miniADF() map[string]any {
 }
 
 func TestADFRenderers(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name     string
 		renderer ADFRenderer
@@ -60,6 +61,7 @@ func TestADFRenderers(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			lines := tc.renderer.Render(miniADF(), 60)
 			if len(lines) == 0 {
 				t.Fatalf("%s renderer returned no lines", tc.name)
