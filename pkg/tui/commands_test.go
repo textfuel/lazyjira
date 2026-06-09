@@ -17,7 +17,7 @@ func TestFetchProjects(t *testing.T) {
 		t.Parallel()
 		fake := &jiratest.FakeClient{T: t}
 		fake.GetProjectsFunc = func(context.Context) ([]jira.Project, error) {
-			return []jira.Project{{Key: "PLAT"}}, nil
+			return []jira.Project{{Key: testProject}}, nil
 		}
 
 		msg := fetchProjects(fake)()
@@ -26,7 +26,7 @@ func TestFetchProjects(t *testing.T) {
 		if !ok {
 			t.Fatalf("msg = %T, want projectsLoadedMsg", msg)
 		}
-		if len(loaded.projects) != 1 || loaded.projects[0].Key != "PLAT" {
+		if len(loaded.projects) != 1 || loaded.projects[0].Key != testProject {
 			t.Errorf("projects = %+v", loaded.projects)
 		}
 		if len(fake.GetProjectsCalls) != 1 {
@@ -55,16 +55,16 @@ func TestFetchTransitions_PassesIssueKey(t *testing.T) {
 		return []jira.Transition{{ID: "11", Name: "To Do"}}, nil
 	}
 
-	msg := fetchTransitions(fake, "PLAT-1")()
+	msg := fetchTransitions(fake, testKey)()
 
 	loaded, ok := msg.(transitionsLoadedMsg)
 	if !ok {
 		t.Fatalf("msg = %T, want transitionsLoadedMsg", msg)
 	}
-	if loaded.issueKey != "PLAT-1" {
+	if loaded.issueKey != testKey {
 		t.Errorf("issueKey = %q, want PLAT-1", loaded.issueKey)
 	}
-	if len(fake.GetTransitionsCalls) != 1 || fake.GetTransitionsCalls[0].Key != "PLAT-1" {
+	if len(fake.GetTransitionsCalls) != 1 || fake.GetTransitionsCalls[0].Key != testKey {
 		t.Errorf("GetTransitions calls = %+v", fake.GetTransitionsCalls)
 	}
 }
@@ -95,7 +95,7 @@ func TestDoTransition(t *testing.T) {
 		fake := &jiratest.FakeClient{T: t}
 		fake.DoTransitionFunc = func(_ context.Context, _, _ string) error { return nil }
 
-		msg := doTransition(fake, "PLAT-1", "21")()
+		msg := doTransition(fake, testKey, "21")()
 
 		if _, ok := msg.(transitionDoneMsg); !ok {
 			t.Fatalf("msg = %T, want transitionDoneMsg", msg)
@@ -104,7 +104,7 @@ func TestDoTransition(t *testing.T) {
 			t.Fatalf("DoTransition called %d times, want 1", len(fake.DoTransitionCalls))
 		}
 		call := fake.DoTransitionCalls[0]
-		if call.Key != "PLAT-1" || call.TransitionID != "21" {
+		if call.Key != testKey || call.TransitionID != "21" {
 			t.Errorf("call = %+v, want key=PLAT-1 id=21", call)
 		}
 	})
@@ -114,7 +114,7 @@ func TestDoTransition(t *testing.T) {
 		fake := &jiratest.FakeClient{T: t}
 		fake.DoTransitionFunc = func(_ context.Context, _, _ string) error { return errors.New("forbidden") }
 
-		if _, ok := doTransition(fake, "PLAT-1", "21")().(errorMsg); !ok {
+		if _, ok := doTransition(fake, testKey, "21")().(errorMsg); !ok {
 			t.Error("want errorMsg on failed transition")
 		}
 	})
@@ -175,9 +175,9 @@ func TestHandleProjectsLoaded_SelectsFirstWhenNoneActive(t *testing.T) {
 	app.demoMode = true
 	app.issuesList.SetTabs([]config.IssueTabConfig{{Name: "All", JQL: "project = {{.ProjectKey}} ORDER BY updated DESC"}})
 
-	_, cmd := app.handleProjectsLoaded(projectsLoadedMsg{projects: []jira.Project{{Key: "PLAT", ID: "1"}}})
+	_, cmd := app.handleProjectsLoaded(projectsLoadedMsg{projects: []jira.Project{{Key: testProject, ID: "1"}}})
 
-	if app.projectKey != "PLAT" {
+	if app.projectKey != testProject {
 		t.Errorf("projectKey = %q, want PLAT", app.projectKey)
 	}
 	if cmd == nil {

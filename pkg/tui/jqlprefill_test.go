@@ -18,20 +18,20 @@ func TestParseJQLPrefill(t *testing.T) {
 		want map[string]string
 	}{
 		{"empty", "", map[string]string{}},
-		{"single equality", "project = PLAT", map[string]string{"project": "PLAT"}},
+		{"single equality", "project = PLAT", map[string]string{"project": testProject}},
 		{
 			name: "currentUser marker",
 			jql:  "project = PLAT AND assignee = currentUser()",
-			want: map[string]string{"project": "PLAT", "assignee": currentUserMarker},
+			want: map[string]string{"project": testProject, "assignee": currentUserMarker},
 		},
-		{"order by stripped", "project = PLAT ORDER BY updated DESC", map[string]string{"project": "PLAT"}},
+		{"order by stripped", "project = PLAT ORDER BY updated DESC", map[string]string{"project": testProject}},
 		{"quoted value unquoted", `project = "My Proj"`, map[string]string{"project": "My Proj"}},
 		{"or clause skipped entirely", "project = PLAT OR status = Done", map[string]string{}},
 		{"other function skipped", "assignee = membersOf(grp)", map[string]string{}},
 		{
 			name: "valid clause survives alongside a skipped function",
 			jql:  "project = PLAT AND assignee = membersOf(grp)",
-			want: map[string]string{"project": "PLAT"},
+			want: map[string]string{"project": testProject},
 		},
 	}
 
@@ -50,12 +50,12 @@ func TestApplyPrefill_TextAndCurrentUser(t *testing.T) {
 	t.Parallel()
 
 	fields := []components.CreateFormField{
-		{FieldID: "summary"},
+		{FieldID: testSummary},
 		{FieldID: "assignee"},
 	}
 	prefill := map[string]string{
-		"summary":  "Fix the bug",
-		"assignee": currentUserMarker,
+		testSummary: "Fix the bug",
+		"assignee":  currentUserMarker,
 	}
 	currentUser := &jira.User{AccountID: "acc-1", DisplayName: "Ada"}
 

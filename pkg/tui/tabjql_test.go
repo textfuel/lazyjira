@@ -20,20 +20,20 @@ func TestResolveTabJQL(t *testing.T) {
 		{
 			name:       "project placeholder is quoted",
 			jql:        "project = {{.ProjectKey}} ORDER BY updated DESC",
-			projectKey: "PLAT",
+			projectKey: testProject,
 			want:       `project = "PLAT" ORDER BY updated DESC`,
 		},
 		{
 			name:       "user email placeholder is raw",
 			jql:        "assignee = {{.UserEmail}}",
-			projectKey: "PLAT",
+			projectKey: testProject,
 			email:      "user@example.com",
 			want:       "assignee = user@example.com",
 		},
 		{
 			name:       "invalid template falls back to default",
 			jql:        "project = {{.Bad",
-			projectKey: "PLAT",
+			projectKey: testProject,
 			want:       `project = "PLAT" ORDER BY updated DESC`,
 		},
 	}
