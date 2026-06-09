@@ -41,8 +41,9 @@ func TestFetchProjects(t *testing.T) {
 			return nil, errors.New("network down")
 		}
 
-		if _, ok := fetchProjects(fake)().(errorMsg); !ok {
-			t.Fatalf("msg = %T, want errorMsg", fetchProjects(fake)())
+		msg := fetchProjects(fake)()
+		if _, ok := msg.(errorMsg); !ok {
+			t.Fatalf("msg = %T, want errorMsg", msg)
 		}
 	})
 }
