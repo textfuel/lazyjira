@@ -824,12 +824,12 @@ func (a *App) editInfoField(sel *jira.Issue) (tea.Model, tea.Cmd) {
 		if isCustomField(field.FieldID) {
 			return a.fetchCustomFieldOptionsForEdit(sel, field)
 		}
-		a.inputModal.Show("Edit "+field.Name, views.EditValueForInput(field.Value))
+		a.inputModal.Show("Edit "+field.Name, views.EditValueForField(sel, field.FieldID, field.Value))
 		a.editContext = editCtx{kind: editField, issueKey: sel.Key, fieldID: field.FieldID}
 		return a, nil
 	case views.FieldMultiText:
 		a.editContext = editCtx{kind: editFieldText, issueKey: sel.Key, fieldID: field.FieldID}
-		return a, launchEditor(views.EditValueForInput(field.Value), ".md")
+		return a, launchEditor(views.EditValueForField(sel, field.FieldID, field.Value), ".md")
 	}
 	return a, nil
 }

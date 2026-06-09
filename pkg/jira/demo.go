@@ -415,6 +415,24 @@ func (d *DemoClient) UpdateIssue(_ context.Context, issueKey string, fields map[
 	if _, ok := fields["sprint"]; ok {
 		iss.Sprint = nil
 	}
+	if p, ok := fields["parent"].(map[string]string); ok {
+		if parent, found := d.issueIndex[p["key"]]; found {
+			iss.Parent = &Issue{Key: parent.Key, Summary: parent.Summary}
+		} else {
+			iss.Parent = &Issue{Key: p["key"]}
+		}
+	}
+	iss.Updated = time.Now()
+	return nil
+}
+
+func (d *DemoClient) RemoveIssueParent(_ context.Context, issueKey string) error {
+	d.logRequest("PUT", "/issue/"+issueKey)
+	iss, ok := d.issueIndex[issueKey]
+	if !ok {
+		return fmt.Errorf("issue %s not found", issueKey)
+	}
+	iss.Parent = nil
 	iss.Updated = time.Now()
 	return nil
 }
