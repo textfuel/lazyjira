@@ -133,3 +133,30 @@ func TestSanitizeSummary(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractIssueKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"key inside feature branch", "feature/PROJ-123-foo", "PROJ-123"},
+		{"lowercase is upcased", "proj-7-lower", "PROJ-7"},
+		{"first key wins", "abc-12-then-DEF-34", "ABC-12"},
+		{"bare key", "PLAT-3", "PLAT-3"},
+		{"no key returns empty", "no-key-here", ""},
+		{"main is skipped", "main", ""},
+		{"develop is skipped case insensitive", "DEVELOP", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := ExtractIssueKey(tt.input); got != tt.want {
+				t.Errorf("ExtractIssueKey(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
