@@ -177,8 +177,10 @@ func syncColors() {
 	ColorNone = Default.Colors.None
 	ColorHighlight = Default.Colors.Highlight
 
+	authorMutex.Lock()
 	authorPalette = Default.AuthorPalette
 	authorCache = make(map[string]lipgloss.Style)
+	authorMutex.Unlock()
 }
 
 // SetTheme selects a theme by name and updates the global Default instance
