@@ -2,6 +2,7 @@ package components
 
 import (
 	"testing"
+	"time"
 
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 )
@@ -29,4 +30,14 @@ func TestDblClickDetector_TripleClickResetsAfterDouble(t *testing.T) {
 	detector.Click(3)
 	testkit.AssertEqual(t, "double", detector.Click(3), true)
 	testkit.AssertEqual(t, "third click does not retrigger", detector.Click(3), false)
+}
+
+func TestDblClickDetector_SlowSecondClickIsNotDouble(t *testing.T) {
+	t.Parallel()
+	current := time.Unix(0, 0)
+	detector := DblClickDetector{now: func() time.Time { return current }}
+
+	testkit.AssertEqual(t, "first click", detector.Click(3), false)
+	current = current.Add(time.Second)
+	testkit.AssertEqual(t, "second click past threshold", detector.Click(3), false)
 }
