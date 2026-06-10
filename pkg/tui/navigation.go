@@ -152,17 +152,35 @@ func platformCommand(action string, arg string) (name string, args []string) {
 	return "", nil
 }
 
-func copyToClipboard(text string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	name, args := platformCommand("copy", "")
+var runExternalCommand = execExternal
+
+func execExternal(input string, waitForExit bool, name string, args ...string) {
+	if name == "" {
+		return
+	}
+	ctx := context.Background()
+	if waitForExit {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
 	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Stdin = strings.NewReader(text)
-	_ = cmd.Run()
+	if input != "" {
+		cmd.Stdin = strings.NewReader(input)
+	}
+	if waitForExit {
+		_ = cmd.Run()
+		return
+	}
+	_ = cmd.Start()
+}
+
+func copyToClipboard(text string) {
+	name, args := platformCommand("copy", "")
+	runExternalCommand(text, true, name, args...)
 }
 
 func openBrowser(url string) {
 	name, args := platformCommand("open", url)
-	cmd := exec.CommandContext(context.Background(), name, args...)
-	_ = cmd.Start()
+	runExternalCommand("", false, name, args...)
 }
