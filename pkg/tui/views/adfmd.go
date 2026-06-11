@@ -439,7 +439,8 @@ func tryParseTable(lines []string, i *int, trimmed string) (any, bool) {
 }
 
 func parseParagraph(lines []string, i *int) any {
-	var paraLines []string
+	paraLines := []string{lines[*i]}
+	*i++
 	for *i < len(lines) {
 		pl := lines[*i]
 		ptrimmed := strings.TrimSpace(pl)
