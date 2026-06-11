@@ -22,32 +22,37 @@ import (
 // version is set at build time via ldflags
 var version = "dev"
 
-var setupWizardInput io.Reader = os.Stdin
-
 func main() {
-	// Subcommands
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
+	os.Exit(dispatch(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+func dispatch(args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 {
+		switch args[0] {
 		case "auth":
-			runAuth(os.Args[2:])
-			return
+			if err := runAuth(args[1:], os.Stdin); err != nil {
+				fmt.Fprintf(stderr, "Error: %v\n", err)
+				return 1
+			}
+			return 0
 		case "logout":
 			if err := config.ClearCredentials(); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				fmt.Fprintf(stderr, "Error: %v\n", err)
+				return 1
 			}
-			fmt.Println("Credentials cleared.")
-			return
+			fmt.Fprintln(stdout, "Credentials cleared.")
+			return 0
 		case "--version", "version":
-			fmt.Printf("lazyjira %s\n", version)
-			return
+			fmt.Fprintf(stdout, "lazyjira %s\n", version)
+			return 0
 		}
 	}
 
 	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Error: %v\n", err)
+		return 1
 	}
+	return 0
 }
 
 func run() error {
@@ -206,13 +211,13 @@ func resolveClient(cfg *config.Config) (*jira.Client, tui.AuthMethod, error) {
 	fmt.Println()
 	fmt.Println("  Welcome to lazyjira! Let's set up your Jira connection.")
 	fmt.Println()
-	client, err := runSetupWizard(cfg)
+	client, err := runSetupWizard(cfg, os.Stdin)
 	return client, tui.AuthWizard, err
 }
 
 // runSetupWizard interactively collects Jira credentials.
-func runSetupWizard(cfg *config.Config) (*jira.Client, error) {
-	reader := bufio.NewReader(setupWizardInput)
+func runSetupWizard(cfg *config.Config, input io.Reader) (*jira.Client, error) {
+	reader := bufio.NewReader(input)
 
 	// Server type.
 	fmt.Println("  \033[1mJira Type\033[0m")
@@ -341,17 +346,16 @@ func testConnection(client *jira.Client) error {
 }
 
 // runAuth handles 'lazyjira auth', re-runs the setup wizard.
-func runAuth(args []string) {
-	authFlags := flag.NewFlagSet("auth", flag.ExitOnError)
-	_ = authFlags.Parse(args)
+func runAuth(args []string, input io.Reader) error {
+	authFlags := flag.NewFlagSet("auth", flag.ContinueOnError)
+	if err := authFlags.Parse(args); err != nil {
+		return err
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("loading config: %w", err)
 	}
-	_, err = runSetupWizard(cfg)
-	if err != nil {
-		os.Exit(1)
-	}
+	_, err = runSetupWizard(cfg, input)
+	return err
 }
