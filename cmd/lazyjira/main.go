@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -20,6 +21,8 @@ import (
 
 // version is set at build time via ldflags
 var version = "dev"
+
+var setupWizardInput io.Reader = os.Stdin
 
 func main() {
 	// Subcommands
@@ -209,7 +212,7 @@ func resolveClient(cfg *config.Config) (*jira.Client, tui.AuthMethod, error) {
 
 // runSetupWizard interactively collects Jira credentials.
 func runSetupWizard(cfg *config.Config) (*jira.Client, error) {
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(setupWizardInput)
 
 	// Server type.
 	fmt.Println("  \033[1mJira Type\033[0m")
