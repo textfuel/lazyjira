@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
@@ -34,7 +35,7 @@ func TestClient_PaginatedMethods_FetchAllPages(t *testing.T) {
 		return map[string]any{"id": index + 1, "name": fmt.Sprintf("Board %d", index+1)}
 	}
 	issueObject := func(index int) map[string]any {
-		return map[string]any{"id": fmt.Sprint(index + 1), "key": fmt.Sprintf("PAGE-%d", index+1), "fields": map[string]any{"summary": "s"}}
+		return map[string]any{"id": strconv.Itoa(index + 1), "key": fmt.Sprintf("PAGE-%d", index+1), "fields": map[string]any{"summary": "s"}}
 	}
 	changelogObject := func(index int) map[string]any {
 		return map[string]any{"items": []map[string]any{{"field": "status", "fromString": "A", "toString": "B"}}}

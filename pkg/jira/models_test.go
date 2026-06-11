@@ -68,7 +68,7 @@ func TestJiraTime_UnmarshalJSON(t *testing.T) {
 			if err != nil {
 				t.Fatalf("UnmarshalJSON(%s): %v", tt.input, err)
 			}
-			if !parsed.Time.Equal(tt.want) {
+			if !parsed.Equal(tt.want) {
 				t.Errorf("parsed time = %v, want %v", parsed.Time, tt.want)
 			}
 		})
