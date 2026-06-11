@@ -767,7 +767,6 @@ func TestCreateForm_WrapTextLinesZeroWidth(t *testing.T) {
 }
 
 func TestCreateForm_NoneStyle(t *testing.T) {
-	forceColors(t)
 	t.Parallel()
 	style := noneStyle()
 	out := style.Render("None")
@@ -783,7 +782,6 @@ func TestCreateForm_StyleFieldValue_None(t *testing.T) {
 }
 
 func TestCreateForm_StyleFieldValue_Priority(t *testing.T) {
-	forceColors(t)
 	t.Parallel()
 	field := CreateFormField{FieldID: "priority", Type: CFFieldSingleSelect}
 	out := styleFieldValue(field, "High")
@@ -792,7 +790,6 @@ func TestCreateForm_StyleFieldValue_Priority(t *testing.T) {
 }
 
 func TestCreateForm_StyleFieldValue_Person(t *testing.T) {
-	forceColors(t)
 	t.Parallel()
 	field := CreateFormField{FieldID: "assignee", Type: CFFieldPerson}
 	out := styleFieldValue(field, "John Doe")
@@ -801,7 +798,6 @@ func TestCreateForm_StyleFieldValue_Person(t *testing.T) {
 }
 
 func TestCreateForm_StyleFieldValue_SchemaUser(t *testing.T) {
-	forceColors(t)
 	t.Parallel()
 	field := CreateFormField{FieldID: "reporter", Type: CFFieldSingleSelect, SchemaItems: "user"}
 	out := styleFieldValue(field, "Alice")

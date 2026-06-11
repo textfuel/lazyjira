@@ -1,12 +1,18 @@
 package components
 
 import (
+	"os"
 	"regexp"
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 )
+
+func TestMain(m *testing.M) {
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	os.Exit(m.Run())
+}
 
 const (
 	testTitle        = "Test Title"
@@ -32,11 +38,4 @@ var ansiEscapeRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func stripANSI(s string) string {
 	return ansiEscapeRe.ReplaceAllString(s, "")
-}
-
-func forceColors(t *testing.T) {
-	t.Helper()
-	original := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	t.Cleanup(func() { lipgloss.SetColorProfile(original) })
 }

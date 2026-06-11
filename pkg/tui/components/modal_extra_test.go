@@ -357,7 +357,6 @@ func TestModal_RenderItems_WithSeparatorAndActive(t *testing.T) {
 }
 
 func TestModal_RenderItems_InternalItemRendersWithColor(t *testing.T) {
-	forceColors(t)
 	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
