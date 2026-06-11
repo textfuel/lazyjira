@@ -126,3 +126,12 @@ func TestBranchExists_TrueForMainFalseForUnknown(t *testing.T) {
 	testkit.AssertEqual(t, "main exists", BranchExists(dir, "main"), true)
 	testkit.AssertEqual(t, "ghost exists", BranchExists(dir, "ghost"), false)
 }
+
+func TestCheckoutTracking_UnknownRemoteBranchReturnsError(t *testing.T) {
+	t.Parallel()
+	dir := initRepo(t)
+
+	if err := CheckoutTracking(dir, "origin/does-not-exist"); err == nil {
+		t.Fatal("CheckoutTracking with unknown remote branch should error")
+	}
+}

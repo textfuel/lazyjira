@@ -54,6 +54,24 @@ func TestGenerateBranchName(t *testing.T) {
 			want: "Story/PROJ-10/PROJ-42-add-feature",
 		},
 		{
+			name: "unparseable template falls back to default",
+			data: BranchTemplateData{
+				Key:     "PROJ-9",
+				Summary: "fix-crash",
+			},
+			tmpl: "{{.Unclosed",
+			want: "PROJ-9-fix-crash",
+		},
+		{
+			name: "template referencing unknown field falls back to default",
+			data: BranchTemplateData{
+				Key:     "PROJ-9",
+				Summary: "fix-crash",
+			},
+			tmpl: "{{.DoesNotExist}}/{{.Key}}",
+			want: "PROJ-9-fix-crash",
+		},
+		{
 			// GenerateBranchName does not transliterate by itself; ASCII
 			// reduction is a per-field caller responsibility. Non-ASCII
 			// in raw fields survives.

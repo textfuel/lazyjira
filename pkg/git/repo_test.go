@@ -71,3 +71,16 @@ func TestCurrentBranch(t *testing.T) {
 		})
 	}
 }
+
+func TestCurrentBranch_GitMissingFromPathReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PATH", "")
+
+	branch, err := CurrentBranch(dir)
+	if err == nil {
+		t.Fatal("CurrentBranch without git in PATH should error")
+	}
+	if branch != "" {
+		t.Errorf("branch = %q, want empty on error", branch)
+	}
+}
