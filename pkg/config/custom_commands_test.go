@@ -261,3 +261,47 @@ func TestResolveCustomCommands_SlugifyFunc(t *testing.T) {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 }
+
+func TestResolvedCustomCommand_ShouldSuspend(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		suspend *bool
+		want    bool
+	}{
+		{"nil defaults to true", nil, true},
+		{"explicit true", ptr(true), true},
+		{"explicit false", ptr(false), false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			resolved := ResolvedCustomCommand{Suspend: tc.suspend}
+			if got := resolved.ShouldSuspend(); got != tc.want {
+				t.Errorf("ShouldSuspend() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolvedCustomCommand_HasContext(t *testing.T) {
+	t.Parallel()
+	resolved := ResolvedCustomCommand{Contexts: []Context{CtxIssues, CtxDetail}}
+	tests := []struct {
+		name    string
+		context Context
+		want    bool
+	}{
+		{"bound context", CtxIssues, true},
+		{"other bound context", CtxDetail, true},
+		{"unbound context", CtxProjects, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := resolved.HasContext(tc.context); got != tc.want {
+				t.Errorf("HasContext(%q) = %v, want %v", tc.context, got, tc.want)
+			}
+		})
+	}
+}

@@ -89,3 +89,32 @@ func TestClearCredentials_MissingIsNotAnError(t *testing.T) {
 		t.Errorf("ClearCredentials on missing file = %v, want nil", err)
 	}
 }
+
+func TestLoadCredentials_ReadErrorWhenAuthPathIsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LAZYJIRA_CONFIG_DIR", dir)
+
+	if err := os.Mkdir(AuthPath(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	credentials, err := LoadCredentials()
+	if err == nil {
+		t.Fatal("LoadCredentials() with unreadable auth.json should error")
+	}
+	if credentials != nil {
+		t.Errorf("credentials = %+v, want nil on error", credentials)
+	}
+}
+
+func TestSaveCredentials_FailsWhenConfigDirIsFile(t *testing.T) {
+	blockingFile := filepath.Join(t.TempDir(), "occupied")
+	if err := os.WriteFile(blockingFile, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LAZYJIRA_CONFIG_DIR", blockingFile)
+
+	if err := SaveCredentials(&Credentials{Host: "https://example.atlassian.net"}); err == nil {
+		t.Fatal("SaveCredentials() into a file path should error")
+	}
+}
