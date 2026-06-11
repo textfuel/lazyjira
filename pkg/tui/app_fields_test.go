@@ -35,71 +35,114 @@ func TestIsCustomField(t *testing.T) {
 	}
 }
 
-func TestFieldMultilineEnabled_FalseByDefault(t *testing.T) {
+func TestFieldMultilineEnabled(t *testing.T) {
 	t.Parallel()
-	app := newTestApp()
-	app.cfg.Fields = []config.FieldConfig{
-		{ID: "customfield_10001", Name: "Story Points", Multiline: false},
+
+	cases := []struct {
+		name    string
+		fields  []config.FieldConfig
+		fieldID string
+		want    bool
+	}{
+		{
+			name:    "false by default",
+			fields:  []config.FieldConfig{{ID: "customfield_10001", Name: "Story Points", Multiline: false}},
+			fieldID: "customfield_10001",
+			want:    false,
+		},
+		{
+			name:    "true when set",
+			fields:  []config.FieldConfig{{ID: "customfield_10001", Name: "Notes", Multiline: true}},
+			fieldID: "customfield_10001",
+			want:    true,
+		},
+		{
+			name:    "false for unknown field",
+			fields:  nil,
+			fieldID: "customfield_99999",
+			want:    false,
+		},
 	}
 
-	testkit.AssertEqual(t, "multiline disabled", app.fieldMultilineEnabled("customfield_10001"), false)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			app := newTestApp()
+			app.cfg.Fields = tc.fields
+			testkit.AssertEqual(t, "multiline", app.fieldMultilineEnabled(tc.fieldID), tc.want)
+		})
+	}
 }
 
-func TestFieldMultilineEnabled_TrueWhenSet(t *testing.T) {
+func TestConfiguredFieldType(t *testing.T) {
 	t.Parallel()
-	app := newTestApp()
-	app.cfg.Fields = []config.FieldConfig{
-		{ID: "customfield_10001", Name: "Notes", Multiline: true},
+
+	cases := []struct {
+		name    string
+		fields  []config.FieldConfig
+		fieldID string
+		want    string
+	}{
+		{
+			name:    "returns configured type",
+			fields:  []config.FieldConfig{{ID: "customfield_10001", Name: "Status", Type: "select"}},
+			fieldID: "customfield_10001",
+			want:    "select",
+		},
+		{
+			name:    "empty for unknown",
+			fields:  nil,
+			fieldID: "customfield_99999",
+			want:    "",
+		},
 	}
 
-	testkit.AssertEqual(t, "multiline enabled", app.fieldMultilineEnabled("customfield_10001"), true)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			app := newTestApp()
+			app.cfg.Fields = tc.fields
+			testkit.AssertEqual(t, "field type", app.configuredFieldType(tc.fieldID), tc.want)
+		})
+	}
 }
 
-func TestFieldMultilineEnabled_FalseForUnknownField(t *testing.T) {
+func TestIsPersonSchema(t *testing.T) {
 	t.Parallel()
-	app := newTestApp()
-	app.cfg.Fields = nil
 
-	testkit.AssertEqual(t, "unknown field not multiline", app.fieldMultilineEnabled("customfield_99999"), false)
-}
-
-func TestConfiguredFieldType_ReturnsConfiguredType(t *testing.T) {
-	t.Parallel()
-	app := newTestApp()
-	app.cfg.Fields = []config.FieldConfig{
-		{ID: "customfield_10001", Name: "Status", Type: "select"},
+	cases := []struct {
+		name        string
+		schemaType  string
+		schemaItems string
+		want        bool
+	}{
+		{
+			name:        "user type",
+			schemaType:  schemaUser,
+			schemaItems: "",
+			want:        true,
+		},
+		{
+			name:        "array of users",
+			schemaType:  schemaArray,
+			schemaItems: schemaUser,
+			want:        true,
+		},
+		{
+			name:        "non-user type",
+			schemaType:  "string",
+			schemaItems: "",
+			want:        false,
+		},
 	}
 
-	testkit.AssertEqual(t, "field type", app.configuredFieldType("customfield_10001"), "select")
-}
-
-func TestConfiguredFieldType_EmptyForUnknown(t *testing.T) {
-	t.Parallel()
-	app := newTestApp()
-	app.cfg.Fields = nil
-
-	testkit.AssertEqual(t, "unknown field type", app.configuredFieldType("customfield_99999"), "")
-}
-
-func TestIsPersonSchema_UserType(t *testing.T) {
-	t.Parallel()
-	app := newTestApp()
-
-	testkit.AssertEqual(t, "user schema", app.isPersonSchema(schemaUser, ""), true)
-}
-
-func TestIsPersonSchema_ArrayOfUsers(t *testing.T) {
-	t.Parallel()
-	app := newTestApp()
-
-	testkit.AssertEqual(t, "array of users schema", app.isPersonSchema(schemaArray, schemaUser), true)
-}
-
-func TestIsPersonSchema_NonUserType(t *testing.T) {
-	t.Parallel()
-	app := newTestApp()
-
-	testkit.AssertEqual(t, "non-user schema", app.isPersonSchema("string", ""), false)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			app := newTestApp()
+			testkit.AssertEqual(t, "isPersonSchema", app.isPersonSchema(tc.schemaType, tc.schemaItems), tc.want)
+		})
+	}
 }
 
 func TestEditInfoField_NoSelectionIsNoop(t *testing.T) {
@@ -179,8 +222,9 @@ func TestEditInfoField_TextFieldShowsInputModal(t *testing.T) {
 		{ID: "customfield_10001", Name: "Story Points", Type: "text"},
 	}
 	issue := &jira.Issue{
-		Key:     testKey,
-		Summary: testSummary,
+		Key:       testKey,
+		Summary:   testSummary,
+		IssueType: &jira.IssueType{ID: "10000", Name: "Story"},
 		CustomFields: map[string]any{
 			"customfield_10001": "5",
 		},
@@ -188,10 +232,10 @@ func TestEditInfoField_TextFieldShowsInputModal(t *testing.T) {
 	app.infoPanel.SetFields(app.cfg.Fields)
 	app.infoPanel.SetIssue(issue)
 
-	_, cmd := app.editInfoField(issue)
+	_, _ = app.editInfoField(issue)
 
-	if cmd != nil {
-		t.Logf("cmd returned (may be expected): %T", cmd)
+	if !app.inputModal.IsVisible() {
+		t.Error("expected input modal to be visible for text custom field")
 	}
 }
 
@@ -326,6 +370,10 @@ func TestFetchCustomFieldOptionsForEdit_NoIssueTypeErrors(t *testing.T) {
 	}
 
 	_, _ = app.fetchCustomFieldOptionsForEdit(issue, field)
+
+	if app.statusPanel.ErrorMessage() == "" {
+		t.Error("expected status panel error when issue has no issue type")
+	}
 }
 
 func TestFetchCustomFieldOptionsForEdit_TextTypeShowsModal(t *testing.T) {
@@ -349,19 +397,17 @@ func TestFetchCustomFieldOptionsForEdit_TextTypeShowsModal(t *testing.T) {
 		Type:    views.FieldSingleText,
 	}
 
-	_, cmd := app.fetchCustomFieldOptionsForEdit(issue, field)
+	_, _ = app.fetchCustomFieldOptionsForEdit(issue, field)
 
-	if cmd != nil {
-		t.Logf("cmd = %T (launch editor or fetch)", cmd)
-	}
 	if !app.inputModal.IsVisible() {
-		t.Logf("input modal not visible (may be expected for text type without multiline)")
+		t.Error("expected input modal to be visible for text type custom field")
 	}
 }
 
 func TestFetchCustomFieldOptionsForEdit_CachedMetaUsed(t *testing.T) {
 	t.Parallel()
-	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
+	fake := &jiratest.FakeClient{T: t}
+	app := newAppWithFake(t, fake)
 	app.keymap = DefaultKeymap()
 	app.width = 120
 	app.height = 40
@@ -385,4 +431,8 @@ func TestFetchCustomFieldOptionsForEdit_CachedMetaUsed(t *testing.T) {
 	}
 
 	_, _ = app.fetchCustomFieldOptionsForEdit(issue, field)
+
+	if len(fake.GetCreateMetaCalls) != 0 {
+		t.Errorf("GetCreateMeta called %d times, want 0 (cache hit)", len(fake.GetCreateMetaCalls))
+	}
 }

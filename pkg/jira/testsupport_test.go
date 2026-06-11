@@ -6,6 +6,11 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 )
 
+const (
+	errorTestIssueKey   = "PLAT-9"
+	errorTestProjectKey = "PLAT"
+)
+
 func cloudOpts() ClientOpts {
 	return ClientOpts{Email: "ci@example.com", Token: "secret-token", IsCloud: true}
 }

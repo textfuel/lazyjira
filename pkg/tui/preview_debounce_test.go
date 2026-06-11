@@ -9,20 +9,12 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
-// TestPreviewDebounce_RapidMovement verifies that when two PreviewRequestMsgs
-// arrive in rapid succession only the second one causes a GetIssue call.
-//
-// We simulate debounce deterministically without real timers: dispatch both
-// PreviewRequestMsgs first so the epoch advances to 2, then dispatch a
-// synthetic previewDebounceMsg for epoch=1 (stale) followed by one for
-// epoch=2 (fresh). Only the fresh one must trigger a GetIssue call.
 func TestPreviewDebounce_RapidMovement(t *testing.T) {
 	t.Parallel()
 	const key2 = "SUB-2"
 	key1 := subKey1
 
 	fake := &jiratest.FakeClient{T: t}
-	// Configure for key2 only; any unexpected GetIssue for key1 would t.Fatalf.
 	fake.GetIssueFunc = func(_ context.Context, key string) (*jira.Issue, error) {
 		if key != key2 {
 			t.Errorf("unexpected GetIssue call for key %q (expected %q only)", key, key2)
@@ -36,20 +28,18 @@ func TestPreviewDebounce_RapidMovement(t *testing.T) {
 		return nil, nil
 	}
 
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 
-	// Two rapid PreviewRequestMsgs advance the epoch to 2.
-	_, _ = a.Update(views.PreviewRequestMsg{Key: key1})
-	_, _ = a.Update(views.PreviewRequestMsg{Key: key2})
+	_, _ = app.Update(views.PreviewRequestMsg{Key: key1})
+	_, _ = app.Update(views.PreviewRequestMsg{Key: key2})
 
-	if a.previewEpoch != 2 {
-		t.Fatalf("previewEpoch = %d after two msgs, want 2", a.previewEpoch)
+	if app.previewEpoch != 2 {
+		t.Fatalf("previewEpoch = %d after two msgs, want 2", app.previewEpoch)
 	}
 
-	// Stale debounce tick for epoch=1: must be a no-op.
-	_, fetchCmd := a.Update(previewDebounceMsg{key: key1, epoch: 1})
+	_, fetchCmd := app.Update(previewDebounceMsg{key: key1, epoch: 1})
 	if fetchCmd != nil {
-		fetchCmd() // execute to surface any unexpected GetIssue call
+		fetchCmd()
 		if len(fake.GetIssueCalls) > 0 {
 			t.Errorf("stale debounce tick caused %d GetIssue call(s), want 0", len(fake.GetIssueCalls))
 		}
@@ -57,8 +47,7 @@ func TestPreviewDebounce_RapidMovement(t *testing.T) {
 
 	before := len(fake.GetIssueCalls)
 
-	// Fresh debounce tick for epoch=2: must trigger one GetIssue call.
-	_, fetchCmd2 := a.Update(previewDebounceMsg{key: key2, epoch: 2})
+	_, fetchCmd2 := app.Update(previewDebounceMsg{key: key2, epoch: 2})
 	if fetchCmd2 == nil {
 		t.Fatal("expected fetch cmd from fresh debounce tick, got nil")
 	}
@@ -73,10 +62,6 @@ func TestPreviewDebounce_RapidMovement(t *testing.T) {
 	}
 }
 
-// TestPreviewDebounce_Lapse verifies that when two PreviewRequestMsgs are
-// separated by enough time (simulated by dispatching the debounce for the
-// first before the second PreviewRequestMsg arrives), both result in a
-// GetIssue call.
 func TestPreviewDebounce_Lapse(t *testing.T) {
 	t.Parallel()
 	const key2 = "SUB-2"
@@ -95,23 +80,19 @@ func TestPreviewDebounce_Lapse(t *testing.T) {
 		return nil, nil
 	}
 
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 
-	// First PreviewRequestMsg - epoch becomes 1.
-	_, _ = a.Update(views.PreviewRequestMsg{Key: key1})
+	_, _ = app.Update(views.PreviewRequestMsg{Key: key1})
 
-	// Debounce fires before the second msg (lapse): epoch=1 still matches.
-	_, fetchCmd1 := a.Update(previewDebounceMsg{key: key1, epoch: 1})
+	_, fetchCmd1 := app.Update(previewDebounceMsg{key: key1, epoch: 1})
 	if fetchCmd1 == nil {
 		t.Fatal("expected fetch cmd from first debounce tick, got nil")
 	}
 	fetchCmd1()
 
-	// Second PreviewRequestMsg - epoch becomes 2.
-	_, _ = a.Update(views.PreviewRequestMsg{Key: key2})
+	_, _ = app.Update(views.PreviewRequestMsg{Key: key2})
 
-	// Debounce fires for epoch=2, still matches.
-	_, fetchCmd2 := a.Update(previewDebounceMsg{key: key2, epoch: 2})
+	_, fetchCmd2 := app.Update(previewDebounceMsg{key: key2, epoch: 2})
 	if fetchCmd2 == nil {
 		t.Fatal("expected fetch cmd from second debounce tick, got nil")
 	}
@@ -128,8 +109,6 @@ func TestPreviewDebounce_Lapse(t *testing.T) {
 	}
 }
 
-// TestPreviewStaleResponse_DroppedWhenEpochAdvanced verifies that a detail
-// response carrying an old epoch does not update infoPanel or issueCache.
 func TestPreviewStaleResponse_DroppedWhenEpochAdvanced(t *testing.T) {
 	t.Parallel()
 	const key2 = "SUB-2"
@@ -138,63 +117,53 @@ func TestPreviewStaleResponse_DroppedWhenEpochAdvanced(t *testing.T) {
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: key2, Summary: "current"})
 
-	a := newAppWithFake(t, fake)
-	// Pre-load InfoPanel with a main issue so a stale response that wrongly
-	// resets it would flip IssueKey away from mainKey.
+	app := newAppWithFake(t, fake)
 	main := &jira.Issue{Key: mainKey, Summary: "main"}
-	a.issuesList.SetIssues([]jira.Issue{*main})
-	a.infoPanel.SetIssue(main)
+	app.issuesList.SetIssues([]jira.Issue{*main})
+	app.infoPanel.SetIssue(main)
 
-	// Simulate previewEpoch at 2 with previewKey = key2 (user is on key2).
-	a.previewKey = key2
-	a.previewEpoch = 2
+	app.previewKey = key2
+	app.previewEpoch = 2
 
-	// Stale response for epoch=1 arrives.
-	_, _ = a.Update(previewDetailLoadedMsg{
+	_, _ = app.Update(previewDetailLoadedMsg{
 		issue: &jira.Issue{Key: key1, Summary: "stale"},
 		epoch: 1,
 	})
 
-	// The stale response must not touch the cache or the panels.
-	if got := a.infoPanel.IssueKey(); got != mainKey {
+	if got := app.infoPanel.IssueKey(); got != mainKey {
 		t.Errorf("infoPanel.IssueKey() = %q, want %q (must stay with main)", got, mainKey)
 	}
-	if got := a.detailView.IssueKey(); got == key1 {
+	if got := app.detailView.IssueKey(); got == key1 {
 		t.Errorf("detailView updated with stale key %q, want no update", key1)
 	}
-	if _, ok := a.issueCache[key1]; ok {
+	if _, ok := app.issueCache[key1]; ok {
 		t.Errorf("issueCache populated with stale key %q, want absent", key1)
 	}
 
-	// Fresh response for epoch=2 arrives.
-	_, _ = a.Update(previewDetailLoadedMsg{
+	_, _ = app.Update(previewDetailLoadedMsg{
 		issue: &jira.Issue{Key: key2, Summary: "current"},
 		epoch: 2,
 	})
 
-	// A preview response only updates the DetailView + cache, not the
-	// InfoPanel (which belongs to the main list issue).
-	if got := a.detailView.IssueKey(); got != key2 {
+	if got := app.detailView.IssueKey(); got != key2 {
 		t.Errorf("detailView.IssueKey() = %q after fresh response, want %q", got, key2)
 	}
-	if _, ok := a.issueCache[key2]; !ok {
+	if _, ok := app.issueCache[key2]; !ok {
 		t.Errorf("issueCache missing key %q after fresh response", key2)
 	}
 }
 
-// TestNonPreviewFetch_NotAffectedByDebounce verifies that ActRefresh works
-// normally regardless of previewEpoch value.
 func TestNonPreviewFetch_NotAffectedByDebounce(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: mainKey, Summary: "main"})
 
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
-	a.previewKey = mainKey
-	a.previewEpoch = 99
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
+	app.previewKey = mainKey
+	app.previewEpoch = 99
 
-	_, cmd, handled := a.handleIssueAction(ActRefresh)
+	_, cmd, handled := app.handleIssueAction(ActRefresh)
 	if !handled {
 		t.Fatal("ActRefresh was not handled")
 	}
@@ -211,9 +180,8 @@ func TestNonPreviewFetch_NotAffectedByDebounce(t *testing.T) {
 		t.Errorf("issueDetailLoadedMsg.issue.Key = %q, want %q", loaded.issue.Key, mainKey)
 	}
 
-	// issueDetailLoadedMsg (non-preview) must update views without epoch check.
-	_, _ = a.handleIssueDetailLoaded(loaded)
-	if got := a.infoPanel.IssueKey(); got != mainKey {
+	_, _ = app.handleIssueDetailLoaded(loaded)
+	if got := app.infoPanel.IssueKey(); got != mainKey {
 		t.Errorf("infoPanel.IssueKey() = %q after ActRefresh, want %q", got, mainKey)
 	}
 }

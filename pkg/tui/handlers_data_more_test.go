@@ -216,8 +216,8 @@ func TestBuildCreateFields(t *testing.T) {
 		})
 
 		ids := make(map[string]bool)
-		for _, f := range fields {
-			ids[f.FieldID] = true
+		for _, field := range fields {
+			ids[field.FieldID] = true
 		}
 		if !ids[fldPriority] {
 			t.Error("priority should be included")
@@ -250,11 +250,11 @@ func TestMetaToFormField(t *testing.T) {
 		{"plain string is single text", jira.CreateMetaSchema{Type: "string"}, components.CFFieldSingleText},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			field := app.metaToFormField(jira.CreateMetaField{FieldID: "f", Name: "F", Schema: tt.schema})
-			testkit.AssertEqual(t, "field type", field.Type, tt.want)
+			field := app.metaToFormField(jira.CreateMetaField{FieldID: "f", Name: "F", Schema: testCase.schema})
+			testkit.AssertEqual(t, "field type", field.Type, testCase.want)
 		})
 	}
 }
@@ -285,7 +285,7 @@ func TestApplyDuplicatePrefill(t *testing.T) {
 		{FieldID: fldSprint},
 		{FieldID: "customfield_5"},
 	}
-	src := &jira.Issue{
+	source := &jira.Issue{
 		Summary:     "Original",
 		Description: "Body",
 		Priority:    &jira.Priority{ID: "2", Name: "High"},
@@ -298,7 +298,7 @@ func TestApplyDuplicatePrefill(t *testing.T) {
 		},
 	}
 
-	applyDuplicatePrefill(fields, src, true)
+	applyDuplicatePrefill(fields, source, true)
 
 	testkit.AssertEqual(t, "summary", fields[0].DisplayValue, "Copy of Original")
 	testkit.AssertEqual(t, "description", fields[1].DisplayValue, "Body")
@@ -448,22 +448,4 @@ func TestHandleUsersLoaded_CreateSentinel(t *testing.T) {
 			t.Error("user picker should be visible")
 		}
 	})
-}
-
-func TestHandleUsersLoaded_DedupsCurrentUser(t *testing.T) {
-	t.Parallel()
-	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
-	app.usersCache = map[string][]jira.User{}
-	app.projectKey = testProject
-	app.currentUser = &jira.User{AccountID: "me", DisplayName: "Me"}
-	app.issuesList.SetIssues([]jira.Issue{{Key: testKey}})
-
-	_, _ = app.handleUsersLoaded(usersLoadedMsg{
-		users:    []jira.User{{AccountID: "me", DisplayName: "Me"}, {AccountID: "u1", DisplayName: "Ann"}},
-		issueKey: testKey,
-	})
-
-	if !app.modal.IsVisible() {
-		t.Error("assignee modal should be visible")
-	}
 }

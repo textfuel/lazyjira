@@ -72,9 +72,6 @@ func TestGenerateBranchName(t *testing.T) {
 			want: "PROJ-9-fix-crash",
 		},
 		{
-			// GenerateBranchName does not transliterate by itself; ASCII
-			// reduction is a per-field caller responsibility. Non-ASCII
-			// in raw fields survives.
 			name: "non-ASCII in raw fields survives",
 			data: BranchTemplateData{
 				Key:     "PROJ-1",

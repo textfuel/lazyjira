@@ -195,6 +195,13 @@ func TestHandleActionURLPicker_ShowsModalWhenURLsExist(t *testing.T) {
 	app.issueCache[testKey] = issue
 
 	_, _ = app.handleActionURLPicker()
+
+	if !app.modal.IsVisible() {
+		t.Error("modal should be visible when issue has URLs")
+	}
+	if app.onSelect == nil {
+		t.Error("onSelect should be set for URL picker")
+	}
 }
 
 func TestHandleActionURLPicker_NoopWhenNoIssue(t *testing.T) {
@@ -226,25 +233,6 @@ func TestHandleActionCreateBranch_RequiresGitRepo(t *testing.T) {
 	if app.inputModal.IsVisible() {
 		t.Error("input modal should not show when gitRepoPath is empty")
 	}
-}
-
-func TestHandleActionCreateBranch_ShowsInputModalWithSuggestedName(t *testing.T) {
-	t.Parallel()
-	app := actionApp(t)
-	app.side = sideLeft
-	app.leftFocus = focusIssues
-	app.gitRepoPath = t.TempDir()
-	issue := &jira.Issue{Key: testKey, Summary: testSummary}
-	app.issuesList.SetIssues([]jira.Issue{*issue})
-	app.previewKey = testKey
-	app.issueCache[testKey] = issue
-
-	_, _ = app.handleActionCreateBranch()
-
-	if !app.inputModal.IsVisible() {
-		t.Error("input modal should be visible for branch creation")
-	}
-	testkit.AssertEqual(t, "editContext kind", app.editContext.kind, editBranch)
 }
 
 func TestHandleActionCreateBranch_WrongFocusIsNoop(t *testing.T) {

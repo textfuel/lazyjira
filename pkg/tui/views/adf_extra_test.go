@@ -3,6 +3,11 @@ package views
 import (
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 func makeListADF(ordered bool, items []string) map[string]any {
@@ -188,11 +193,10 @@ func TestBuiltinRenderer_RenderTable_EmptyTableSkipped(t *testing.T) {
 	}
 }
 
-func TestURLStyle_NonEmpty(t *testing.T) {
+func TestURLStyle_CyanUnderlined(t *testing.T) {
 	t.Parallel()
 	style := urlStyle()
-	rendered := style.Render("https://example.com")
-	if rendered == "" {
-		t.Error("urlStyle() should render non-empty styled text")
-	}
+	var wantCyan lipgloss.TerminalColor = theme.ColorCyan
+	testkit.AssertEqual(t, "foreground", style.GetForeground(), wantCyan)
+	testkit.AssertEqual(t, "underline", style.GetUnderline(), true)
 }

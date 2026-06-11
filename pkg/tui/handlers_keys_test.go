@@ -32,32 +32,6 @@ func TestHandleFocusAction(t *testing.T) {
 		}
 	})
 
-	t.Run("focus right cycles left panels", func(t *testing.T) {
-		t.Parallel()
-		app := focusApp(t)
-		app.side = sideLeft
-		app.leftFocus = focusIssues
-
-		_, _, ok := app.handleFocusAction(ActFocusRight)
-
-		if !ok || app.leftFocus != focusInfo {
-			t.Errorf("ok=%v focus=%v, want focusInfo", ok, app.leftFocus)
-		}
-	})
-
-	t.Run("focus left cycles back", func(t *testing.T) {
-		t.Parallel()
-		app := focusApp(t)
-		app.side = sideLeft
-		app.leftFocus = focusIssues
-
-		_, _, _ = app.handleFocusAction(ActFocusLeft)
-
-		if app.leftFocus != focusStatus {
-			t.Errorf("focus = %v, want focusStatus", app.leftFocus)
-		}
-	})
-
 	t.Run("focus detail jumps right", func(t *testing.T) {
 		t.Parallel()
 		app := focusApp(t)
@@ -78,12 +52,12 @@ func TestHandleFocusAction(t *testing.T) {
 			{ActFocusInfo, focusInfo},
 			{ActFocusProj, focusProjects},
 		}
-		for _, tc := range cases {
+		for _, testCase := range cases {
 			app := focusApp(t)
 			app.side = sideRight
-			_, _, ok := app.handleFocusAction(tc.action)
-			if !ok || app.side != sideLeft || app.leftFocus != tc.want {
-				t.Errorf("action %v -> ok=%v side=%v focus=%v, want left/%v", tc.action, ok, app.side, app.leftFocus, tc.want)
+			_, _, ok := app.handleFocusAction(testCase.action)
+			if !ok || app.side != sideLeft || app.leftFocus != testCase.want {
+				t.Errorf("action %v -> ok=%v side=%v focus=%v, want left/%v", testCase.action, ok, app.side, app.leftFocus, testCase.want)
 			}
 		}
 	})

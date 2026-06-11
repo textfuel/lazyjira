@@ -25,10 +25,10 @@ func TestFormatCustomVal(t *testing.T) {
 		{"unknown type is empty", true, ""},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			testkit.AssertEqual(t, "formatted", formatCustomVal(tt.input), tt.want)
+			testkit.AssertEqual(t, "formatted", formatCustomVal(testCase.input), testCase.want)
 		})
 	}
 }

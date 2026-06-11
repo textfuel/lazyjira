@@ -563,5 +563,8 @@ func TestHandleEditorFinished(t *testing.T) {
 		if app.diffView.IsVisible() {
 			t.Error("diff view should not show on editor error")
 		}
+		if app.statusPanel.ErrorMessage() == "" {
+			t.Error("status panel should show error message after editor failure")
+		}
 	})
 }

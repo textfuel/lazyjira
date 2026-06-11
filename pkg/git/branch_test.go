@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestResolveBranchAction_slashedNewName_isCreate(t *testing.T) {
+func TestResolveBranchAction_SlashedNewName_IsCreate(t *testing.T) {
 	t.Parallel()
 	dir := initRepo(t)
 	addRemoteRef(t, dir, "origin/main")

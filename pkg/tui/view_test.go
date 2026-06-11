@@ -108,31 +108,31 @@ func TestView_NoPanic_AllFocusStates(t *testing.T) {
 	}{
 		{
 			name:  "left issues",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusIssues },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusIssues },
 		},
 		{
 			name:  "left info",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusInfo },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusInfo },
 		},
 		{
 			name:  "left projects",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusProjects },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusProjects },
 		},
 		{
 			name:  "left status",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusStatus },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusStatus },
 		},
 		{
 			name:  "right side",
-			setup: func(a *App) { a.side = sideRight },
+			setup: func(app *App) { app.side = sideRight },
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			app := appForView(t)
-			tc.setup(app)
+			testCase.setup(app)
 			app.updateFocusState()
 
 			output := app.View()

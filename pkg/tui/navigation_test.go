@@ -24,10 +24,10 @@ func TestExtractIssueKey(t *testing.T) {
 		{"non browse url returns empty", "example.atlassian.net/projects/DR", ""},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			testkit.AssertEqual(t, "extracted key", app.extractIssueKey(tt.url), tt.want)
+			testkit.AssertEqual(t, "extracted key", app.extractIssueKey(testCase.url), testCase.want)
 		})
 	}
 }

@@ -6,10 +6,12 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/theme"
 )
 
 func navResolverForDetail(key string) components.NavAction {
@@ -256,7 +258,7 @@ func TestDetailView_ClickTab_SwitchesToComments(t *testing.T) {
 		Key:      testKey,
 		Comments: []jira.Comment{{Body: "comment"}},
 	})
-	detail.ClickTab(len("[0] PLAT-1 - Body - "))
+	detail.ClickTab(len("[0] " + testKey + " - Body - "))
 	testkit.AssertEqual(t, "clicked to comments", detail.ActiveTab(), TabComments)
 }
 
@@ -895,39 +897,22 @@ func TestRenderMultiSelectDiff_EmptyNoneValues(t *testing.T) {
 	}
 }
 
-func TestStatusNameStyle_GreenForDone(t *testing.T) {
+func TestStatusNameStyle_Colors(t *testing.T) {
 	t.Parallel()
-	style := statusNameStyle("done")
-	rendered := style.Render("done")
-	if rendered == "" {
-		t.Error("statusNameStyle('done') should return non-empty style")
+	tests := []struct {
+		statusName    string
+		expectedColor lipgloss.TerminalColor
+	}{
+		{"done", theme.ColorGreen},
+		{"in progress", theme.ColorYellow},
+		{"todo", theme.ColorCyan},
+		{"xyzzy unknown status", theme.ColorWhite},
 	}
-}
-
-func TestStatusNameStyle_YellowForProgress(t *testing.T) {
-	t.Parallel()
-	style := statusNameStyle("in progress")
-	rendered := style.Render("in progress")
-	if rendered == "" {
-		t.Error("statusNameStyle('in progress') should return non-empty style")
-	}
-}
-
-func TestStatusNameStyle_CyanForTodo(t *testing.T) {
-	t.Parallel()
-	style := statusNameStyle("todo")
-	rendered := style.Render("todo")
-	if rendered == "" {
-		t.Error("statusNameStyle('todo') should return non-empty style")
-	}
-}
-
-func TestStatusNameStyle_DefaultForUnknown(t *testing.T) {
-	t.Parallel()
-	style := statusNameStyle("xyzzy unknown status")
-	rendered := style.Render("xyzzy")
-	if rendered == "" {
-		t.Error("statusNameStyle(unknown) should return non-empty style")
+	for _, tt := range tests {
+		t.Run(tt.statusName, func(t *testing.T) {
+			t.Parallel()
+			testkit.AssertEqual(t, "foreground", statusNameStyle(tt.statusName).GetForeground(), tt.expectedColor)
+		})
 	}
 }
 

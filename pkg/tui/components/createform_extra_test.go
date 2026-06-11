@@ -48,8 +48,7 @@ func TestCreateForm_RenderSummaryPlainNotFocused(t *testing.T) {
 	form.SetSize(120, 40)
 	form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
 	form.Intercept(tea.KeyMsg{Type: tea.KeyTab})
-	bg := strings.Repeat(strings.Repeat(" ", 120)+"\n", 39)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(120, 40)
 	out := form.Render(bg, 120, 40)
 	plain := stripANSI(out)
 	if !strings.Contains(plain, testSummaryText) {
@@ -66,20 +65,22 @@ func TestCreateForm_SetFieldValue_SummaryField(t *testing.T) {
 	testkit.AssertEqual(t, "summary text updated", string(form.summaryText), "new summary")
 }
 
-func TestCreateForm_InterceptMouseClickOnFields(t *testing.T) {
+func TestCreateForm_InterceptMouseClickOnSummaryPanel(t *testing.T) {
 	t.Parallel()
 	form := NewCreateForm(nil)
 	form.SetSize(120, 40)
 	form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
+	form.Intercept(tea.KeyMsg{Type: tea.KeyTab})
+	testkit.AssertEqual(t, "focus is on description before click", form.FocusedPanel(), CreatePanelDescription)
 	formW := min(max(120*6/10, 40), 120-2)
 	formX := (120 - formW) / 2
 	form.Intercept(tea.MouseMsg{
 		Button: tea.MouseButtonLeft,
 		Action: tea.MouseActionPress,
 		X:      formX + 5,
-		Y:      30,
+		Y:      16,
 	})
-	testkit.AssertEqual(t, "click handled", true, true)
+	testkit.AssertEqual(t, "click on summary row switches focus to summary", form.FocusedPanel(), CreatePanelSummary)
 }
 
 func TestCreateForm_EditCurrentField_EmptyFiltered(t *testing.T) {

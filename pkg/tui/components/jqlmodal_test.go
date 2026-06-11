@@ -384,8 +384,7 @@ func TestJQLModal_RenderDrawsOnBackground(t *testing.T) {
 	m := NewJQLModal()
 	m.SetSize(80, 24)
 	m.Show("q", nil)
-	bg := strings.Repeat(strings.Repeat(" ", 80)+"\n", 23)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(80, 24)
 	out := m.Render(bg, 80, 24)
 	if !strings.Contains(stripANSI(out), "JQL Query") {
 		t.Errorf("expected modal content in render, got %q", stripANSI(out))

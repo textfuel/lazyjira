@@ -270,8 +270,8 @@ func TestResolvedCustomCommand_ShouldSuspend(t *testing.T) {
 		want    bool
 	}{
 		{"nil defaults to true", nil, true},
-		{"explicit true", ptr(true), true},
-		{"explicit false", ptr(false), false},
+		{"explicit true", pointerTo(true), true},
+		{"explicit false", pointerTo(false), false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

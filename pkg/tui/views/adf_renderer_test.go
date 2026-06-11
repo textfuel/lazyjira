@@ -10,9 +10,6 @@ var ansiRE = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func stripANSI(s string) string { return ansiRE.ReplaceAllString(s, "") }
 
-// miniADF is a small but representative ADF document covering a paragraph
-// with a mark, a heading, and a code block. Both renderers must produce
-// non-empty output for it.
 func miniADF() map[string]any {
 	return map[string]any{
 		"type":    "doc",

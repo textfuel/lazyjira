@@ -185,35 +185,15 @@ func TestOpaqueMarker_MarshalError(t *testing.T) {
 func TestMarkdownToADF_Branches(t *testing.T) {
 	t.Parallel()
 
-	contentOf := func(t *testing.T, md string) []any {
-		t.Helper()
-		doc, ok := markdownToADF(md).(map[string]any)
-		if !ok {
-			t.Fatal("markdownToADF should return a map")
-		}
-		blocks, _ := doc["content"].([]any)
-		return blocks
-	}
-
-	blockType := func(t *testing.T, block any) string {
-		t.Helper()
-		m, ok := block.(map[string]any)
-		if !ok {
-			t.Fatalf("block is %T, want map", block)
-		}
-		typ, _ := m["type"].(string)
-		return typ
-	}
-
 	t.Run("blank line separates paragraphs", func(t *testing.T) {
 		t.Parallel()
-		blocks := contentOf(t, "first\n\nsecond")
+		blocks := mdBlocks(t, "first\n\nsecond")
 		testkit.AssertEqual(t, "block count", len(blocks), 2)
 	})
 
 	t.Run("table followed by paragraph", func(t *testing.T) {
 		t.Parallel()
-		blocks := contentOf(t, "| a | b |\n| --- | --- |\n| c | d |\ntrailing text")
+		blocks := mdBlocks(t, "| a | b |\n| --- | --- |\n| c | d |\ntrailing text")
 		testkit.AssertEqual(t, "block count", len(blocks), 2)
 		testkit.AssertEqual(t, "first is table", blockType(t, blocks[0]), adfTable)
 		testkit.AssertEqual(t, "second is paragraph", blockType(t, blocks[1]), adfParagraph)
@@ -221,7 +201,7 @@ func TestMarkdownToADF_Branches(t *testing.T) {
 
 	t.Run("paragraph stops at heading", func(t *testing.T) {
 		t.Parallel()
-		blocks := contentOf(t, "para text\n# Heading")
+		blocks := mdBlocks(t, "para text\n# Heading")
 		testkit.AssertEqual(t, "block count", len(blocks), 2)
 		testkit.AssertEqual(t, "first is paragraph", blockType(t, blocks[0]), adfParagraph)
 		testkit.AssertEqual(t, "second is heading", blockType(t, blocks[1]), adfHeading)
@@ -229,7 +209,7 @@ func TestMarkdownToADF_Branches(t *testing.T) {
 
 	t.Run("opaque marker without json falls through to paragraph", func(t *testing.T) {
 		t.Parallel()
-		blocks := contentOf(t, "<!-- adf:rule -->")
+		blocks := mdBlocks(t, "<!-- adf:rule -->")
 		testkit.AssertEqual(t, "block count", len(blocks), 1)
 		testkit.AssertEqual(t, "fallback paragraph", blockType(t, blocks[0]), adfParagraph)
 	})

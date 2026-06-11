@@ -8,9 +8,6 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
-// TestPreviewRequestMsg_SetsPreviewKeyAndFetches verifies that receiving
-// PreviewRequestMsg sets a.previewKey and returns a non-nil Cmd that calls
-// GetIssue with the given key.
 func TestPreviewRequestMsg_SetsPreviewKeyAndFetches(t *testing.T) {
 	t.Parallel()
 	subKey := subKey1
@@ -18,18 +15,15 @@ func TestPreviewRequestMsg_SetsPreviewKeyAndFetches(t *testing.T) {
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: subKey, Summary: "sub issue"})
 
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 
-	_, _ = a.Update(views.PreviewRequestMsg{Key: subKey})
+	_, _ = app.Update(views.PreviewRequestMsg{Key: subKey})
 
-	if got := a.previewKey; got != subKey {
+	if got := app.previewKey; got != subKey {
 		t.Errorf("previewKey = %q, want %q", got, subKey)
 	}
 }
 
-// TestPreviewRequestMsg_CmdEventuallyCallsGetIssue verifies that after the
-// debounce tick fires (simulated via previewDebounceMsg), a GetIssue call is
-// made for the correct key.
 func TestPreviewRequestMsg_CmdEventuallyCallsGetIssue(t *testing.T) {
 	t.Parallel()
 	subKey := subKey1
@@ -37,22 +31,19 @@ func TestPreviewRequestMsg_CmdEventuallyCallsGetIssue(t *testing.T) {
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: subKey, Summary: "sub issue"})
 
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 
-	_, tickCmd := a.Update(views.PreviewRequestMsg{Key: subKey})
+	_, tickCmd := app.Update(views.PreviewRequestMsg{Key: subKey})
 	if tickCmd == nil {
 		t.Fatal("expected non-nil tea.Cmd from PreviewRequestMsg handler, got nil")
 	}
 
-	// The tick cmd returns a previewDebounceMsg when fired. We simulate it
-	// deterministically by dispatching the debounce message directly, which
-	// avoids waiting for the real 150 ms timer.
-	_, fetchCmd := a.Update(previewDebounceMsg{key: subKey, epoch: a.previewEpoch})
+	_, fetchCmd := app.Update(previewDebounceMsg{key: subKey, epoch: app.previewEpoch})
 	if fetchCmd == nil {
 		t.Fatal("expected fetch cmd from debounce tick, got nil")
 	}
 
-	fetchCmd() // triggers GetIssue on the fake
+	fetchCmd()
 
 	if len(fake.GetIssueCalls) != 1 {
 		t.Fatalf("expected 1 GetIssue call, got %d: %+v", len(fake.GetIssueCalls), fake.GetIssueCalls)

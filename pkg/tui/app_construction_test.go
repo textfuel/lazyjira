@@ -32,8 +32,8 @@ func fullConfig() *config.Config {
 func TestNewAppWithAuth_FullConfig(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	var captured func(jira.RequestLog)
-	fake.SetOnRequestFunc = func(fn func(jira.RequestLog)) { captured = fn }
+	var capturedRequestLogCallback func(jira.RequestLog)
+	fake.SetOnRequestFunc = func(fn func(jira.RequestLog)) { capturedRequestLogCallback = fn }
 	fake.SetCustomFieldsFunc = func([]string) {}
 
 	app := NewAppWithAuth(fullConfig(), fake, AuthSaved)
@@ -47,13 +47,13 @@ func TestNewAppWithAuth_FullConfig(t *testing.T) {
 	if _, ok := app.converter.(AdfConvConverter); !ok {
 		t.Errorf("converter = %T, want AdfConvConverter", app.converter)
 	}
-	if captured == nil {
+	if capturedRequestLogCallback == nil {
 		t.Fatal("SetOnRequest callback was not registered")
 	}
 	requestLog := jira.RequestLog{Method: "GET", Path: "/x", Status: 200, Elapsed: time.Millisecond}
-	captured(requestLog)
+	capturedRequestLogCallback(requestLog)
 	*app.logFlag = true
-	captured(requestLog)
+	capturedRequestLogCallback(requestLog)
 }
 
 func TestNewAppWithAuth_WarnsWhenQuitShadowedEverywhere(t *testing.T) {

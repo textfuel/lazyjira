@@ -64,83 +64,100 @@ func TestHandleDetailScroll_UnknownKey(t *testing.T) {
 	}
 }
 
-func TestHandleHelpKeys_Quit(t *testing.T) {
+func TestHandleHelpKeys(t *testing.T) {
 	t.Parallel()
-	app := helpApp(t)
 
-	app.handleHelpKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
-
-	if app.showHelp {
-		t.Error("q should close help overlay")
+	testCases := []struct {
+		name         string
+		key          tea.KeyMsg
+		initialState func(app *App)
+		assert       func(t *testing.T, app *App)
+	}{
+		{
+			name: "q closes help overlay",
+			key:  tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.showHelp {
+					t.Error("q should close help overlay")
+				}
+			},
+		},
+		{
+			name: "esc closes help overlay",
+			key:  tea.KeyMsg{Type: tea.KeyEsc},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.showHelp {
+					t.Error("esc should close help overlay")
+				}
+			},
+		},
+		{
+			name: "slash enters search mode",
+			key:  tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if !app.helpSearching {
+					t.Error("/ should enter help search mode")
+				}
+			},
+		},
+		{
+			name:         "j navigates down",
+			key:          tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+			initialState: func(app *App) { app.helpCursor = 0 },
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.helpCursor != 1 {
+					t.Errorf("helpCursor = %d, want 1 after navigate down", app.helpCursor)
+				}
+			},
+		},
+		{
+			name:         "k navigates up",
+			key:          tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
+			initialState: func(app *App) { app.helpCursor = 3 },
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.helpCursor != 2 {
+					t.Errorf("helpCursor = %d, want 2 after navigate up", app.helpCursor)
+				}
+			},
+		},
+		{
+			name:         "g jumps to top",
+			key:          tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}},
+			initialState: func(app *App) { app.helpCursor = 10 },
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				testkit.AssertEqual(t, "helpCursor after top", app.helpCursor, 0)
+			},
+		},
+		{
+			name:         "G jumps to bottom",
+			key:          tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}},
+			initialState: func(app *App) { app.helpCursor = 0 },
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				bindings := app.ContextBindings()
+				if app.helpCursor != len(bindings)-1 {
+					t.Errorf("helpCursor = %d, want %d after navigate to bottom", app.helpCursor, len(bindings)-1)
+				}
+			},
+		},
 	}
-}
 
-func TestHandleHelpKeys_EscClosesHelp(t *testing.T) {
-	t.Parallel()
-	app := helpApp(t)
-
-	app.handleHelpKeys(tea.KeyMsg{Type: tea.KeyEsc})
-
-	if app.showHelp {
-		t.Error("esc should close help overlay")
-	}
-}
-
-func TestHandleHelpKeys_SlashEntersSearch(t *testing.T) {
-	t.Parallel()
-	app := helpApp(t)
-
-	app.handleHelpKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
-
-	if !app.helpSearching {
-		t.Error("/ should enter help search mode")
-	}
-}
-
-func TestHandleHelpKeys_NavigatesDown(t *testing.T) {
-	t.Parallel()
-	app := helpApp(t)
-	app.helpCursor = 0
-
-	app.handleHelpKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
-
-	if app.helpCursor != 1 {
-		t.Errorf("helpCursor = %d, want 1 after navigate down", app.helpCursor)
-	}
-}
-
-func TestHandleHelpKeys_NavigatesUp(t *testing.T) {
-	t.Parallel()
-	app := helpApp(t)
-	app.helpCursor = 3
-
-	app.handleHelpKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
-
-	if app.helpCursor != 2 {
-		t.Errorf("helpCursor = %d, want 2 after navigate up", app.helpCursor)
-	}
-}
-
-func TestHandleHelpKeys_NavigatesToTop(t *testing.T) {
-	t.Parallel()
-	app := helpApp(t)
-	app.helpCursor = 10
-
-	app.handleHelpKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'g'}})
-
-	testkit.AssertEqual(t, "helpCursor after top", app.helpCursor, 0)
-}
-
-func TestHandleHelpKeys_NavigatesToBottom(t *testing.T) {
-	t.Parallel()
-	app := helpApp(t)
-	app.helpCursor = 0
-
-	app.handleHelpKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
-
-	bindings := app.ContextBindings()
-	if app.helpCursor != len(bindings)-1 {
-		t.Errorf("helpCursor = %d, want %d after navigate to bottom", app.helpCursor, len(bindings)-1)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			app := helpApp(t)
+			if testCase.initialState != nil {
+				testCase.initialState(app)
+			}
+			app.handleHelpKeys(testCase.key)
+			testCase.assert(t, app)
+		})
 	}
 }
 
@@ -168,9 +185,9 @@ func TestFilteredHelpBindings_FilterReduces(t *testing.T) {
 	if len(filtered) >= len(all) {
 		t.Errorf("filter should reduce bindings: filtered=%d, all=%d", len(filtered), len(all))
 	}
-	for _, b := range filtered {
-		if b.Description != string(ActQuit) && b.Key != "q" && b.Key != "ctrl+c" {
-			t.Errorf("unexpected binding %q/%q after filter=quit", b.Key, b.Description)
+	for _, binding := range filtered {
+		if binding.Description != string(ActQuit) && binding.Key != "q" && binding.Key != "ctrl+c" {
+			t.Errorf("unexpected binding %q/%q after filter=quit", binding.Key, binding.Description)
 		}
 	}
 }
@@ -225,6 +242,10 @@ func TestHelpConfirmSearch_RestoresCursorToMatchedItem(t *testing.T) {
 	app.helpFilter = string(ActQuit)
 
 	filtered := app.filteredHelpBindings()
+	if len(filtered) == 0 {
+		t.Fatal("expected at least one binding matching quit filter")
+	}
+	matchedBinding := filtered[0]
 	app.helpCursor = 0
 
 	app.helpConfirmSearch()
@@ -235,7 +256,19 @@ func TestHelpConfirmSearch_RestoresCursorToMatchedItem(t *testing.T) {
 	if app.helpFilter != "" {
 		t.Error("filter should be cleared after confirm")
 	}
-	if len(filtered) > 0 && app.helpCursor < 0 {
-		t.Error("cursor should be valid after confirm")
+
+	allBindings := app.ContextBindings()
+	wantCursor := -1
+	for i, binding := range allBindings {
+		if binding.Key == matchedBinding.Key && binding.Description == matchedBinding.Description {
+			wantCursor = i
+			break
+		}
+	}
+	if wantCursor < 0 {
+		t.Fatal("matched binding not found in full binding list")
+	}
+	if app.helpCursor != wantCursor {
+		t.Errorf("helpCursor = %d, want %d (position of quit binding)", app.helpCursor, wantCursor)
 	}
 }

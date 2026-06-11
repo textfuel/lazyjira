@@ -2,21 +2,22 @@ package tui
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
-	"github.com/textfuel/lazyjira/v2/pkg/git"
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 )
 
 func initGitRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	for _, args := range [][]string{
+	gitArgs := [][]string{
 		{"init", dir},
-		{"--git-dir=" + filepath.Join(dir, ".git"), "--work-tree=" + dir, "config", "user.email", "test@test.com"},
-		{"--git-dir=" + filepath.Join(dir, ".git"), "--work-tree=" + dir, "config", "user.name", "Test"},
-	} {
+		{"-C", dir, "config", "user.email", "test@test.com"},
+		{"-C", dir, "config", "user.name", "Test"},
+	}
+	for _, args := range gitArgs {
 		if err := runGit(t, args); err != nil {
 			t.Fatalf("git %v: %v", args, err)
 		}
@@ -26,8 +27,8 @@ func initGitRepo(t *testing.T) string {
 		t.Fatalf("write file: %v", err)
 	}
 	for _, args := range [][]string{
-		{"--git-dir=" + filepath.Join(dir, ".git"), "--work-tree=" + dir, "add", "."},
-		{"--git-dir=" + filepath.Join(dir, ".git"), "--work-tree=" + dir, "commit", "-m", "init"},
+		{"-C", dir, "add", "."},
+		{"-C", dir, "commit", "-m", "init"},
 	} {
 		if err := runGit(t, args); err != nil {
 			t.Fatalf("git %v: %v", args, err)
@@ -38,86 +39,87 @@ func initGitRepo(t *testing.T) string {
 
 func runGit(t *testing.T, args []string) error {
 	t.Helper()
-	_, err := git.CurrentBranch(t.TempDir())
-	_ = err
-	return nil
+	cmd := exec.CommandContext(t.Context(), "git", args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Logf("git %v output: %s", args, out)
+	}
+	return err
 }
 
 func TestGitCreateBranch_ReturnsMsg(t *testing.T) {
 	t.Parallel()
 	repoDir := initGitRepo(t)
-	_ = repoDir
 
 	cmd := gitCreateBranch(repoDir, "test-branch")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}
 	msg := cmd()
-	switch m := msg.(type) {
-	case gitBranchCreatedMsg:
-		testkit.AssertEqual(t, "branch name", m.name, "test-branch")
-	case gitErrorMsg:
-		t.Logf("git create branch error (expected in CI without git): %v", m.err)
-	default:
-		t.Errorf("unexpected message type %T", msg)
+	created, ok := msg.(gitBranchCreatedMsg)
+	if !ok {
+		t.Fatalf("expected gitBranchCreatedMsg, got %T: %v", msg, msg)
 	}
+	testkit.AssertEqual(t, "branch name", created.name, "test-branch")
 }
 
 func TestGitCheckoutBranch_ReturnsMsg(t *testing.T) {
 	t.Parallel()
 	repoDir := initGitRepo(t)
-	_ = repoDir
 
-	cmd := gitCheckoutBranch(repoDir, "nonexistent-branch")
+	if err := runGit(t, []string{"-C", repoDir, "branch", "existing-branch"}); err != nil {
+		t.Fatalf("create branch: %v", err)
+	}
+
+	cmd := gitCheckoutBranch(repoDir, "existing-branch")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}
 	msg := cmd()
-	switch msg.(type) {
-	case gitCheckoutDoneMsg:
-	case gitErrorMsg:
-		t.Logf("checkout error (expected for nonexistent branch): ok")
-	default:
-		t.Errorf("unexpected message type %T", msg)
+	checked, ok := msg.(gitCheckoutDoneMsg)
+	if !ok {
+		t.Fatalf("expected gitCheckoutDoneMsg, got %T: %v", msg, msg)
 	}
+	testkit.AssertEqual(t, "branch name", checked.name, "existing-branch")
 }
 
 func TestGitCheckoutTracking_StripsBranchPrefix(t *testing.T) {
 	t.Parallel()
-	repoDir := initGitRepo(t)
-	_ = repoDir
+	remotePath := initGitRepo(t)
+	if err := runGit(t, []string{"-C", remotePath, "branch", "tracked-feature"}); err != nil {
+		t.Fatalf("create remote branch: %v", err)
+	}
 
-	cmd := gitCheckoutTracking(repoDir, "origin/feature/test-xyz")
+	repoDir := initGitRepo(t)
+	if err := runGit(t, []string{"-C", repoDir, "remote", "add", "origin", remotePath}); err != nil {
+		t.Fatalf("add remote: %v", err)
+	}
+	if err := runGit(t, []string{"-C", repoDir, "fetch", "origin"}); err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+
+	cmd := gitCheckoutTracking(repoDir, "origin/tracked-feature")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}
 	msg := cmd()
-	switch m := msg.(type) {
-	case gitCheckoutDoneMsg:
-		testkit.AssertEqual(t, "stripped name", m.name, "feature/test-xyz")
-	case gitErrorMsg:
-		t.Logf("checkout tracking error (expected without remote): ok %v", m.err)
-	default:
-		t.Errorf("unexpected message type %T", msg)
+	checked, ok := msg.(gitCheckoutDoneMsg)
+	if !ok {
+		t.Fatalf("expected gitCheckoutDoneMsg, got %T: %v", msg, msg)
 	}
+	testkit.AssertEqual(t, "stripped name", checked.name, "tracked-feature")
 }
 
-func TestGitCheckoutTracking_NoSlashKeepsName(t *testing.T) {
+func TestGitCheckoutTracking_NoSlashReturnsError(t *testing.T) {
 	t.Parallel()
 	repoDir := initGitRepo(t)
-	_ = repoDir
 
 	cmd := gitCheckoutTracking(repoDir, "some-branch-no-slash")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}
 	msg := cmd()
-	switch m := msg.(type) {
-	case gitCheckoutDoneMsg:
-		testkit.AssertEqual(t, "name without slash", m.name, "some-branch-no-slash")
-	case gitErrorMsg:
-		t.Logf("checkout error (expected without remote): ok %v", m.err)
-	default:
-		t.Errorf("unexpected message type %T", msg)
+	if _, ok := msg.(gitErrorMsg); !ok {
+		t.Errorf("expected gitErrorMsg for no-slash remote name, got %T", msg)
 	}
 }

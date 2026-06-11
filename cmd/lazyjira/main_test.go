@@ -283,12 +283,15 @@ func TestRunSetupWizard_ConnectionFailureErrors(t *testing.T) {
 func TestDispatch_VersionPrints(t *testing.T) {
 	t.Parallel()
 	for _, arg := range []string{"--version", "version"} {
-		var stdout, stderr strings.Builder
-		code := dispatch([]string{arg}, &stdout, &stderr)
-		assertEqual(t, "exit code", code, 0)
-		if !strings.Contains(stdout.String(), "lazyjira ") {
-			t.Errorf("version output = %q, want lazyjira prefix", stdout.String())
-		}
+		t.Run(arg, func(t *testing.T) {
+			t.Parallel()
+			var stdout, stderr strings.Builder
+			code := dispatch([]string{arg}, &stdout, &stderr)
+			assertEqual(t, "exit code", code, 0)
+			if !strings.Contains(stdout.String(), "lazyjira ") {
+				t.Errorf("version output = %q, want lazyjira prefix", stdout.String())
+			}
+		})
 	}
 }
 

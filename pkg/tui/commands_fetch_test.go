@@ -18,7 +18,7 @@ func assertErrorMsg(t *testing.T, msg tea.Msg) {
 	}
 }
 
-func failingClient(t *testing.T) *jiratest.FakeClient {
+func newFakeClient(t *testing.T) *jiratest.FakeClient {
 	t.Helper()
 	return &jiratest.FakeClient{T: t}
 }
@@ -46,7 +46,7 @@ func TestFetchIssuesByJQL(t *testing.T) {
 
 	t.Run("error returns errorMsg", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.SearchIssuesFunc = func(_ context.Context, _ string, _, _ int) (*jira.SearchResult, error) {
 			return nil, errors.New("boom")
 		}
@@ -77,7 +77,7 @@ func TestFetchJQLSearch(t *testing.T) {
 
 	t.Run("error returns jqlSearchErrorMsg", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.SearchIssuesFunc = func(_ context.Context, _ string, _, _ int) (*jira.SearchResult, error) {
 			return nil, errors.New("bad jql")
 		}
@@ -121,7 +121,7 @@ func TestFetchJQLAutocompleteData(t *testing.T) {
 
 	t.Run("error is swallowed to nil", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.GetJQLAutocompleteDataFunc = func(context.Context) ([]jira.AutocompleteField, error) {
 			return nil, errors.New("nope")
 		}
@@ -164,7 +164,7 @@ func TestUpdateIssueField(t *testing.T) {
 
 	t.Run("error returns errorMsg", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.UpdateIssueFunc = func(_ context.Context, _ string, _ map[string]any) error { return errors.New("x") }
 		assertErrorMsg(t, updateIssueField(fake, testKey, testSummary, "new")())
 	})
@@ -224,7 +224,7 @@ func TestFetchCreateMeta(t *testing.T) {
 
 	t.Run("error returns createErrorMsg", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.GetCreateMetaFunc = func(_ context.Context, _, _ string) ([]jira.CreateMetaField, error) {
 			return nil, errors.New("x")
 		}
@@ -298,7 +298,7 @@ func TestCreateIssue(t *testing.T) {
 
 	t.Run("error returns createErrorMsg", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.CreateIssueFunc = func(_ context.Context, _ map[string]any) (*jira.Issue, error) {
 			return nil, errors.New("x")
 		}
@@ -392,7 +392,7 @@ func TestFetchBoards(t *testing.T) {
 
 	t.Run("error is silent nil", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.GetBoardsFunc = func(context.Context) ([]jira.Board, error) { return nil, errors.New("no agile") }
 		if msg := fetchBoards(fake)(); msg != nil {
 			t.Errorf("msg = %T, want nil", msg)
@@ -418,7 +418,7 @@ func TestFetchSprints(t *testing.T) {
 
 	t.Run("error returns empty sprints not errorMsg", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.GetSprintsFunc = func(_ context.Context, _ int) ([]jira.Sprint, error) {
 			return nil, errors.New("unsupported")
 		}
@@ -479,7 +479,7 @@ func TestFetchIssueDetail(t *testing.T) {
 
 	t.Run("get issue error returns errorMsg", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.GetIssueFunc = func(_ context.Context, _ string) (*jira.Issue, error) {
 			return nil, errors.New("404")
 		}
@@ -510,7 +510,7 @@ func TestBatchPrefetch(t *testing.T) {
 
 	t.Run("error is silent nil", func(t *testing.T) {
 		t.Parallel()
-		fake := failingClient(t)
+		fake := newFakeClient(t)
 		fake.SearchIssuesFunc = func(_ context.Context, _ string, _, _ int) (*jira.SearchResult, error) {
 			return nil, errors.New("x")
 		}
@@ -522,7 +522,7 @@ func TestBatchPrefetch(t *testing.T) {
 
 func TestPrefetchIssue_NilOnFailure(t *testing.T) {
 	t.Parallel()
-	fake := failingClient(t)
+	fake := newFakeClient(t)
 	fake.GetIssueFunc = func(_ context.Context, _ string) (*jira.Issue, error) {
 		return nil, errors.New("gone")
 	}

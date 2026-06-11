@@ -147,9 +147,6 @@ func TestEditValueForField_ParentNilReturnsEmpty(t *testing.T) {
 
 func TestEditValueForField_FallbackToDisplay(t *testing.T) {
 	t.Parallel()
-	// Fields without an editValue callback (e.g. a hypothetical text custom
-	// field or any built-in that uses display = edit) fall through to the
-	// generic display-string filter, which only strips None/Unknown sentinels.
 	issue := &jira.Issue{Key: "PROJ-2"}
 	if got := EditValueForField(issue, "summary", "current summary"); got != "current summary" {
 		t.Errorf("fallback display: got %q, want %q", got, "current summary")
@@ -161,7 +158,6 @@ func TestEditValueForField_FallbackToDisplay(t *testing.T) {
 
 func TestParentField_KeyOnlyDisplay(t *testing.T) {
 	t.Parallel()
-	// Optimistic update may leave Summary empty until re-fetch completes.
 	issue := &jira.Issue{
 		Key:    "PROJ-2",
 		Parent: &jira.Issue{Key: "PROJ-1"},
@@ -184,7 +180,6 @@ func TestParentField_LongSummaryTruncated(t *testing.T) {
 		Parent: &jira.Issue{Key: "PROJ-1", Summary: longSummary},
 	}
 
-	// Render with a narrow width so the value cannot fit.
 	styled, plain := renderInfoRowPairs(issue, nil, nil, 30)
 	_ = styled
 

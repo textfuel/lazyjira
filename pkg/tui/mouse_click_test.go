@@ -5,9 +5,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/textfuel/lazyjira/v2/pkg/config"
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/jira/jiratest"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
 func mouseApp(t *testing.T) *App {
@@ -23,6 +25,7 @@ func TestHandleMouse_WheelUpScrollsUp(t *testing.T) {
 	app.side = sideLeft
 	app.leftFocus = focusIssues
 	app.issuesList.SetIssues([]jira.Issue{{Key: testKey}, {Key: mainKey}, {Key: subKey1}})
+	app.issuesList.Cursor = 1
 
 	_, _ = app.handleMouse(tea.MouseMsg{
 		Button: tea.MouseButtonWheelUp,
@@ -30,6 +33,10 @@ func TestHandleMouse_WheelUpScrollsUp(t *testing.T) {
 		X:      5,
 		Y:      3,
 	})
+
+	if app.issuesList.Cursor != 0 {
+		t.Errorf("cursor = %d, want 0 after wheel up", app.issuesList.Cursor)
+	}
 }
 
 func TestHandleMouse_WheelDownScrollsDown(t *testing.T) {
@@ -45,6 +52,10 @@ func TestHandleMouse_WheelDownScrollsDown(t *testing.T) {
 		X:      5,
 		Y:      3,
 	})
+
+	if app.issuesList.Cursor != 1 {
+		t.Errorf("cursor = %d, want 1 after wheel down", app.issuesList.Cursor)
+	}
 }
 
 func TestHandleMouse_LeftClickFocusesPanel(t *testing.T) {
@@ -99,11 +110,16 @@ func TestMouseClick_IssuesTitleBarTabClick(t *testing.T) {
 	app.keymap = DefaultKeymap()
 	app.client = fake
 	app.projectKey = testProject
+	app.issuesList.SetTabs([]config.IssueTabConfig{
+		{Name: "All", JQL: "project = X"},
+		{Name: "Mine", JQL: "assignee = currentUser()"},
+	})
 
-	_, _ = app.mouseClick(panelIssues, 0, 5)
+	_, _ = app.mouseClick(panelIssues, 0, 15)
 
 	testkit.AssertEqual(t, "side", app.side, sideLeft)
 	testkit.AssertEqual(t, "leftFocus", app.leftFocus, focusIssues)
+	testkit.AssertEqual(t, "active tab index", app.issuesList.GetTabIndex(), 1)
 }
 
 func TestMouseClick_InfoFocusesInfo(t *testing.T) {
@@ -120,11 +136,13 @@ func TestMouseClick_InfoFocusesInfo(t *testing.T) {
 func TestMouseClick_InfoTitleBarClicksTab(t *testing.T) {
 	t.Parallel()
 	app := mouseApp(t)
+	app.infoPanel.SetIssue(&jira.Issue{Key: testKey})
 
-	_, _ = app.mouseClick(panelInfo, 0, 5)
+	_, _ = app.mouseClick(panelInfo, 0, 12)
 
 	testkit.AssertEqual(t, "side", app.side, sideLeft)
 	testkit.AssertEqual(t, "leftFocus", app.leftFocus, focusInfo)
+	testkit.AssertEqual(t, "active info tab", app.infoPanel.ActiveTab(), views.InfoTabLinks)
 }
 
 func TestMouseClick_ProjectsFocusesProjects(t *testing.T) {
@@ -152,8 +170,15 @@ func TestMouseClick_DetailTitleBarClicksTab(t *testing.T) {
 	t.Parallel()
 	app := mouseApp(t)
 	app.side = sideLeft
+	app.detailView.SetIssue(&jira.Issue{Key: testKey, Comments: []jira.Comment{{ID: "1", Body: "hi"}}})
+	app.layoutPanels()
 
-	_, _ = app.mouseClick(panelDetail, 0, 50)
+	separatorWidth := 3
+	tabsStart := len("[0] "+testKey) + separatorWidth
+	commentsTabX := app.panelSideW + tabsStart + len("Body") + separatorWidth
+
+	_, _ = app.mouseClick(panelDetail, 0, commentsTabX)
 
 	testkit.AssertEqual(t, "side", app.side, sideRight)
+	testkit.AssertEqual(t, "active detail tab", app.detailView.ActiveTab(), views.TabComments)
 }

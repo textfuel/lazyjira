@@ -3,8 +3,8 @@ package tui
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
-	"text/template"
 
 	"github.com/textfuel/lazyjira/v2/pkg/config"
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
@@ -65,10 +65,10 @@ func TestScopeNoun_AllBranches(t *testing.T) {
 		{config.ScopeComment, "selection"},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.want, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.want, func(t *testing.T) {
 			t.Parallel()
-			testkit.AssertEqual(t, "noun", scopeNoun(tc.scope), tc.want)
+			testkit.AssertEqual(t, "noun", scopeNoun(testCase.scope), testCase.want)
 		})
 	}
 }
@@ -88,10 +88,10 @@ func TestLastNonEmptyLine_ReturnsLastLine(t *testing.T) {
 		{"multiple lines", "line1\nline2\nline3", "line3"},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			testkit.AssertEqual(t, "last line", lastNonEmptyLine(tc.input), tc.want)
+			testkit.AssertEqual(t, "last line", lastNonEmptyLine(testCase.input), testCase.want)
 		})
 	}
 }
@@ -99,7 +99,7 @@ func TestLastNonEmptyLine_ReturnsLastLine(t *testing.T) {
 func TestCustomCommandBindings_ReturnsMatchingContext(t *testing.T) {
 	t.Parallel()
 	app := newTestApp()
-	tmpl, _ := template.New("t").Parse("echo hello")
+	tmpl := parseTmpl(t, "echo hello")
 	app.customCmds = []config.ResolvedCustomCommand{
 		{
 			Key:      "y",
@@ -135,6 +135,10 @@ func TestHandleCustomCommandFinished_ErrorShowsInStatusPanel(t *testing.T) {
 		err:    errCommandFailed,
 		output: "something went wrong\ndetailed error",
 	})
+
+	if app.statusPanel.ErrorMessage() == "" {
+		t.Error("status panel should show error message after command failure")
+	}
 }
 
 func TestHandleCustomCommandFinished_SuccessWithOutput(t *testing.T) {
@@ -145,6 +149,10 @@ func TestHandleCustomCommandFinished_SuccessWithOutput(t *testing.T) {
 	_, _ = app.handleCustomCommandFinished(customCommandFinishedMsg{
 		output: "operation succeeded",
 	})
+
+	if app.statusPanel.ErrorMessage() != "" {
+		t.Errorf("status panel should not show error on success, got: %q", app.statusPanel.ErrorMessage())
+	}
 }
 
 func TestHandleCustomCommandFinished_RefreshFetchesIssue(t *testing.T) {
@@ -173,7 +181,7 @@ func TestExecuteCustomCommand_BackgroundCapture(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	app.ctx = ctx
-	tmpl, _ := template.New("t").Parse("echo test-output")
+	tmpl := parseTmpl(t, "echo test-output")
 	suspendFalse := false
 	rc := config.ResolvedCustomCommand{
 		Key:      "x",
@@ -196,5 +204,8 @@ func TestExecuteCustomCommand_BackgroundCapture(t *testing.T) {
 	}
 	if result.err != nil {
 		t.Errorf("unexpected error: %v", result.err)
+	}
+	if !strings.Contains(result.output, "test-output") {
+		t.Errorf("output = %q, want to contain test-output", result.output)
 	}
 }

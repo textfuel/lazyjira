@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
@@ -56,11 +57,16 @@ func TestHandleJQLSearchResult_AddsTabAndFocusesIssues(t *testing.T) {
 func TestHandleJQLSearchError_ShowsErrorInModal(t *testing.T) {
 	t.Parallel()
 	app := jqlApp(t)
+	app.jqlModal.Show("", nil)
 
 	_, _ = app.handleJQLSearchError(jqlSearchErrorMsg{err: "bad jql"})
 
-	if app.jqlModal.IsVisible() {
-		t.Error("modal should remain in its state, not newly shown as error-less")
+	if !app.jqlModal.IsVisible() {
+		t.Error("modal should remain visible after error")
+	}
+	app.jqlModal.SetSize(80, 24)
+	if view := app.jqlModal.View(); !strings.Contains(view, "bad jql") {
+		t.Errorf("modal view should contain error text, got: %q", view)
 	}
 }
 
@@ -80,9 +86,14 @@ func TestHandleJQLSuggestions_UpdatesWhenVisible(t *testing.T) {
 	t.Parallel()
 	app := jqlApp(t)
 	app.jqlModal.Show("", nil)
+	app.jqlModal.SetSize(80, 24)
 
 	suggestions := []jira.AutocompleteSuggestion{{Value: "open"}, {Value: "done"}}
 	_, _ = app.handleJQLSuggestions(jqlSuggestionsMsg{suggestions: suggestions})
+
+	if view := app.jqlModal.View(); !strings.Contains(view, "open") {
+		t.Errorf("modal view should contain suggestion text after update, got: %q", view)
+	}
 }
 
 func TestHandleJQLSuggestions_NoopWhenHidden(t *testing.T) {
@@ -100,9 +111,15 @@ func TestHandleJQLSuggestions_NoopWhenHidden(t *testing.T) {
 func TestHandleJQLInputChanged_FieldMode(t *testing.T) {
 	t.Parallel()
 	app := jqlApp(t)
+	app.jqlModal.Show("", nil)
+	app.jqlModal.SetSize(80, 24)
 	app.jqlFields = []jira.AutocompleteField{{Value: "summary"}}
 
 	_, _ = app.handleJQLInputChanged(components.JQLInputChangedMsg{Text: "sum", CursorPos: 3})
+
+	if view := app.jqlModal.View(); !strings.Contains(view, "summary") {
+		t.Errorf("modal view should contain suggestion after field-mode input change, got: %q", view)
+	}
 }
 
 func TestHandleJQLInputChanged_ValueMode(t *testing.T) {

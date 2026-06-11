@@ -62,8 +62,7 @@ func TestOverlayLines_DoesNotPanicOnEmptyBg(t *testing.T) {
 
 func TestCenterOverlay_PlacesPopupCentered(t *testing.T) {
 	t.Parallel()
-	bg := strings.Repeat(strings.Repeat(" ", 40)+"\n", 20)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(40, 20)
 	popup := "pop"
 	out := centerOverlay(bg, popup, 40, 20)
 	if !strings.Contains(out, "pop") {
@@ -73,8 +72,7 @@ func TestCenterOverlay_PlacesPopupCentered(t *testing.T) {
 
 func TestCenterOverlayWithHint_EmptyHintSkipsHintLine(t *testing.T) {
 	t.Parallel()
-	bg := strings.Repeat(strings.Repeat(" ", 40)+"\n", 20)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(40, 20)
 	popup := "pop"
 	out := centerOverlayWithHint(bg, popup, "", 40, 20)
 	testkit.AssertEqual(t, "contains popup", strings.Contains(out, "pop"), true)
@@ -82,8 +80,7 @@ func TestCenterOverlayWithHint_EmptyHintSkipsHintLine(t *testing.T) {
 
 func TestCenterOverlayWithHint_WithHint(t *testing.T) {
 	t.Parallel()
-	bg := strings.Repeat(strings.Repeat(" ", 40)+"\n", 20)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(40, 20)
 	out := centerOverlayWithHint(bg, "pop", "hint", 40, 20)
 	testkit.AssertEqual(t, "contains popup", strings.Contains(out, "pop"), true)
 	testkit.AssertEqual(t, "contains hint", strings.Contains(out, "hint"), true)

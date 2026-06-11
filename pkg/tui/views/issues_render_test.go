@@ -274,16 +274,14 @@ func TestIssuesList_RenderIssueRow_WithIcons(t *testing.T) {
 	if !strings.Contains(output, testKey) {
 		t.Errorf("View() with icons = %q, want key %s", output, testKey)
 	}
-}
-
-func TestIssuesList_RenderIssueRow_SelectedHighlighted(t *testing.T) {
-	t.Parallel()
-	list := makeFocusedIssuesList([]jira.Issue{
-		{Key: testKey, Summary: "selected issue"},
-	})
-	output := list.View()
-	if output == "" {
-		t.Error("expected non-empty View()")
+	if !strings.Contains(output, "○") {
+		t.Errorf("View() with icons = %q, want status icon ○", output)
+	}
+	if !strings.Contains(output, "!") {
+		t.Errorf("View() with icons = %q, want priority icon !", output)
+	}
+	if !strings.Contains(output, "S") {
+		t.Errorf("View() with icons = %q, want type icon S", output)
 	}
 }
 

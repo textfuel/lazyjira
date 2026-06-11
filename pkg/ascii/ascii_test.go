@@ -15,9 +15,6 @@ func TestConvert(t *testing.T) {
 		{"naïve", "naive"},
 		{"jalapeño", "jalapeno"},
 		{"keeps punctuation: a/b.c_d", "keeps punctuation: a/b.c_d"},
-		// Contract: Convert only strips non-ASCII runes and combining marks.
-		// ASCII punctuation survives by design — callers decide which chars
-		// to filter further.
 		{"a_b<c>d|e$f%g`h", "a_b<c>d|e$f%g`h"},
 	}
 	for _, tc := range cases {

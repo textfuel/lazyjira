@@ -68,13 +68,12 @@ func TestStatusPanel_SetError_ShowsInView(t *testing.T) {
 	}
 }
 
-func TestStatusPanel_SetFocused_ChangesView(t *testing.T) {
+func TestStatusPanel_SetFocused_ReturnsNonEmptyView(t *testing.T) {
 	t.Parallel()
 	panel := makeStatusPanel()
 	panel.SetSize(80, 10)
 	panel.SetFocused(true)
-	output := panel.View()
-	if output == "" {
+	if panel.View() == "" {
 		t.Error("expected non-empty View() when focused")
 	}
 }

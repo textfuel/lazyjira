@@ -66,7 +66,7 @@ func TestLogPanel_AddEntry_ShowsInView(t *testing.T) {
 	}
 }
 
-func TestLogPanel_AddEntry_ErrorStatusColored(t *testing.T) {
+func TestLogPanel_AddEntry_ErrorShowsStatus(t *testing.T) {
 	t.Parallel()
 	panel := NewLogPanel()
 	panel.SetSize(80, 10)

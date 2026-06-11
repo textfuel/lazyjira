@@ -12,27 +12,22 @@ import (
 const mainKey = "ABC-1"
 const subKey1 = "SUB-1"
 
-// newAppWithFake augments newTestApp() with a FakeClient, a non-nil logFlag,
-// an InfoPanel, a StatusPanel, and an empty issueCache — enough to flow a
-// message through App.Update without NPEs.
 func newAppWithFake(t *testing.T, fake *jiratest.FakeClient) *App {
 	t.Helper()
-	a := newTestApp()
-	a.client = fake
+	app := newTestApp()
+	app.client = fake
 	logFlag := false
-	a.logFlag = &logFlag
-	a.infoPanel = views.NewInfoPanel()
-	a.statusPanel = views.NewStatusPanel("", "", "")
-	a.logPanel = views.NewLogPanel()
-	a.issueCache = map[string]*jira.Issue{}
-	a.childrenCache = map[string][]jira.Issue{}
-	a.usersCache = map[string][]jira.User{}
-	a.createMetaCache = map[string][]jira.CreateMetaField{}
-	return a
+	app.logFlag = &logFlag
+	app.infoPanel = views.NewInfoPanel()
+	app.statusPanel = views.NewStatusPanel("", "", "")
+	app.logPanel = views.NewLogPanel()
+	app.issueCache = map[string]*jira.Issue{}
+	app.childrenCache = map[string][]jira.Issue{}
+	app.usersCache = map[string][]jira.User{}
+	app.createMetaCache = map[string][]jira.CreateMetaField{}
+	return app
 }
 
-// stubFullIssueFetch wires the three methods that fetchFullIssue calls.
-// Only GetIssue returns a real issue; Comments + Changelog are empty.
 func stubFullIssueFetch(fake *jiratest.FakeClient, issue *jira.Issue) {
 	fake.GetIssueFunc = func(_ context.Context, _ string) (*jira.Issue, error) {
 		return issue, nil
@@ -45,19 +40,16 @@ func stubFullIssueFetch(fake *jiratest.FakeClient, issue *jira.Issue) {
 	}
 }
 
-// TestActRefresh_FetchesPreviewedIssue documents the happy path: after the
-// usual navigation sets previewKey to the displayed issue, pressing refresh
-// re-fetches that issue.
 func TestActRefresh_FetchesPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: mainKey, Summary: "updated"})
 
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
-	a.previewKey = mainKey
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
+	app.previewKey = mainKey
 
-	_, cmd, handled := a.handleIssueAction(ActRefresh)
+	_, cmd, handled := app.handleIssueAction(ActRefresh)
 	if !handled {
 		t.Fatal("ActRefresh was not handled")
 	}
@@ -82,74 +74,59 @@ func TestActRefresh_FetchesPreviewedIssue(t *testing.T) {
 	}
 }
 
-// TestIssueSelectedMsg_UpdatesPreviewKey pins down the invariant that the
-// previewKey follows whatever issue the user has selected in the list.
 func TestIssueSelectedMsg_UpdatesPreviewKey(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 
-	_, _ = a.Update(views.IssueSelectedMsg{Issue: &jira.Issue{Key: mainKey}})
+	_, _ = app.Update(views.IssueSelectedMsg{Issue: &jira.Issue{Key: mainKey}})
 
-	if got := a.previewKey; got != mainKey {
+	if got := app.previewKey; got != mainKey {
 		t.Errorf("previewKey = %q, want %q", got, mainKey)
 	}
 }
 
-// TestPreviewSelectedIssue_UpdatesPreviewKey covers the helper that syncs the
-// preview to the current list selection (called on tab switches and after
-// issues load). It must keep previewKey aligned.
 func TestPreviewSelectedIssue_UpdatesPreviewKey(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: "XYZ-9"}})
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: "XYZ-9"}})
 
-	a.previewSelectedIssue()
+	app.previewSelectedIssue()
 
-	if got := a.previewKey; got != "XYZ-9" {
+	if got := app.previewKey; got != "XYZ-9" {
 		t.Errorf("previewKey = %q, want %q", got, "XYZ-9")
 	}
 }
 
-// TestHandleIssueDetailLoaded_RoutesByPreviewKey ensures a detail response for
-// the previewed sub-issue updates the DetailView (which follows previewKey)
-// but leaves the InfoPanel untouched (the InfoPanel belongs to the main list
-// issue and must keep its tab/cursor).
 func TestHandleIssueDetailLoaded_RoutesByPreviewKey(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	main := &jira.Issue{Key: mainKey, Summary: "main"}
-	a.issuesList.SetIssues([]jira.Issue{*main})
-	a.infoPanel.SetIssue(main)
-	a.previewKey = subKey1
+	app.issuesList.SetIssues([]jira.Issue{*main})
+	app.infoPanel.SetIssue(main)
+	app.previewKey = subKey1
 
-	_, _ = a.handleIssueDetailLoaded(issueDetailLoadedMsg{
+	_, _ = app.handleIssueDetailLoaded(issueDetailLoadedMsg{
 		issue: &jira.Issue{Key: subKey1, Summary: "fresh"},
 	})
 
-	if got := a.detailView.IssueKey(); got != subKey1 {
+	if got := app.detailView.IssueKey(); got != subKey1 {
 		t.Errorf("detailView.IssueKey() = %q, want %q (DetailView follows previewKey)", got, subKey1)
 	}
-	if got := a.infoPanel.IssueKey(); got != mainKey {
+	if got := app.infoPanel.IssueKey(); got != mainKey {
 		t.Errorf("infoPanel.IssueKey() = %q, want %q (InfoPanel stays on main issue)", got, mainKey)
 	}
 }
 
-// TestActRefresh_NoFetchWhenPreviewKeyEmpty pins the invariant that previewKey
-// is the single source of truth: with no preview active, refresh is a no-op
-// even if the list has a selection. This removes the implicit fallback to
-// the list cursor.
 func TestActRefresh_NoFetchWhenPreviewKeyEmpty(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	// No *Func set — any call would t.Fatalf.
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
-	// previewKey intentionally left empty.
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
 
-	_, cmd, handled := a.handleIssueAction(ActRefresh)
+	_, cmd, handled := app.handleIssueAction(ActRefresh)
 	if !handled {
 		t.Fatal("ActRefresh was not handled")
 	}
@@ -161,20 +138,16 @@ func TestActRefresh_NoFetchWhenPreviewKeyEmpty(t *testing.T) {
 	}
 }
 
-// TestActRefresh_UsesPreviewKey_WhenSet documents the desired behavior:
-// when a preview (e.g. a sub-issue selected in the info panel) is active,
-// the refresh action must re-fetch that preview's issue, not the main list
-// selection.
 func TestActRefresh_UsesPreviewKey_WhenSet(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: "ABC-2", Summary: "sub-item"})
 
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
-	a.previewKey = "ABC-2"
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
+	app.previewKey = "ABC-2"
 
-	_, cmd, handled := a.handleIssueAction(ActRefresh)
+	_, cmd, handled := app.handleIssueAction(ActRefresh)
 	if !handled {
 		t.Fatal("ActRefresh was not handled")
 	}
@@ -191,29 +164,23 @@ func TestActRefresh_UsesPreviewKey_WhenSet(t *testing.T) {
 	}
 }
 
-// TestActRefresh_InvalidatesCacheBeforeFetch ensures that ActRefresh removes the
-// existing cache entry for the previewed issue synchronously, before the fetch
-// cmd is dispatched. Any cache read between the keypress and the response must
-// see a miss, never stale data.
 func TestActRefresh_InvalidatesCacheBeforeFetch(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	stubFullIssueFetch(fake, &jira.Issue{Key: mainKey, Summary: "fresh"})
 
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
-	a.previewKey = mainKey
-	// Pre-populate the cache with a stale entry.
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
+	app.previewKey = mainKey
 	stale := &jira.Issue{Key: mainKey, Summary: "stale"}
-	a.issueCache[mainKey] = stale
+	app.issueCache[mainKey] = stale
 
-	_, _, handled := a.handleIssueAction(ActRefresh)
+	_, _, handled := app.handleIssueAction(ActRefresh)
 	if !handled {
 		t.Fatal("ActRefresh was not handled")
 	}
 
-	// The cache entry must be gone synchronously — before cmd is executed.
-	if _, ok := a.issueCache[mainKey]; ok {
+	if _, ok := app.issueCache[mainKey]; ok {
 		t.Errorf("issueCache[%q] still present after ActRefresh; expected cache invalidation", mainKey)
 	}
 }

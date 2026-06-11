@@ -12,8 +12,6 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
-// navResolverJK resolves a minimal j/k keymap used to drive list cursor
-// movement in tests without loading the full app keymap.
 func navResolverJK(key string) components.NavAction {
 	switch key {
 	case "j":
@@ -24,67 +22,58 @@ func navResolverJK(key string) components.NavAction {
 	return components.NavNone
 }
 
-// TestPreviewFollowsCursor_IssuesList_Down verifies that IssueSelectedMsg
-// (emitted by the main list on a down-cursor move) delegates to the preview
-// pipeline: previewKey follows the new selection and previewEpoch bumps so
-// the debounce+cancel mechanics engage.
 func TestPreviewFollowsCursor_IssuesList_Down(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	issues := []jira.Issue{{Key: mainKey}, {Key: "ABC-2"}}
-	a.issuesList.SetIssues(issues)
+	app.issuesList.SetIssues(issues)
 
-	_, cmd := a.Update(views.IssueSelectedMsg{Issue: &issues[1]})
+	_, cmd := app.Update(views.IssueSelectedMsg{Issue: &issues[1]})
 
-	if a.previewKey != "ABC-2" {
-		t.Errorf("previewKey = %q, want %q", a.previewKey, "ABC-2")
+	if app.previewKey != "ABC-2" {
+		t.Errorf("previewKey = %q, want %q", app.previewKey, "ABC-2")
 	}
-	if a.previewEpoch != 1 {
-		t.Errorf("previewEpoch = %d, want 1 (IssueSelectedMsg must delegate to PreviewRequestMsg)", a.previewEpoch)
+	if app.previewEpoch != 1 {
+		t.Errorf("previewEpoch = %d, want 1 (IssueSelectedMsg must delegate to PreviewRequestMsg)", app.previewEpoch)
 	}
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd (debounce tick), got nil")
 	}
 }
 
-// TestPreviewFollowsCursor_IssuesList_Up covers the symmetric up-cursor path
-// and also pins that the epoch advances once per move.
 func TestPreviewFollowsCursor_IssuesList_Up(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	issues := []jira.Issue{{Key: mainKey}, {Key: "ABC-2"}}
-	a.issuesList.SetIssues(issues)
+	app.issuesList.SetIssues(issues)
 
-	_, _ = a.Update(views.IssueSelectedMsg{Issue: &issues[1]})
-	_, _ = a.Update(views.IssueSelectedMsg{Issue: &issues[0]})
+	_, _ = app.Update(views.IssueSelectedMsg{Issue: &issues[1]})
+	_, _ = app.Update(views.IssueSelectedMsg{Issue: &issues[0]})
 
-	if a.previewKey != mainKey {
-		t.Errorf("previewKey = %q, want %q", a.previewKey, mainKey)
+	if app.previewKey != mainKey {
+		t.Errorf("previewKey = %q, want %q", app.previewKey, mainKey)
 	}
-	if a.previewEpoch != 2 {
-		t.Errorf("previewEpoch = %d, want 2", a.previewEpoch)
+	if app.previewEpoch != 2 {
+		t.Errorf("previewEpoch = %d, want 2", app.previewEpoch)
 	}
 }
 
-// TestPreviewFollowsCursor_InfoSubtasks_ExistingPath verifies that cursor
-// movement inside the InfoPanel Subtasks tab dispatches a PreviewRequestMsg
-// carrying the newly-selected subtask key.
 func TestPreviewFollowsCursor_InfoSubtasks_ExistingPath(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	main := &jira.Issue{
 		Key:      mainKey,
 		Subtasks: []jira.Issue{{Key: "SUB-1"}, {Key: "SUB-2"}},
 	}
-	a.infoPanel.SetIssue(main)
-	a.infoPanel.SetActiveTab(views.InfoTabSubtasks)
-	a.infoPanel.SetFocused(true)
-	a.infoPanel.ResolveNav = navResolverJK
+	app.infoPanel.SetIssue(main)
+	app.infoPanel.SetActiveTab(views.InfoTabSubtasks)
+	app.infoPanel.SetFocused(true)
+	app.infoPanel.ResolveNav = navResolverJK
 
-	_, cmd := a.infoPanel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	_, cmd := app.infoPanel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if cmd == nil {
 		t.Fatal("expected PreviewRequestMsg cmd from Subtasks cursor move, got nil")
 	}
@@ -98,15 +87,13 @@ func TestPreviewFollowsCursor_InfoSubtasks_ExistingPath(t *testing.T) {
 	}
 }
 
-// TestPreviewFollowsCursor_InfoLinks_ExistingPath is the Links-tab analog of
-// the Subtasks cursor test above.
 func TestPreviewFollowsCursor_InfoLinks_ExistingPath(t *testing.T) {
 	t.Parallel()
 	const linkKey1 = "LNK-1"
 	const linkKey2 = "LNK-2"
 
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	main := &jira.Issue{
 		Key: mainKey,
 		IssueLinks: []jira.IssueLink{
@@ -114,12 +101,12 @@ func TestPreviewFollowsCursor_InfoLinks_ExistingPath(t *testing.T) {
 			{Type: &jira.IssueLinkType{Name: "relates to"}, OutwardIssue: &jira.Issue{Key: linkKey2}},
 		},
 	}
-	a.infoPanel.SetIssue(main)
-	a.infoPanel.SetActiveTab(views.InfoTabLinks)
-	a.infoPanel.SetFocused(true)
-	a.infoPanel.ResolveNav = navResolverJK
+	app.infoPanel.SetIssue(main)
+	app.infoPanel.SetActiveTab(views.InfoTabLinks)
+	app.infoPanel.SetFocused(true)
+	app.infoPanel.ResolveNav = navResolverJK
 
-	_, cmd := a.infoPanel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	_, cmd := app.infoPanel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if cmd == nil {
 		t.Fatal("expected PreviewRequestMsg cmd from Links cursor move, got nil")
 	}
@@ -133,10 +120,6 @@ func TestPreviewFollowsCursor_InfoLinks_ExistingPath(t *testing.T) {
 	}
 }
 
-// TestPreviewFollowsCursor_RapidCursor_OnlyLastFetch pins the debounce
-// guarantee through the IssueSelectedMsg path: five rapid moves advance the
-// epoch to 5, stale debounce ticks from epochs 1-4 are dropped, only the
-// fresh tick for epoch 5 issues a GetIssue call.
 func TestPreviewFollowsCursor_RapidCursor_OnlyLastFetch(t *testing.T) {
 	t.Parallel()
 	const lastKey = "ABC-5"
@@ -151,21 +134,21 @@ func TestPreviewFollowsCursor_RapidCursor_OnlyLastFetch(t *testing.T) {
 	fake.GetCommentsFunc = func(_ context.Context, _ string) ([]jira.Comment, error) { return nil, nil }
 	fake.GetChangelogFunc = func(_ context.Context, _ string) ([]jira.ChangelogEntry, error) { return nil, nil }
 
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	issues := []jira.Issue{
 		{Key: "ABC-1"}, {Key: "ABC-2"}, {Key: "ABC-3"}, {Key: "ABC-4"}, {Key: lastKey},
 	}
-	a.issuesList.SetIssues(issues)
+	app.issuesList.SetIssues(issues)
 
 	for i := range issues {
-		_, _ = a.Update(views.IssueSelectedMsg{Issue: &issues[i]})
+		_, _ = app.Update(views.IssueSelectedMsg{Issue: &issues[i]})
 	}
-	if a.previewEpoch != 5 {
-		t.Fatalf("previewEpoch = %d after 5 moves, want 5", a.previewEpoch)
+	if app.previewEpoch != 5 {
+		t.Fatalf("previewEpoch = %d after 5 moves, want 5", app.previewEpoch)
 	}
 
 	for epoch := 1; epoch <= 4; epoch++ {
-		_, stale := a.Update(previewDebounceMsg{key: issues[epoch-1].Key, epoch: epoch})
+		_, stale := app.Update(previewDebounceMsg{key: issues[epoch-1].Key, epoch: epoch})
 		if stale != nil {
 			stale()
 		}
@@ -174,7 +157,7 @@ func TestPreviewFollowsCursor_RapidCursor_OnlyLastFetch(t *testing.T) {
 		t.Errorf("stale debounce ticks caused %d GetIssue call(s), want 0", len(fake.GetIssueCalls))
 	}
 
-	_, fetchCmd := a.Update(previewDebounceMsg{key: lastKey, epoch: 5})
+	_, fetchCmd := app.Update(previewDebounceMsg{key: lastKey, epoch: 5})
 	if fetchCmd == nil {
 		t.Fatal("expected fetch cmd from fresh debounce tick, got nil")
 	}
@@ -187,46 +170,34 @@ func TestPreviewFollowsCursor_RapidCursor_OnlyLastFetch(t *testing.T) {
 	}
 }
 
-// TestPreviewFollowsCursor_Projects verifies that ProjectHoveredMsg routes
-// the hovered project into DetailView in project mode. The hover message
-// is emitted by ProjectList on every cursor move (see views.ProjectList.Update).
 func TestPreviewFollowsCursor_Projects(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	projects := []jira.Project{{Key: "P1", Name: "Project One"}, {Key: "P2", Name: "Project Two"}}
 
-	_, _ = a.Update(views.ProjectHoveredMsg{Project: &projects[1]})
+	_, _ = app.Update(views.ProjectHoveredMsg{Project: &projects[1]})
 
-	if got := a.detailView.Mode(); got != views.ModeProject {
+	if got := app.detailView.Mode(); got != views.ModeProject {
 		t.Errorf("detailView.Mode = %v, want ModeProject", got)
 	}
-	// The detailView keeps a copy of the project; verify via re-render path
-	// would couple to View() output. Instead, hover with nil and confirm
-	// no panic and mode stays.
-	_, _ = a.Update(views.ProjectHoveredMsg{Project: nil})
-	if got := a.detailView.Mode(); got != views.ModeProject {
+	_, _ = app.Update(views.ProjectHoveredMsg{Project: nil})
+	if got := app.detailView.Mode(); got != views.ModeProject {
 		t.Errorf("nil hover changed mode away from ModeProject (got %v)", got)
 	}
 }
 
-// TestPreviewFollowsCursor_UnknownKey_FallsBackToContext verifies the
-// content-fallback chain: when a preview is requested for a key that is
-// neither cached nor matches the main-list selection (e.g. a sub/link key
-// without cache), the DetailView keeps showing the previously displayed
-// context issue rather than blanking out. The spec calls for "letzter
-// Content bleibt stehen" until the fetch resolves.
 func TestPreviewFollowsCursor_UnknownKey_FallsBackToContext(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 	main := &jira.Issue{Key: mainKey, Summary: "main issue"}
-	a.issuesList.SetIssues([]jira.Issue{*main})
-	a.detailView.SetIssue(main)
+	app.issuesList.SetIssues([]jira.Issue{*main})
+	app.detailView.SetIssue(main)
 
-	_, _ = a.Update(views.PreviewRequestMsg{Key: "UNKNOWN-99"})
+	_, _ = app.Update(views.PreviewRequestMsg{Key: "UNKNOWN-99"})
 
-	if got := a.detailView.IssueKey(); got != mainKey {
+	if got := app.detailView.IssueKey(); got != mainKey {
 		t.Errorf("DetailView.IssueKey = %q, want context fallback %q", got, mainKey)
 	}
 }

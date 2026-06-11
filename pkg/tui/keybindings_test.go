@@ -26,38 +26,38 @@ func TestContextBindings_ContainsQuit(t *testing.T) {
 	}{
 		{
 			name:  "issues focus",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusIssues },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusIssues },
 		},
 		{
 			name:  "info focus",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusInfo },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusInfo },
 		},
 		{
 			name:  "projects focus",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusProjects },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusProjects },
 		},
 		{
 			name:  "status focus",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusStatus },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusStatus },
 		},
 		{
 			name:  "detail side",
-			setup: func(a *App) { a.side = sideRight },
+			setup: func(app *App) { app.side = sideRight },
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			app := appForKeybindings(t)
-			tc.setup(app)
+			testCase.setup(app)
 			bindings := app.ContextBindings()
 			if len(bindings) == 0 {
 				t.Fatal("expected non-empty bindings")
 			}
 			found := false
-			for _, b := range bindings {
-				if b.Description == string(ActQuit) {
+			for _, binding := range bindings {
+				if binding.Description == string(ActQuit) {
 					found = true
 					break
 				}
@@ -79,8 +79,8 @@ func TestContextBindings_DetailCommentsIncludesEdit(t *testing.T) {
 	bindings := app.ContextBindings()
 
 	found := false
-	for _, b := range bindings {
-		if b.Description == "edit comment" {
+	for _, binding := range bindings {
+		if binding.Description == "edit comment" {
 			found = true
 			break
 		}
@@ -99,31 +99,31 @@ func TestHelpBarItems_NotEmpty(t *testing.T) {
 	}{
 		{
 			name:  "issues panel",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusIssues },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusIssues },
 		},
 		{
 			name:  "info panel",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusInfo },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusInfo },
 		},
 		{
 			name:  "projects panel",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusProjects },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusProjects },
 		},
 		{
 			name:  "status panel",
-			setup: func(a *App) { a.side = sideLeft; a.leftFocus = focusStatus },
+			setup: func(app *App) { app.side = sideLeft; app.leftFocus = focusStatus },
 		},
 		{
 			name:  "detail right panel",
-			setup: func(a *App) { a.side = sideRight },
+			setup: func(app *App) { app.side = sideRight },
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			app := appForKeybindings(t)
-			tc.setup(app)
+			testCase.setup(app)
 			items := app.helpBarItems()
 			if len(items) == 0 {
 				t.Error("expected non-empty help bar items")

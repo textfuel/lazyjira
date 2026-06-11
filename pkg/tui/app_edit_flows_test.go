@@ -738,42 +738,44 @@ func TestView_BottomBarVariants(t *testing.T) {
 
 	cases := []struct {
 		name  string
-		setup func(app *App)
+		setup func(t *testing.T, app *App)
 	}{
 		{
 			name:  "active search bar",
-			setup: func(app *App) { app.searchBar.Activate() },
+			setup: func(_ *testing.T, app *App) { app.searchBar.Activate() },
 		},
 		{
 			name:  "jql modal visible",
-			setup: func(app *App) { app.jqlModal.Show("", nil) },
+			setup: func(_ *testing.T, app *App) { app.jqlModal.Show("", nil) },
 		},
 		{
 			name: "modal searching",
-			setup: func(app *App) {
+			setup: func(t *testing.T, app *App) {
+				t.Helper()
 				app.modal.Show("Pick", []components.ModalItem{{ID: "1", Label: "A"}})
 				app.modal, _ = app.modal.Update(runeKey('/'))
 				if !app.modal.IsSearching() {
-					panic("modal should be searching")
+					t.Fatal("modal should be searching")
 				}
 			},
 		},
 		{
 			name: "help search input",
-			setup: func(app *App) {
+			setup: func(_ *testing.T, app *App) {
 				app.showHelp = true
 				app.helpSearching = true
 			},
 		},
 		{
 			name: "create form filtering",
-			setup: func(app *App) {
+			setup: func(t *testing.T, app *App) {
+				t.Helper()
 				app.createForm = formWithFields([]components.CreateFormField{{FieldID: "customfield_1", Name: "Team"}})
 				_, _ = app.createForm.Intercept(tea.KeyMsg{Type: tea.KeyTab})
 				_, _ = app.createForm.Intercept(tea.KeyMsg{Type: tea.KeyTab})
 				_, _ = app.createForm.Intercept(runeKey('/'))
 				if !app.createForm.IsFiltering() {
-					panic("create form should be filtering")
+					t.Fatal("create form should be filtering")
 				}
 			},
 		},
@@ -783,7 +785,7 @@ func TestView_BottomBarVariants(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			app := routingApp(t)
-			tc.setup(app)
+			tc.setup(t, app)
 
 			if app.View() == "" {
 				t.Error("View should render content")

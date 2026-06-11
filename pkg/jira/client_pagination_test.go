@@ -38,7 +38,7 @@ func TestClient_PaginatedMethods_FetchAllPages(t *testing.T) {
 		return map[string]any{"id": strconv.Itoa(index + 1), "key": fmt.Sprintf("PAGE-%d", index+1), "fields": map[string]any{"summary": "s"}}
 	}
 	changelogObject := func(index int) map[string]any {
-		return map[string]any{"items": []map[string]any{{"field": "status", "fromString": "A", "toString": "B"}}}
+		return map[string]any{"items": []map[string]any{{"field": "status", "fromString": fmt.Sprintf("State%d", index), "toString": fmt.Sprintf("State%d", index+1)}}}
 	}
 	userObject := func(index int) map[string]any {
 		return map[string]any{"accountId": fmt.Sprintf("acc-%d", index+1), "displayName": fmt.Sprintf("User %d", index+1)}

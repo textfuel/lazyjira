@@ -114,18 +114,24 @@ func TestModal_HandleMouseLeftClick_SelectsItem(t *testing.T) {
 		{ID: testItem2ID, Label: testItem2Label},
 	}
 	m.Show(testTitle, items)
+	mainBoxH := min(len(items)+4, 22) + 2
+	topOffset := (24 - mainBoxH) / 2
+	clickY := topOffset + 3
 	m, cmd := m.Update(tea.MouseMsg{
 		Button: tea.MouseButtonLeft,
 		Action: tea.MouseActionPress,
 		X:      5,
-		Y:      3,
+		Y:      clickY,
 	})
-	if m.IsVisible() && cmd != nil {
-		msg := cmd()
-		if _, ok := msg.(ModalSelectedMsg); !ok {
-			t.Logf("got msg type %T (acceptable, depends on click position)", msg)
-		}
+	if cmd == nil {
+		t.Fatal("expected command from left click on item")
 	}
+	msg := cmd()
+	sel, ok := msg.(ModalSelectedMsg)
+	if !ok {
+		t.Fatalf("expected ModalSelectedMsg, got %T", msg)
+	}
+	testkit.AssertEqual(t, "selected item ID", sel.Item.ID, testItem1ID)
 }
 
 func TestModal_ViewReadOnly_ScrollsWithJK(t *testing.T) {
@@ -181,8 +187,7 @@ func TestModal_RenderDrawsOnBackground(t *testing.T) {
 	m := NewModal()
 	m.SetSize(80, 24)
 	m.Show(testTitle, []ModalItem{{ID: testItem1ID, Label: testItem1Label}})
-	bg := strings.Repeat(strings.Repeat(" ", 80)+"\n", 23)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(80, 24)
 	out := m.Render(bg, 80, 24)
 	plain := stripANSI(out)
 	if !strings.Contains(plain, testItem1Label) {
@@ -351,7 +356,8 @@ func TestModal_RenderItems_WithSeparatorAndActive(t *testing.T) {
 	}
 }
 
-func TestModal_RenderItems_InternalItemStyled(t *testing.T) {
+func TestModal_RenderItems_InternalItemRendersWithColor(t *testing.T) {
+	forceColors(t)
 	t.Parallel()
 	m := NewModal()
 	m.SetSize(80, 24)
@@ -361,5 +367,8 @@ func TestModal_RenderItems_InternalItemStyled(t *testing.T) {
 	}
 	m.Show(testTitle, items)
 	view := m.View()
-	testkit.AssertEqual(t, "view non-empty", view != "", true)
+	if !strings.Contains(stripANSI(view), testItem1Label) {
+		t.Errorf("expected internal item label %q in view, got %q", testItem1Label, stripANSI(view))
+	}
+	testkit.AssertEqual(t, "internal item rendered with color escape codes", view != stripANSI(view), true)
 }

@@ -24,13 +24,13 @@ func TestApp_SideWidth(t *testing.T) {
 		{"floors at minimum width", 100, 10, 25},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			app := &App{width: tt.width, cfg: &config.Config{}}
-			app.cfg.GUI.SidePanelWidth = tt.configured
+			app := &App{width: testCase.width, cfg: &config.Config{}}
+			app.cfg.GUI.SidePanelWidth = testCase.configured
 
-			testkit.AssertEqual(t, "sideWidth", app.sideWidth(), tt.want)
+			testkit.AssertEqual(t, "sideWidth", app.sideWidth(), testCase.want)
 		})
 	}
 }

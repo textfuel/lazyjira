@@ -11,45 +11,39 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
-// setupPreviewedSub creates an app with MAIN selected in the list and SUB-1
-// cached as the preview. Action handlers should target SUB-1.
 func setupPreviewedSub(t *testing.T, fake *jiratest.FakeClient, sub *jira.Issue) *App {
 	t.Helper()
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main summary"}})
-	a.previewKey = subKey1
-	a.issueCache[subKey1] = sub
-	return a
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main summary"}})
+	app.previewKey = subKey1
+	app.issueCache[subKey1] = sub
+	return app
 }
 
-// TestEditAction_TargetsPreviewedIssue verifies that pressing the edit action
-// while previewing a sub-issue edits the sub's summary, not the main issue.
 func TestEditAction_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main summary"}})
-	a.previewKey = subKey1
-	a.issueCache[subKey1] = &jira.Issue{Key: subKey1, Summary: "sub summary"}
-	a.side = sideLeft
-	a.leftFocus = focusIssues
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main summary"}})
+	app.previewKey = subKey1
+	app.issueCache[subKey1] = &jira.Issue{Key: subKey1, Summary: "sub summary"}
+	app.side = sideLeft
+	app.leftFocus = focusIssues
 
-	_, _ = a.handleActionEdit()
+	_, _ = app.handleActionEdit()
 
-	if got := a.editContext.issueKey; got != subKey1 {
+	if got := app.editContext.issueKey; got != subKey1 {
 		t.Errorf("editContext.issueKey = %q, want %q", got, subKey1)
 	}
 }
 
-// TestCustomCommand_TargetsPreviewedIssue verifies that a custom command's
-// template is rendered with the previewed issue's key, not the list cursor.
 func TestCustomCommand_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main"}})
-	a.previewKey = subKey1
-	a.issueCache[subKey1] = &jira.Issue{Key: subKey1, Summary: "sub"}
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey, Summary: "main"}})
+	app.previewKey = subKey1
+	app.issueCache[subKey1] = &jira.Issue{Key: subKey1, Summary: "sub"}
 
 	tmpl, err := template.New("t").Option("missingkey=error").Parse("{{.Key}}")
 	if err != nil {
@@ -62,7 +56,7 @@ func TestCustomCommand_TargetsPreviewedIssue(t *testing.T) {
 		Template: tmpl,
 	}
 
-	data, ok := a.buildCommandData(rc)
+	data, ok := app.buildCommandData(rc)
 	if !ok {
 		t.Fatal("buildCommandData returned ok=false")
 	}
@@ -75,18 +69,14 @@ func TestCustomCommand_TargetsPreviewedIssue(t *testing.T) {
 	}
 }
 
-// TestCurrentIssue_StubWhenPreviewKeyUncached covers the race between a
-// preview request firing and the fetch populating the cache. During that
-// window the user might press an issue-scoped key; the action must target
-// the preview key (shown on screen) rather than the list cursor.
 func TestCurrentIssue_StubWhenPreviewKeyUncached(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
-	a.previewKey = subKey1 // no cache entry yet
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
+	app.previewKey = subKey1
 
-	cur := a.currentIssue()
+	cur := app.currentIssue()
 	if cur == nil {
 		t.Fatal("currentIssue() returned nil with previewKey set")
 	}
@@ -95,17 +85,13 @@ func TestCurrentIssue_StubWhenPreviewKeyUncached(t *testing.T) {
 	}
 }
 
-// TestCurrentIssue_FallsBackToListWhenNoPreview covers the steady-state:
-// before any preview is active, issue-scoped actions operate on the list
-// selection.
 func TestCurrentIssue_FallsBackToListWhenNoPreview(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
-	// previewKey intentionally empty
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{Key: mainKey}})
 
-	cur := a.currentIssue()
+	cur := app.currentIssue()
 	if cur == nil {
 		t.Fatal("currentIssue() returned nil with list selection present")
 	}
@@ -114,53 +100,44 @@ func TestCurrentIssue_FallsBackToListWhenNoPreview(t *testing.T) {
 	}
 }
 
-// TestEditAction_OnInfoSubTab_EditsPreviewedIssueSummary: pressing edit while
-// the info panel has focus on the Sub or Lnk tab edits the summary of the
-// issue currently previewed, not the main list issue.
 func TestEditAction_OnInfoSubTab_EditsPreviewedIssueSummary(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "sub summary"})
-	a.side = sideLeft
-	a.leftFocus = focusInfo
-	// Main issue has a subtask so the Sub tab has an item.
+	app := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "sub summary"})
+	app.side = sideLeft
+	app.leftFocus = focusInfo
 	main := &jira.Issue{Key: mainKey, Subtasks: []jira.Issue{{Key: subKey1}}}
-	a.infoPanel.SetIssue(main)
-	a.infoPanel.NextTab() // Fields -> Links
-	a.infoPanel.NextTab() // Links  -> Subtasks
+	app.infoPanel.SetIssue(main)
+	app.infoPanel.NextTab()
+	app.infoPanel.NextTab()
 
-	_, _ = a.handleActionEdit()
+	_, _ = app.handleActionEdit()
 
-	if got := a.editContext.issueKey; got != subKey1 {
+	if got := app.editContext.issueKey; got != subKey1 {
 		t.Errorf("editContext.issueKey = %q, want %q", got, subKey1)
 	}
-	if a.editContext.kind != editSummary {
-		t.Errorf("editContext.kind = %v, want editSummary", a.editContext.kind)
+	if app.editContext.kind != editSummary {
+		t.Errorf("editContext.kind = %v, want editSummary", app.editContext.kind)
 	}
 }
 
-// TestEditAction_Description_TargetsPreviewedIssue: pressing edit from the
-// detail view (side=right, Details tab) edits the previewed issue's
-// description.
 func TestEditAction_Description_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Description: "sub desc"})
-	a.side = sideRight
-	a.detailView.SetActiveTab(views.TabDetails)
+	app := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Description: "sub desc"})
+	app.side = sideRight
+	app.detailView.SetActiveTab(views.TabDetails)
 
-	_, _ = a.handleActionEdit()
+	_, _ = app.handleActionEdit()
 
-	if got := a.editContext.issueKey; got != subKey1 {
+	if got := app.editContext.issueKey; got != subKey1 {
 		t.Errorf("editContext.issueKey = %q, want %q", got, subKey1)
 	}
-	if a.editContext.kind != editDesc {
-		t.Errorf("editContext.kind = %v, want editDesc", a.editContext.kind)
+	if app.editContext.kind != editDesc {
+		t.Errorf("editContext.kind = %v, want editDesc", app.editContext.kind)
 	}
 }
 
-// TestTransitionAction_TargetsPreviewedIssue: ActTransition fetches
-// transitions for the previewed issue.
 func TestTransitionAction_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	var calledKey string
@@ -169,9 +146,9 @@ func TestTransitionAction_TargetsPreviewedIssue(t *testing.T) {
 		calledKey = key
 		return nil, nil
 	}
-	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1})
+	app := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1})
 
-	_, cmd, handled := a.handleIssueAction(ActTransition)
+	_, cmd, handled := app.handleIssueAction(ActTransition)
 	if !handled {
 		t.Fatal("ActTransition not handled")
 	}
@@ -185,8 +162,6 @@ func TestTransitionAction_TargetsPreviewedIssue(t *testing.T) {
 	}
 }
 
-// TestAssigneeAction_TargetsPreviewedIssue: ActAssignee fetches users
-// scoped to the previewed issue.
 func TestAssigneeAction_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	var calledProject string
@@ -195,10 +170,10 @@ func TestAssigneeAction_TargetsPreviewedIssue(t *testing.T) {
 		calledProject = projectKey
 		return nil, nil
 	}
-	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1})
-	a.projectKey = "SUB"
+	app := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1})
+	app.projectKey = "SUB"
 
-	_, cmd, handled := a.handleIssueAction(ActAssignee)
+	_, cmd, handled := app.handleIssueAction(ActAssignee)
 	if !handled {
 		t.Fatal("ActAssignee not handled")
 	}
@@ -207,7 +182,7 @@ func TestAssigneeAction_TargetsPreviewedIssue(t *testing.T) {
 	}
 	cmd()
 
-	if a.onSelect == nil {
+	if app.onSelect == nil {
 		t.Error("onSelect was not installed (handler needs a previewed issue)")
 	}
 	if calledProject != "SUB" {
@@ -215,72 +190,65 @@ func TestAssigneeAction_TargetsPreviewedIssue(t *testing.T) {
 	}
 }
 
-// TestCommentsAction_TargetsPreviewedIssue: ActComments opens the detail
-// view's Comments tab and shows the previewed issue.
 func TestCommentsAction_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "cached"})
-	a.detailView.SetIssue(a.issueCache[subKey1])
+	app := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "cached"})
+	app.detailView.SetIssue(app.issueCache[subKey1])
 
-	_, cmd, handled := a.handleIssueAction(ActComments)
+	_, cmd, handled := app.handleIssueAction(ActComments)
 	if !handled {
 		t.Fatal("ActComments not handled")
 	}
 	if cmd != nil {
-		// No-op since the previewed issue is cached.
 		cmd()
 	}
-	if a.detailView.ActiveTab() != views.TabComments {
-		t.Errorf("detailView tab = %v, want Comments", a.detailView.ActiveTab())
+	if app.detailView.ActiveTab() != views.TabComments {
+		t.Errorf("detailView tab = %v, want Comments", app.detailView.ActiveTab())
 	}
-	if a.detailView.IssueKey() != subKey1 {
-		t.Errorf("detailView.IssueKey() = %q, want %q", a.detailView.IssueKey(), subKey1)
+	if app.detailView.IssueKey() != subKey1 {
+		t.Errorf("detailView.IssueKey() = %q, want %q", app.detailView.IssueKey(), subKey1)
 	}
 }
 
-// TestNewCommentAction_TargetsPreviewedIssue: ActNew in the Comments tab
-// opens the editor bound to the previewed issue.
 func TestNewCommentAction_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1})
-	a.side = sideRight
-	a.detailView.SetActiveTab(views.TabComments)
+	app := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1})
+	app.side = sideRight
+	app.detailView.SetActiveTab(views.TabComments)
 
-	_, _, handled := a.handleIssueAction(ActNew)
+	_, _, handled := app.handleIssueAction(ActNew)
 	if !handled {
 		t.Fatal("ActNew not handled")
 	}
-	if got := a.editContext.issueKey; got != subKey1 {
+	if got := app.editContext.issueKey; got != subKey1 {
 		t.Errorf("editContext.issueKey = %q, want %q", got, subKey1)
 	}
-	if a.editContext.kind != editCommentNew {
-		t.Errorf("editContext.kind = %v, want editCommentNew", a.editContext.kind)
+	if app.editContext.kind != editCommentNew {
+		t.Errorf("editContext.kind = %v, want editCommentNew", app.editContext.kind)
 	}
 }
 
-// TestDuplicateIssueAction_TargetsPreviewedIssue: starting a duplicate uses
-// the previewed issue as the source.
 func TestDuplicateIssueAction_TargetsPreviewedIssue(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.GetIssueTypesFunc = func(_ context.Context, _ string) ([]jira.IssueType, error) {
 		return nil, nil
 	}
-	a := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "sub summary"})
-	a.side = sideLeft
-	a.leftFocus = focusIssues
-	a.projectKey = "SUB"
+	app := setupPreviewedSub(t, fake, &jira.Issue{Key: subKey1, Summary: "sub summary"})
+	app.side = sideLeft
+	app.leftFocus = focusIssues
+	app.projectKey = "SUB"
 
-	_, _, handled := a.handleIssueAction(ActDuplicateIssue)
+	_, _, handled := app.handleIssueAction(ActDuplicateIssue)
 	if !handled {
 		t.Fatal("ActDuplicateIssue not handled")
 	}
-	if a.createCtx.duplicateFrom == nil {
+	if app.createCtx.duplicateFrom == nil {
 		t.Fatal("duplicateFrom not set")
 	}
-	if got := a.createCtx.duplicateFrom.Key; got != subKey1 {
+	if got := app.createCtx.duplicateFrom.Key; got != subKey1 {
 		t.Errorf("duplicateFrom.Key = %q, want %q", got, subKey1)
 	}
 }

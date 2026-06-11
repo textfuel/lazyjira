@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -91,4 +92,13 @@ func AssertSliceEqual[T comparable](t *testing.T, label string, got, want []T) {
 	if !slices.Equal(got, want) {
 		t.Errorf("%s = %v, want %v", label, got, want)
 	}
+}
+
+func BlankCanvas(width, height int) string {
+	row := strings.Repeat(" ", width)
+	rows := make([]string, height)
+	for i := range rows {
+		rows[i] = row
+	}
+	return strings.Join(rows, "\n")
 }

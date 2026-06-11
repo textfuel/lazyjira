@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 )
@@ -74,22 +75,42 @@ func TestCreateForm_SetFieldValue(t *testing.T) {
 	testkit.AssertEqual(t, "field value set", field.DisplayValue, testItem1Label)
 }
 
-func TestCreateForm_SetFieldValue_OutOfRange(t *testing.T) {
+func TestCreateForm_IndexGuards(t *testing.T) {
 	t.Parallel()
-	form := NewCreateForm(nil)
-	form.SetSize(120, 40)
-	form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
-	form.SetFieldValue(99, "x", "x")
-	testkit.AssertEqual(t, "no panic on out-of-range", true, true)
-}
-
-func TestCreateForm_FieldAt_OutOfRange(t *testing.T) {
-	t.Parallel()
-	form := NewCreateForm(nil)
-	form.SetSize(120, 40)
-	form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
-	testkit.AssertEqual(t, "nil for negative index", form.FieldAt(-1), (*CreateFormField)(nil))
-	testkit.AssertEqual(t, "nil for large index", form.FieldAt(100), (*CreateFormField)(nil))
+	cases := []struct {
+		name string
+		run  func(form *CreateForm)
+	}{
+		{
+			name: "FieldAt negative index returns nil",
+			run: func(form *CreateForm) {
+				testkit.AssertEqual(t, "nil for negative index", form.FieldAt(-1), (*CreateFormField)(nil))
+			},
+		},
+		{
+			name: "FieldAt large index returns nil",
+			run: func(form *CreateForm) {
+				testkit.AssertEqual(t, "nil for large index", form.FieldAt(100), (*CreateFormField)(nil))
+			},
+		},
+		{
+			name: "SetFieldValue out-of-range leaves existing fields unchanged",
+			run: func(form *CreateForm) {
+				before := form.FieldAt(2).DisplayValue
+				form.SetFieldValue(99, "x", "x")
+				testkit.AssertEqual(t, "field at index 2 unchanged", form.FieldAt(2).DisplayValue, before)
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			form := NewCreateForm(nil)
+			form.SetSize(120, 40)
+			form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
+			tc.run(&form)
+		})
+	}
 }
 
 func TestCreateForm_SetError(t *testing.T) {
@@ -664,8 +685,7 @@ func TestCreateForm_RenderLoadingNoFieldsShowsSpinner(t *testing.T) {
 	form := NewCreateForm(nil)
 	form.SetSize(80, 24)
 	form.SetLoading(true)
-	bg := strings.Repeat(strings.Repeat(" ", 80)+"\n", 23)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(80, 24)
 	out := form.Render(bg, 80, 24)
 	plain := stripANSI(out)
 	if !strings.Contains(plain, "Loading") {
@@ -678,8 +698,7 @@ func TestCreateForm_RenderFormDraws(t *testing.T) {
 	form := NewCreateForm(nil)
 	form.SetSize(120, 40)
 	form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
-	bg := strings.Repeat(strings.Repeat(" ", 120)+"\n", 39)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(120, 40)
 	out := form.Render(bg, 120, 40)
 	plain := stripANSI(out)
 	if !strings.Contains(plain, "Summary") {
@@ -693,8 +712,7 @@ func TestCreateForm_RenderWithError(t *testing.T) {
 	form.SetSize(120, 40)
 	form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
 	form.SetError("1 required field(s) empty")
-	bg := strings.Repeat(strings.Repeat(" ", 120)+"\n", 39)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(120, 40)
 	out := form.Render(bg, 120, 40)
 	plain := stripANSI(out)
 	if !strings.Contains(plain, "required") {
@@ -705,7 +723,7 @@ func TestCreateForm_RenderWithError(t *testing.T) {
 func TestCreateForm_InterceptMouseWheelScrolls(t *testing.T) {
 	t.Parallel()
 	form := NewCreateForm(nil)
-	form.SetSize(120, 40)
+	form.SetSize(80, 15)
 	fields := []CreateFormField{
 		{FieldID: "summary", Name: "Summary", Type: CFFieldSingleText, DisplayValue: testSummaryText},
 		{FieldID: "description", Name: "Description", Type: CFFieldMultiText, DisplayValue: strings.Repeat("line\n", 30)},
@@ -713,24 +731,14 @@ func TestCreateForm_InterceptMouseWheelScrolls(t *testing.T) {
 	}
 	form.ShowForm(fields, testIssueType, testProjectKey)
 	form.Intercept(tea.KeyMsg{Type: tea.KeyTab})
-	form.Intercept(tea.MouseMsg{Button: tea.MouseButtonWheelDown, Action: tea.MouseActionPress})
-	testkit.AssertEqual(t, "scroll down consumed", true, true)
-	form.Intercept(tea.MouseMsg{Button: tea.MouseButtonWheelUp, Action: tea.MouseActionPress})
-	testkit.AssertEqual(t, "scroll up consumed", true, true)
-}
-
-func TestCreateForm_InterceptMouseClick(t *testing.T) {
-	t.Parallel()
-	form := NewCreateForm(nil)
-	form.SetSize(120, 40)
-	form.ShowForm(makeTestFields(), testIssueType, testProjectKey)
-	form.Intercept(tea.MouseMsg{
-		Button: tea.MouseButtonLeft,
-		Action: tea.MouseActionPress,
-		X:      60,
-		Y:      2,
-	})
-	testkit.AssertEqual(t, "click handled without panic", true, true)
+	testkit.AssertEqual(t, "on description panel", form.FocusedPanel(), CreatePanelDescription)
+	_, consumed := form.Intercept(tea.MouseMsg{Button: tea.MouseButtonWheelDown, Action: tea.MouseActionPress})
+	testkit.AssertEqual(t, "wheel down consumed", consumed, true)
+	testkit.AssertEqual(t, "desc offset increased after wheel down", form.descOffset > 0, true)
+	offsetAfterDown := form.descOffset
+	_, consumed = form.Intercept(tea.MouseMsg{Button: tea.MouseButtonWheelUp, Action: tea.MouseActionPress})
+	testkit.AssertEqual(t, "wheel up consumed", consumed, true)
+	testkit.AssertEqual(t, "desc offset decreased after wheel up", form.descOffset < offsetAfterDown, true)
 }
 
 func TestCreateForm_WrapTextLines(t *testing.T) {
@@ -739,9 +747,9 @@ func TestCreateForm_WrapTextLines(t *testing.T) {
 	if len(lines) == 0 {
 		t.Error("expected non-empty lines")
 	}
-	for _, l := range lines {
-		if len(l) > 5 {
-			t.Errorf("line %q exceeds maxWidth 5", l)
+	for _, line := range lines {
+		if lipgloss.Width(line) > 5 {
+			t.Errorf("line %q exceeds maxWidth 5 display columns", line)
 		}
 	}
 }
@@ -759,42 +767,52 @@ func TestCreateForm_WrapTextLinesZeroWidth(t *testing.T) {
 }
 
 func TestCreateForm_NoneStyle(t *testing.T) {
+	forceColors(t)
 	t.Parallel()
 	style := noneStyle()
 	out := style.Render("None")
-	testkit.AssertEqual(t, "noneStyle renders", out != "", true)
+	testkit.AssertEqual(t, "noneStyle applies color", out != stripANSI(out), true)
 }
 
 func TestCreateForm_StyleFieldValue_None(t *testing.T) {
 	t.Parallel()
-	fld := CreateFormField{FieldID: "priority", Type: CFFieldSingleSelect}
-	out := styleFieldValue(fld, "None")
+	field := CreateFormField{FieldID: "priority", Type: CFFieldSingleSelect}
+	out := styleFieldValue(field, "None")
 	plain := stripANSI(out)
 	testkit.AssertEqual(t, "None rendered", plain, "None")
 }
 
 func TestCreateForm_StyleFieldValue_Priority(t *testing.T) {
+	forceColors(t)
 	t.Parallel()
-	fld := CreateFormField{FieldID: "priority", Type: CFFieldSingleSelect}
-	out := styleFieldValue(fld, "High")
-	testkit.AssertEqual(t, "priority styled", out != "", true)
+	field := CreateFormField{FieldID: "priority", Type: CFFieldSingleSelect}
+	out := styleFieldValue(field, "High")
+	testkit.AssertEqual(t, "priority value preserved", stripANSI(out), "High")
+	testkit.AssertEqual(t, "priority color applied", out != stripANSI(out), true)
 }
 
-func TestCreateForm_StyleFieldValue_PersonAndSchemaUser(t *testing.T) {
+func TestCreateForm_StyleFieldValue_Person(t *testing.T) {
+	forceColors(t)
 	t.Parallel()
-	personFld := CreateFormField{FieldID: "assignee", Type: CFFieldPerson}
-	personOut := styleFieldValue(personFld, "John Doe")
-	testkit.AssertEqual(t, "person styled", personOut != "", true)
+	field := CreateFormField{FieldID: "assignee", Type: CFFieldPerson}
+	out := styleFieldValue(field, "John Doe")
+	testkit.AssertEqual(t, "person value preserved", stripANSI(out), "John Doe")
+	testkit.AssertEqual(t, "person color applied", out != stripANSI(out), true)
+}
 
-	schemaFld := CreateFormField{FieldID: "reporter", Type: CFFieldSingleSelect, SchemaItems: "user"}
-	schemaOut := styleFieldValue(schemaFld, "Alice")
-	testkit.AssertEqual(t, "schema user styled", schemaOut != "", true)
+func TestCreateForm_StyleFieldValue_SchemaUser(t *testing.T) {
+	forceColors(t)
+	t.Parallel()
+	field := CreateFormField{FieldID: "reporter", Type: CFFieldSingleSelect, SchemaItems: "user"}
+	out := styleFieldValue(field, "Alice")
+	testkit.AssertEqual(t, "schema user value preserved", stripANSI(out), "Alice")
+	testkit.AssertEqual(t, "schema user color applied", out != stripANSI(out), true)
 }
 
 func TestCreateForm_StyleFieldValue_DefaultField(t *testing.T) {
 	t.Parallel()
-	fld := CreateFormField{FieldID: "labels", Type: CFFieldMultiSelect}
-	out := styleFieldValue(fld, "backend")
+	field := CreateFormField{FieldID: "labels", Type: CFFieldMultiSelect}
+	out := styleFieldValue(field, "backend")
 	testkit.AssertEqual(t, "default field returns value", out, "backend")
 }
 
@@ -810,8 +828,7 @@ func TestCreateForm_DescRenderer_ADF(t *testing.T) {
 	}
 	form.ShowForm(fields, testIssueType, testProjectKey)
 	form.Intercept(tea.KeyMsg{Type: tea.KeyTab})
-	bg := strings.Repeat(strings.Repeat(" ", 120)+"\n", 39)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(120, 40)
 	out := form.Render(bg, 120, 40)
 	plain := stripANSI(out)
 	if !strings.Contains(plain, "adf rendered") {

@@ -179,8 +179,8 @@ func TestHandleKeyMsg_Dispatch(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			fake := &jiratest.FakeClient{T: t}
 			app := newAppWithFake(t, fake)
@@ -188,17 +188,17 @@ func TestHandleKeyMsg_Dispatch(t *testing.T) {
 			app.width = 120
 			app.height = 40
 			app.layoutPanels()
-			if tc.setup != nil {
-				tc.setup(app, fake)
+			if testCase.setup != nil {
+				testCase.setup(app, fake)
 			}
 
-			m, cmd := app.handleKeyMsg(tc.key)
+			m, cmd := app.handleKeyMsg(testCase.key)
 
-			if tc.wantHandled != (m != nil) {
-				t.Fatalf("handled = %v, want %v", m != nil, tc.wantHandled)
+			if testCase.wantHandled != (m != nil) {
+				t.Fatalf("handled = %v, want %v", m != nil, testCase.wantHandled)
 			}
-			if tc.assert != nil {
-				tc.assert(t, app, cmd)
+			if testCase.assert != nil {
+				testCase.assert(t, app, cmd)
 			}
 		})
 	}
@@ -299,20 +299,20 @@ func TestHandleFocusAction_FullCycles(t *testing.T) {
 		{"left from info", sideLeft, focusInfo, ActFocusLeft, focusIssues},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			app := focusApp(t)
-			app.side = tc.side
-			app.leftFocus = tc.focus
+			app.side = testCase.side
+			app.leftFocus = testCase.focus
 
-			_, _, handled := app.handleFocusAction(tc.action)
+			_, _, handled := app.handleFocusAction(testCase.action)
 
 			if !handled {
 				t.Fatal("focus action should be handled")
 			}
-			if app.leftFocus != tc.want {
-				t.Errorf("leftFocus = %v, want %v", app.leftFocus, tc.want)
+			if app.leftFocus != testCase.want {
+				t.Errorf("leftFocus = %v, want %v", app.leftFocus, testCase.want)
 			}
 		})
 	}
@@ -595,8 +595,8 @@ func TestHandleIssueAction_MoreBranches(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			fake := &jiratest.FakeClient{T: t}
 			app := newAppWithFake(t, fake)
@@ -604,20 +604,20 @@ func TestHandleIssueAction_MoreBranches(t *testing.T) {
 			app.width = 120
 			app.height = 40
 			app.layoutPanels()
-			if tc.setup != nil {
-				tc.setup(app, fake)
+			if testCase.setup != nil {
+				testCase.setup(app, fake)
 			}
 
-			_, cmd, handled := app.handleIssueAction(tc.action)
+			_, cmd, handled := app.handleIssueAction(testCase.action)
 
 			if !handled {
 				t.Fatal("action should be handled")
 			}
-			if tc.wantCmd && cmd == nil {
+			if testCase.wantCmd && cmd == nil {
 				t.Error("expected non-nil cmd")
 			}
-			if tc.assert != nil {
-				tc.assert(t, app)
+			if testCase.assert != nil {
+				testCase.assert(t, app)
 			}
 		})
 	}

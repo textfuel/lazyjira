@@ -9,11 +9,6 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 )
 
-const (
-	errorTestIssueKey   = "PLAT-9"
-	errorTestProjectKey = "PLAT"
-)
-
 func TestClient_AllMethods_PropagateHTTPErrors(t *testing.T) {
 	t.Parallel()
 

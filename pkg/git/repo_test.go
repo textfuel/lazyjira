@@ -1,17 +1,20 @@
 package git
 
 import (
+	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/textfuel/lazyjira/v2/pkg/internal/testkit"
 )
 
 func TestGitAvailable_FindsGitInPath(t *testing.T) {
-	t.Parallel()
-	if !GitAvailable() {
-		t.Skip("git binary not found in PATH")
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("git binary not found; cannot construct test PATH")
 	}
-	testkit.AssertEqual(t, "GitAvailable", GitAvailable(), true)
+	t.Setenv("PATH", filepath.Dir(gitPath))
+	testkit.AssertEqual(t, "GitAvailable with git dir in PATH", GitAvailable(), true)
 }
 
 func TestIsRepo(t *testing.T) {

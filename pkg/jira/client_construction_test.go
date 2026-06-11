@@ -50,7 +50,7 @@ func TestClient_IsCloud_FalseForServer(t *testing.T) {
 	testkit.AssertEqual(t, "IsCloud", client.IsCloud(), false)
 }
 
-func TestClient_SetDryRun_SkipsWritesButAllowsReads(t *testing.T) {
+func TestClient_SetDryRun_SkipsWrite(t *testing.T) {
 	t.Parallel()
 
 	client, recorded := newRecordingClient(t, cloudOpts(), testkit.StubResponse{Status: http.StatusOK, Body: "[]"})
@@ -61,15 +61,22 @@ func TestClient_SetDryRun_SkipsWritesButAllowsReads(t *testing.T) {
 	if err := client.DoTransition(t.Context(), "PLAT-1", "31"); err != nil {
 		t.Fatalf("DoTransition in dry-run: %v", err)
 	}
-	testkit.AssertEqual(t, "request after skipped write", recorded.Method, "")
+	testkit.AssertEqual(t, "no request dispatched for write", recorded.Method, "")
 	if !strings.Contains(logBuffer.String(), "[DRY-RUN] skipped write operation") {
 		t.Errorf("log %q does not mention the dry-run skip", logBuffer.String())
 	}
+}
+
+func TestClient_SetDryRun_AllowsRead(t *testing.T) {
+	t.Parallel()
+
+	client, recorded := newRecordingClient(t, cloudOpts(), testkit.StubResponse{Status: http.StatusOK, Body: "[]"})
+	client.SetDryRun(true)
 
 	if _, err := client.GetPriorities(t.Context()); err != nil {
 		t.Fatalf("GetPriorities in dry-run: %v", err)
 	}
-	testkit.AssertEqual(t, "read request method", recorded.Method, http.MethodGet)
+	testkit.AssertEqual(t, "read request dispatched", recorded.Method, http.MethodGet)
 }
 
 func TestClient_SetLogger_WritesRequestAndResponseLines(t *testing.T) {

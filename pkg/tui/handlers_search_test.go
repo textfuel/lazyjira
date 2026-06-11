@@ -101,7 +101,10 @@ func TestRouteToPanel_ForwardsToFocusedPanel(t *testing.T) {
 		app := newAppWithFake(t, &jiratest.FakeClient{T: t})
 		app.side = sideRight
 
-		cmd := app.routeToPanel(tea.KeyMsg{Type: tea.KeyDown})
-		_ = cmd
+		app.routeToPanel(tea.KeyMsg{Type: tea.KeyDown})
+
+		if app.side != sideRight {
+			t.Errorf("side = %v, want right after routing to detail panel", app.side)
+		}
 	})
 }

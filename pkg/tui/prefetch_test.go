@@ -12,23 +12,18 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
-// runAll executes a tea.Cmd, recursively expanding tea.BatchMsg so callers
-// can assert on side effects from individual commands.
 func runAll(cmd tea.Cmd) {
 	if cmd == nil {
 		return
 	}
 	msg := cmd()
 	if batch, ok := msg.(tea.BatchMsg); ok {
-		for _, c := range batch {
-			runAll(c)
+		for _, subCmd := range batch {
+			runAll(subCmd)
 		}
 	}
 }
 
-// TestPrefetchRelated_IncludesParent ensures the parent key is fetched along
-// with subtasks and links so that navigating up the hierarchy feels the same
-// as navigating into sub-tasks.
 func TestPrefetchRelated_IncludesParent(t *testing.T) {
 	t.Parallel()
 	const parentKey = "PARENT-1"
@@ -39,7 +34,7 @@ func TestPrefetchRelated_IncludesParent(t *testing.T) {
 		got = jql
 		return &jira.SearchResult{}, nil
 	}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 
 	issue := &jira.Issue{
 		Key:      mainKey,
@@ -47,7 +42,7 @@ func TestPrefetchRelated_IncludesParent(t *testing.T) {
 		Subtasks: []jira.Issue{{Key: subKey1}},
 	}
 
-	cmd := a.prefetchRelated(issue)
+	cmd := app.prefetchRelated(issue)
 	if cmd == nil {
 		t.Fatal("expected non-nil prefetch cmd")
 	}
@@ -61,9 +56,6 @@ func TestPrefetchRelated_IncludesParent(t *testing.T) {
 	}
 }
 
-// TestIssueSelectedMsg_PrefetchesRelated ensures selecting a task in the list
-// warms the cache with its subtasks, links and parent so navigating into them
-// feels instant.
 func TestIssueSelectedMsg_PrefetchesRelated(t *testing.T) {
 	t.Parallel()
 	var got string
@@ -72,14 +64,14 @@ func TestIssueSelectedMsg_PrefetchesRelated(t *testing.T) {
 		got = jql
 		return &jira.SearchResult{}, nil
 	}
-	a := newAppWithFake(t, fake)
+	app := newAppWithFake(t, fake)
 
 	issue := &jira.Issue{
 		Key:      mainKey,
 		Subtasks: []jira.Issue{{Key: subKey1}},
 	}
 
-	_, cmd := a.Update(views.IssueSelectedMsg{Issue: issue})
+	_, cmd := app.Update(views.IssueSelectedMsg{Issue: issue})
 	if cmd == nil {
 		t.Fatal("expected a prefetch cmd from IssueSelectedMsg, got nil")
 	}
@@ -90,8 +82,6 @@ func TestIssueSelectedMsg_PrefetchesRelated(t *testing.T) {
 	}
 }
 
-// TestPreviewSelectedIssue_ReturnsPrefetchCmd ensures the helper used on tab
-// switches and focus returns also warms the cache for the now-selected task.
 func TestPreviewSelectedIssue_ReturnsPrefetchCmd(t *testing.T) {
 	t.Parallel()
 	var got string
@@ -100,13 +90,13 @@ func TestPreviewSelectedIssue_ReturnsPrefetchCmd(t *testing.T) {
 		got = jql
 		return &jira.SearchResult{}, nil
 	}
-	a := newAppWithFake(t, fake)
-	a.issuesList.SetIssues([]jira.Issue{{
+	app := newAppWithFake(t, fake)
+	app.issuesList.SetIssues([]jira.Issue{{
 		Key:      mainKey,
 		Subtasks: []jira.Issue{{Key: subKey1}},
 	}})
 
-	cmd := a.previewSelectedIssue()
+	cmd := app.previewSelectedIssue()
 	if cmd == nil {
 		t.Fatal("expected a prefetch cmd from previewSelectedIssue, got nil")
 	}

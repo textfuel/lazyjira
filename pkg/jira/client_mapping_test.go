@@ -188,8 +188,12 @@ func TestClient_GetComments_ADFBodyKeepsRawDocument(t *testing.T) {
 		t.Fatalf("len(comments) = %d, want 1", len(comments))
 	}
 	testkit.AssertEqual(t, "Body", comments[0].Body, "rich comment\n")
-	if comments[0].BodyADF == nil {
-		t.Error("BodyADF is nil, want the raw ADF document preserved")
+	adfDoc, isMap := comments[0].BodyADF.(map[string]any)
+	if !isMap {
+		t.Fatalf("BodyADF type = %T, want map[string]any", comments[0].BodyADF)
+	}
+	if adfDoc["type"] != "doc" {
+		t.Errorf("BodyADF[\"type\"] = %v, want \"doc\"", adfDoc["type"])
 	}
 }
 

@@ -25,10 +25,10 @@ func TestParseJQLContext(t *testing.T) {
 		{"field then space is none", "project ", 8, JQLContext{Mode: jqlCtxNone}},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			testkit.AssertEqual(t, "context", parseJQLContext(tt.input, tt.cursor), tt.want)
+			testkit.AssertEqual(t, "context", parseJQLContext(testCase.input, testCase.cursor), testCase.want)
 		})
 	}
 }
@@ -46,10 +46,10 @@ func TestTokenizeJQL(t *testing.T) {
 		{"empty is no tokens", "", nil},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			testkit.AssertSliceEqual(t, "tokens", tokenizeJQL(tt.input), tt.want)
+			testkit.AssertSliceEqual(t, "tokens", tokenizeJQL(testCase.input), testCase.want)
 		})
 	}
 }
@@ -74,10 +74,10 @@ func TestMatchFieldSuggestions(t *testing.T) {
 		{"no match is empty", "xyz", []string{}},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			testkit.AssertSliceEqual(t, "suggestions", matchFieldSuggestions(fields, tt.partial), tt.want)
+			testkit.AssertSliceEqual(t, "suggestions", matchFieldSuggestions(fields, testCase.partial), testCase.want)
 		})
 	}
 }

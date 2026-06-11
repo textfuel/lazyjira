@@ -25,68 +25,68 @@ func TestActiveContexts(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name  string
-		setup func(a *App)
+		setup func(app *App)
 		want  []config.Context
 	}{
 		{
 			"left issues",
-			func(a *App) { a.side = sideLeft; a.leftFocus = focusIssues },
+			func(app *App) { app.side = sideLeft; app.leftFocus = focusIssues },
 			[]config.Context{config.CtxIssues},
 		},
 		{
 			"left info",
-			func(a *App) { a.side = sideLeft; a.leftFocus = focusInfo },
+			func(app *App) { app.side = sideLeft; app.leftFocus = focusInfo },
 			[]config.Context{config.CtxInfo},
 		},
 		{
 			"left projects",
-			func(a *App) { a.side = sideLeft; a.leftFocus = focusProjects },
+			func(app *App) { app.side = sideLeft; app.leftFocus = focusProjects },
 			[]config.Context{config.CtxProjects},
 		},
 		{
 			"left status",
-			func(a *App) { a.side = sideLeft; a.leftFocus = focusStatus },
+			func(app *App) { app.side = sideLeft; app.leftFocus = focusStatus },
 			nil,
 		},
 		{
 			"right detail details",
-			func(a *App) {
-				a.side = sideRight
-				a.detailView.SetIssue(&jira.Issue{Key: "X-1"})
-				a.detailView.SetActiveTab(views.TabDetails)
+			func(app *App) {
+				app.side = sideRight
+				app.detailView.SetIssue(&jira.Issue{Key: "X-1"})
+				app.detailView.SetActiveTab(views.TabDetails)
 			},
 			[]config.Context{config.CtxDetail},
 		},
 		{
 			"right detail comments",
-			func(a *App) {
-				a.side = sideRight
-				a.detailView.SetIssue(&jira.Issue{Key: "X-1"})
-				a.detailView.SetActiveTab(views.TabComments)
+			func(app *App) {
+				app.side = sideRight
+				app.detailView.SetIssue(&jira.Issue{Key: "X-1"})
+				app.detailView.SetActiveTab(views.TabComments)
 			},
 			[]config.Context{config.CtxDetailComments, config.CtxDetail},
 		},
 		{
 			"right project mode",
-			func(a *App) {
-				a.side = sideRight
-				a.detailView.SetProject(&jira.Project{Key: "P"})
+			func(app *App) {
+				app.side = sideRight
+				app.detailView.SetProject(&jira.Project{Key: "P"})
 			},
 			[]config.Context{config.CtxProjects},
 		},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			a := newTestApp()
-			tc.setup(a)
-			got := a.activeContexts()
-			if len(got) != len(tc.want) {
-				t.Fatalf("len = %d (%v), want %d (%v)", len(got), got, len(tc.want), tc.want)
+			app := newTestApp()
+			testCase.setup(app)
+			got := app.activeContexts()
+			if len(got) != len(testCase.want) {
+				t.Fatalf("len = %d (%v), want %d (%v)", len(got), got, len(testCase.want), testCase.want)
 			}
 			for i := range got {
-				if got[i] != tc.want[i] {
-					t.Errorf("[%d] = %q, want %q", i, got[i], tc.want[i])
+				if got[i] != testCase.want[i] {
+					t.Errorf("[%d] = %q, want %q", i, got[i], testCase.want[i])
 				}
 			}
 		})
@@ -104,15 +104,15 @@ func parseTmpl(t *testing.T, s string) *template.Template {
 
 func TestBuildCommandData_SingleScopeFlat(t *testing.T) {
 	t.Parallel()
-	a := newTestApp()
-	a.issuesList.SetIssues([]jira.Issue{{Key: "ABC-1", Summary: "hi"}})
+	app := newTestApp()
+	app.issuesList.SetIssues([]jira.Issue{{Key: "ABC-1", Summary: "hi"}})
 	rc := config.ResolvedCustomCommand{
 		Key:      "y",
 		Scopes:   config.ScopeIssue,
 		Contexts: []config.Context{config.CtxIssues},
 		Template: parseTmpl(t, "{{.Key}}|{{.Summary}}"),
 	}
-	data, ok := a.buildCommandData(rc)
+	data, ok := app.buildCommandData(rc)
 	if !ok {
 		t.Fatal("expected ok")
 	}
@@ -127,11 +127,11 @@ func TestBuildCommandData_SingleScopeFlat(t *testing.T) {
 
 func TestBuildCommandData_DetailCommentsFlat(t *testing.T) {
 	t.Parallel()
-	a := newTestApp()
+	app := newTestApp()
 	issue := jira.Issue{Key: "ABC-1", Comments: []jira.Comment{{ID: "10", Body: "hello"}}}
-	a.issuesList.SetIssues([]jira.Issue{issue})
-	a.detailView.SetIssue(&issue)
-	a.detailView.SetActiveTab(views.TabComments)
+	app.issuesList.SetIssues([]jira.Issue{issue})
+	app.detailView.SetIssue(&issue)
+	app.detailView.SetActiveTab(views.TabComments)
 
 	rc := config.ResolvedCustomCommand{
 		Key:      "c",
@@ -139,7 +139,7 @@ func TestBuildCommandData_DetailCommentsFlat(t *testing.T) {
 		Contexts: []config.Context{config.CtxDetailComments},
 		Template: parseTmpl(t, "{{.Key}}-{{.CommentID}}"),
 	}
-	data, ok := a.buildCommandData(rc)
+	data, ok := app.buildCommandData(rc)
 	if !ok {
 		t.Fatal("expected ok")
 	}
@@ -154,12 +154,12 @@ func TestBuildCommandData_DetailCommentsFlat(t *testing.T) {
 
 func TestBuildCommandData_SharedFieldsProjectScope(t *testing.T) {
 	t.Parallel()
-	a := newTestApp()
-	a.gitBranch = "feature/x"
-	a.gitRepoPath = "/tmp/repo"
-	a.projectList.SetProjects([]jira.Project{{Key: "P", Name: "Proj"}})
-	a.side = sideLeft
-	a.leftFocus = focusProjects
+	app := newTestApp()
+	app.gitBranch = "feature/x"
+	app.gitRepoPath = "/tmp/repo"
+	app.projectList.SetProjects([]jira.Project{{Key: "P", Name: "Proj"}})
+	app.side = sideLeft
+	app.leftFocus = focusProjects
 
 	rc := config.ResolvedCustomCommand{
 		Key:      "p",
@@ -167,7 +167,7 @@ func TestBuildCommandData_SharedFieldsProjectScope(t *testing.T) {
 		Contexts: []config.Context{config.CtxProjects},
 		Template: parseTmpl(t, "{{.ProjectKey}}|{{.JiraHost}}|{{.GitBranch}}|{{.GitRepoPath}}"),
 	}
-	data, ok := a.buildCommandData(rc)
+	data, ok := app.buildCommandData(rc)
 	if !ok {
 		t.Fatal("expected ok")
 	}
@@ -182,13 +182,13 @@ func TestBuildCommandData_SharedFieldsProjectScope(t *testing.T) {
 
 func TestBuildCommandData_SharedFieldsDetailComments(t *testing.T) {
 	t.Parallel()
-	a := newTestApp()
-	a.gitBranch = "feature/y"
-	a.gitRepoPath = "/tmp/repo2"
+	app := newTestApp()
+	app.gitBranch = "feature/y"
+	app.gitRepoPath = "/tmp/repo2"
 	issue := jira.Issue{Key: "ABC-1", Comments: []jira.Comment{{ID: "10", Body: "hello"}}}
-	a.issuesList.SetIssues([]jira.Issue{issue})
-	a.detailView.SetIssue(&issue)
-	a.detailView.SetActiveTab(views.TabComments)
+	app.issuesList.SetIssues([]jira.Issue{issue})
+	app.detailView.SetIssue(&issue)
+	app.detailView.SetActiveTab(views.TabComments)
 
 	rc := config.ResolvedCustomCommand{
 		Key:      "c",
@@ -196,7 +196,7 @@ func TestBuildCommandData_SharedFieldsDetailComments(t *testing.T) {
 		Contexts: []config.Context{config.CtxDetailComments},
 		Template: parseTmpl(t, "{{.Key}}|{{.CommentID}}|{{.JiraHost}}|{{.GitBranch}}|{{.GitRepoPath}}"),
 	}
-	data, ok := a.buildCommandData(rc)
+	data, ok := app.buildCommandData(rc)
 	if !ok {
 		t.Fatal("expected ok")
 	}
@@ -211,28 +211,28 @@ func TestBuildCommandData_SharedFieldsDetailComments(t *testing.T) {
 
 func TestBuildCommandData_MissingSelectionSwallows(t *testing.T) {
 	t.Parallel()
-	a := newTestApp()
-	a.side = sideLeft
-	a.leftFocus = focusProjects
+	app := newTestApp()
+	app.side = sideLeft
+	app.leftFocus = focusProjects
 	rc := config.ResolvedCustomCommand{
 		Key:      "n",
 		Scopes:   config.ScopeProject,
 		Contexts: []config.Context{config.CtxProjects},
 		Template: parseTmpl(t, "{{.ProjectKey}}"),
 	}
-	if _, ok := a.buildCommandData(rc); ok {
+	if _, ok := app.buildCommandData(rc); ok {
 		t.Error("expected ok=false with no selected project")
 	}
 }
 
 func TestHandleCustomCommand_SpecificityDispatch(t *testing.T) {
 	t.Parallel()
-	a := newTestApp()
+	app := newTestApp()
 	issue := jira.Issue{Key: "ABC-1", Comments: []jira.Comment{{ID: "9", Body: "b"}}}
-	a.issuesList.SetIssues([]jira.Issue{issue})
-	a.detailView.SetIssue(&issue)
-	a.detailView.SetActiveTab(views.TabComments)
-	a.side = sideRight
+	app.issuesList.SetIssues([]jira.Issue{issue})
+	app.detailView.SetIssue(&issue)
+	app.detailView.SetActiveTab(views.TabComments)
+	app.side = sideRight
 
 	detailCmd := config.ResolvedCustomCommand{
 		Key: "x", Name: "detail-one", Scopes: config.ScopeIssue,
@@ -244,17 +244,15 @@ func TestHandleCustomCommand_SpecificityDispatch(t *testing.T) {
 		Contexts: []config.Context{config.CtxDetailComments},
 		Template: parseTmpl(t, "echo comments"),
 	}
-	a.customCmds = []config.ResolvedCustomCommand{detailCmd, commentsCmd}
+	app.customCmds = []config.ResolvedCustomCommand{detailCmd, commentsCmd}
 
-	// The specificity-ordered contexts should dispatch to detail.comments first.
-	ctxs := a.activeContexts()
+	ctxs := app.activeContexts()
 	if len(ctxs) == 0 || ctxs[0] != config.CtxDetailComments {
 		t.Fatalf("activeContexts = %v, want detail.comments first", ctxs)
 	}
-	// Walk the dispatch logic manually to assert selection without exec.
 	var chosen string
 	for _, ctx := range ctxs {
-		for _, rc := range a.customCmds {
+		for _, rc := range app.customCmds {
 			if rc.Key == "x" && rc.HasContext(ctx) {
 				chosen = rc.Name
 				goto done
@@ -280,35 +278,35 @@ func TestQuitReachableWarning(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		km       Keymap
+		keymap   Keymap
 		cmds     []config.ResolvedCustomCommand
 		wantWarn bool
 	}{
 		{
 			name:     "no custom commands",
-			km:       defaultKm,
+			keymap:   defaultKm,
 			cmds:     nil,
 			wantWarn: false,
 		},
 		{
-			name: "custom command on unrelated key",
-			km:   defaultKm,
+			name:   "custom command on unrelated key",
+			keymap: defaultKm,
 			cmds: []config.ResolvedCustomCommand{
 				{Key: "y", Contexts: allCtxs},
 			},
 			wantWarn: false,
 		},
 		{
-			name: "shadows q in issues only",
-			km:   defaultKm,
+			name:   "shadows q in issues only",
+			keymap: defaultKm,
 			cmds: []config.ResolvedCustomCommand{
 				{Key: "q", Contexts: []config.Context{config.CtxIssues}},
 			},
 			wantWarn: false,
 		},
 		{
-			name: "shadows q and ctrl+c everywhere",
-			km:   defaultKm,
+			name:   "shadows q and ctrl+c everywhere",
+			keymap: defaultKm,
 			cmds: []config.ResolvedCustomCommand{
 				{Key: "q", Contexts: allCtxs},
 				{Key: "ctrl+c", Contexts: allCtxs},
@@ -316,8 +314,8 @@ func TestQuitReachableWarning(t *testing.T) {
 			wantWarn: true,
 		},
 		{
-			name: "user remapped quit to alt+q, q shadowed everywhere",
-			km:   Keymap{ActQuit: {"alt+q"}},
+			name:   "user remapped quit to alt+q, q shadowed everywhere",
+			keymap: Keymap{ActQuit: {"alt+q"}},
 			cmds: []config.ResolvedCustomCommand{
 				{Key: "q", Contexts: allCtxs},
 			},
@@ -325,13 +323,13 @@ func TestQuitReachableWarning(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			warning := quitReachableWarning(tc.km, tc.cmds)
+			warning := quitReachableWarning(testCase.keymap, testCase.cmds)
 			got := warning != ""
-			if got != tc.wantWarn {
-				t.Errorf("got warning=%q, want warn=%v", warning, tc.wantWarn)
+			if got != testCase.wantWarn {
+				t.Errorf("got warning=%q, want warn=%v", warning, testCase.wantWarn)
 			}
 		})
 	}

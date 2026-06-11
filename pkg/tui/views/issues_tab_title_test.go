@@ -9,7 +9,6 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/config"
 )
 
-// topBorderLine extracts the first line from View() output.
 func topBorderLine(m *IssuesList) string {
 	v := m.View()
 	if v == "" {
@@ -18,7 +17,6 @@ func topBorderLine(m *IssuesList) string {
 	return strings.SplitN(v, "\n", 2)[0]
 }
 
-// makeIssuesListWithTabs creates an IssuesList with the given tab names and panel size.
 func makeIssuesListWithTabs(width, height int, tabNames ...string) *IssuesList {
 	m := NewIssuesList()
 	tabs := make([]config.IssueTabConfig, len(tabNames))
@@ -30,8 +28,6 @@ func makeIssuesListWithTabs(width, height int, tabNames ...string) *IssuesList {
 	return m
 }
 
-// TestIssuesList_TopBorderWidth_FewTabs verifies that with a small number of tabs
-// the top border of View() is exactly width visible characters wide.
 func TestIssuesList_TopBorderWidth_FewTabs(t *testing.T) {
 	t.Parallel()
 	const width = 50
@@ -44,9 +40,6 @@ func TestIssuesList_TopBorderWidth_FewTabs(t *testing.T) {
 	}
 }
 
-// TestIssuesList_TopBorderWidth_ManyTabsOverflow verifies that when many tabs
-// are present and their combined title exceeds the panel width, the top border
-// is still exactly width visible characters wide.
 func TestIssuesList_TopBorderWidth_ManyTabsOverflow(t *testing.T) {
 	t.Parallel()
 	const width = 50
@@ -61,9 +54,6 @@ func TestIssuesList_TopBorderWidth_ManyTabsOverflow(t *testing.T) {
 	}
 }
 
-// TestIssuesList_ActiveTabVisible_WhenTitleOverflows verifies that the active
-// tab's name is always visible in the title even when the full tab list would
-// overflow the panel width.
 func TestIssuesList_ActiveTabVisible_WhenTitleOverflows(t *testing.T) {
 	t.Parallel()
 	const width = 50
@@ -71,7 +61,6 @@ func TestIssuesList_ActiveTabVisible_WhenTitleOverflows(t *testing.T) {
 		"My Issues", "In Progress", "Blocked", "Done", "Backlog", "JQL",
 	)
 
-	// Activate the last tab, which is most likely to be cut off.
 	for range m.tabs[1:] {
 		m.NextTab()
 	}
@@ -83,10 +72,6 @@ func TestIssuesList_ActiveTabVisible_WhenTitleOverflows(t *testing.T) {
 	}
 }
 
-// TestIssuesList_SlidingWindow_ContiguousOrder verifies that the visible tabs
-// always form a contiguous slice of the full list in their original order.
-// No tabs from the right of the active tab should appear to its left, and
-// no tabs from the left should be skipped over.
 func TestIssuesList_SlidingWindow_ContiguousOrder(t *testing.T) {
 	t.Parallel()
 	tabNames := []string{"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"}
@@ -113,7 +98,6 @@ func TestIssuesList_SlidingWindow_ContiguousOrder(t *testing.T) {
 			continue
 		}
 
-		// Must contain the active tab.
 		found := false
 		for _, idx := range visible {
 			if idx == activeIdx {
@@ -125,7 +109,6 @@ func TestIssuesList_SlidingWindow_ContiguousOrder(t *testing.T) {
 				activeIdx, activeTabName, visible, plain)
 		}
 
-		// Visible set must be contiguous (no gaps).
 		for i := 1; i < len(visible); i++ {
 			if visible[i] != visible[i-1]+1 {
 				t.Errorf("activeIdx=%d: visible tabs %v are not contiguous\nline: %q",
@@ -134,7 +117,6 @@ func TestIssuesList_SlidingWindow_ContiguousOrder(t *testing.T) {
 			}
 		}
 
-		// Border width must still be exact.
 		got := lipgloss.Width(topBorderLine(m))
 		if got != width {
 			t.Errorf("activeIdx=%d: top border width = %d, want %d", activeIdx, got, width)
@@ -142,30 +124,22 @@ func TestIssuesList_SlidingWindow_ContiguousOrder(t *testing.T) {
 	}
 }
 
-// TestIssuesList_SlidingWindow_EarlyTabsHiddenWhenActiveIsLate verifies that
-// when the active tab is near the end of a long list, early tabs are scrolled
-// out of view (i.e. the window does not always start at tab 0).
 func TestIssuesList_SlidingWindow_EarlyTabsHiddenWhenActiveIsLate(t *testing.T) {
 	t.Parallel()
 	tabNames := []string{"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"}
 	const width = 50
 	m := makeIssuesListWithTabs(width, 8, tabNames...)
 
-	// Move to the last tab.
 	for range tabNames[1:] {
 		m.NextTab()
 	}
 
 	plain := stripANSI(topBorderLine(m))
 
-	// If the window is working correctly, "Alpha" should NOT appear when the
-	// active tab is "Zeta" and there is not enough room for both.
-	// Only assert this when the full list provably overflows.
 	fullM := makeIssuesListWithTabs(width, 8, tabNames...)
 	fullBorderW := lipgloss.Width(topBorderLine(fullM))
 	fullPlain := stripANSI(topBorderLine(fullM))
 	if fullBorderW == width && strings.Contains(fullPlain, "Zeta") {
-		// All tabs fit - skip this assertion.
 		return
 	}
 
@@ -175,14 +149,9 @@ func TestIssuesList_SlidingWindow_EarlyTabsHiddenWhenActiveIsLate(t *testing.T) 
 	}
 }
 
-// TestIssuesList_ActiveTabTruncated_WhenLabelExceedsBudget verifies that when a
-// single tab label is wider than the entire available title budget the border
-// width is still exactly width (the label is truncated, not overflowed).
 func TestIssuesList_ActiveTabTruncated_WhenLabelExceedsBudget(t *testing.T) {
 	t.Parallel()
 	const width = 20
-	// "A Very Long Tab Name" is 20 chars; prefix "[2] " is 4, so the label
-	// budget is width-3-4 = 13. The label must be truncated to fit.
 	m := makeIssuesListWithTabs(width, 8, "A Very Long Tab Name")
 
 	line := topBorderLine(m)

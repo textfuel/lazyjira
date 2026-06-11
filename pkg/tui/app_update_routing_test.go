@@ -483,14 +483,32 @@ func TestUpdate_RoutesCreateAndEditMessages(t *testing.T) {
 		{
 			name: "diff confirmed applies edit",
 			msg:  components.DiffConfirmedMsg{Content: "body"},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.editTempPath != "" {
+					t.Errorf("editTempPath = %q after DiffConfirmedMsg, want empty (cleanup)", app.editTempPath)
+				}
+			},
 		},
 		{
 			name: "diff cancelled cleans up",
 			msg:  components.DiffCancelledMsg{},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.editTempPath != "" {
+					t.Errorf("editTempPath = %q after DiffCancelledMsg, want empty (cleanup)", app.editTempPath)
+				}
+			},
 		},
 		{
 			name: "input confirmed without context is noop",
 			msg:  components.InputConfirmedMsg{Text: "x"},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.editContext.kind != editNone {
+					t.Errorf("editContext.kind = %v after InputConfirmedMsg with no ctx, want editNone", app.editContext.kind)
+				}
+			},
 		},
 		{
 			name: "input cancelled resets context",
@@ -691,6 +709,12 @@ func TestUpdate_RoutesLifecycleMessages(t *testing.T) {
 		{
 			name: "unknown message routes to focused panel",
 			msg:  struct{ unknown bool }{unknown: true},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.side != sideLeft {
+					t.Errorf("side = %v after unknown msg, want sideLeft (focused panel must not change)", app.side)
+				}
+			},
 		},
 	})
 }

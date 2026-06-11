@@ -35,12 +35,12 @@ func TestParseJQLPrefill(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := ParseJQLPrefill(tt.jql)
-			if !maps.Equal(got, tt.want) {
-				t.Errorf("ParseJQLPrefill(%q) = %v, want %v", tt.jql, got, tt.want)
+			got := ParseJQLPrefill(testCase.jql)
+			if !maps.Equal(got, testCase.want) {
+				t.Errorf("ParseJQLPrefill(%q) = %v, want %v", testCase.jql, got, testCase.want)
 			}
 		})
 	}

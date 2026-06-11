@@ -6,7 +6,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// fakeOverlay is a minimal OverlayPanel for testing.
 type fakeOverlay struct {
 	visible     bool
 	intercepted bool

@@ -47,11 +47,11 @@ func TestAddToHistory_PrependsDeduplicated(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := AddToHistory(tc.existing, tc.newQuery)
-			testkit.AssertSliceEqual(t, "history", got, tc.want)
+			got := AddToHistory(testCase.existing, testCase.newQuery)
+			testkit.AssertSliceEqual(t, "history", got, testCase.want)
 		})
 	}
 }

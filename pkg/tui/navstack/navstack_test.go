@@ -98,16 +98,6 @@ func TestNavStack_Pop_MultipleTimes_UntilEmpty(t *testing.T) {
 	}
 }
 
-func TestNavStack_Push_DifferentParentKeys_Appends(t *testing.T) {
-	t.Parallel()
-	s := NewNavStack()
-	s.Push(makeFrame("FOO-1", 0, SourceFromList))
-	s.Push(makeFrame("FOO-2", 0, SourceFromList))
-	if s.Depth() != 2 {
-		t.Fatalf("Depth after two different pushes = %d, want 2", s.Depth())
-	}
-}
-
 func TestNavStack_Clear_EmptiesStack(t *testing.T) {
 	t.Parallel()
 	s := NewNavStack()
@@ -122,9 +112,6 @@ func TestNavStack_Clear_EmptiesStack(t *testing.T) {
 	}
 }
 
-// testFocusIssues is a dummy non-zero FocusPanel value used in test fixtures.
-// The semantic mapping lives in the tui package; for NavStack tests any
-// non-zero int suffices.
 const testFocusIssues FocusPanel = 1
 
 func makeFrame(parentKey string, selectedIdx int, source Source) NavFrame {

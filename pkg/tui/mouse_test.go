@@ -41,12 +41,12 @@ func TestHitTest_Horizontal(t *testing.T) {
 		{"log", 40, 25, panelLog, 5},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			panel, relY := app.hitTest(tt.x, tt.y)
-			testkit.AssertEqual(t, "panel", panel, tt.want)
-			testkit.AssertEqual(t, "relY", relY, tt.wantRelY)
+			panel, relY := app.hitTest(testCase.x, testCase.y)
+			testkit.AssertEqual(t, "panel", panel, testCase.want)
+			testkit.AssertEqual(t, "relY", relY, testCase.wantRelY)
 		})
 	}
 }
@@ -69,12 +69,12 @@ func TestHitTest_Vertical(t *testing.T) {
 		{"log", 38, panelLog, 1},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			panel, relY := app.hitTest(2, tt.y)
-			testkit.AssertEqual(t, "panel", panel, tt.want)
-			testkit.AssertEqual(t, "relY", relY, tt.wantRelY)
+			panel, relY := app.hitTest(2, testCase.y)
+			testkit.AssertEqual(t, "panel", panel, testCase.want)
+			testkit.AssertEqual(t, "relY", relY, testCase.wantRelY)
 		})
 	}
 }

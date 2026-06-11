@@ -9,23 +9,21 @@ import (
 	"github.com/textfuel/lazyjira/v2/pkg/jira/jiratest"
 )
 
-// TestApplyParentEdit_SetSendsKey ensures a non-empty input dispatches an
-// UpdateIssue with parent.key body and applies the optimistic cache write.
 func TestApplyParentEdit_SetSendsKey(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.UpdateIssueFunc = func(_ context.Context, _ string, _ map[string]any) error { return nil }
 
-	a := newAppWithFake(t, fake)
-	a.issueCache[mainKey] = &jira.Issue{Key: mainKey}
+	app := newAppWithFake(t, fake)
+	app.issueCache[mainKey] = &jira.Issue{Key: mainKey}
 
-	cmd := a.applyParentEdit(mainKey, "NEW-1")
+	cmd := app.applyParentEdit(mainKey, "NEW-1")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}
 	_ = cmd()
 
-	if got := a.issueCache[mainKey].Parent; got == nil || got.Key != "NEW-1" {
+	if got := app.issueCache[mainKey].Parent; got == nil || got.Key != "NEW-1" {
 		t.Errorf("optimistic Parent = %+v, want Key=NEW-1", got)
 	}
 	if len(fake.UpdateIssueCalls) != 1 {
@@ -37,23 +35,21 @@ func TestApplyParentEdit_SetSendsKey(t *testing.T) {
 	}
 }
 
-// TestApplyParentEdit_EmptyCallsRemove verifies that empty input clears the
-// cached Parent and routes through RemoveIssueParent (not UpdateIssue).
 func TestApplyParentEdit_EmptyCallsRemove(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
 	fake.RemoveIssueParentFunc = func(_ context.Context, _ string) error { return nil }
 
-	a := newAppWithFake(t, fake)
-	a.issueCache[mainKey] = &jira.Issue{Key: mainKey, Parent: &jira.Issue{Key: "OLD-1"}}
+	app := newAppWithFake(t, fake)
+	app.issueCache[mainKey] = &jira.Issue{Key: mainKey, Parent: &jira.Issue{Key: "OLD-1"}}
 
-	cmd := a.applyParentEdit(mainKey, "")
+	cmd := app.applyParentEdit(mainKey, "")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}
 	_ = cmd()
 
-	if got := a.issueCache[mainKey].Parent; got != nil {
+	if got := app.issueCache[mainKey].Parent; got != nil {
 		t.Errorf("optimistic Parent = %+v, want nil", got)
 	}
 	if len(fake.RemoveIssueParentCalls) != 1 {
@@ -64,15 +60,13 @@ func TestApplyParentEdit_EmptyCallsRemove(t *testing.T) {
 	}
 }
 
-// TestApplyParentEdit_InvalidKeyShortCircuits ensures malformed input never
-// reaches the client and surfaces as an inline errorMsg.
 func TestApplyParentEdit_InvalidKeyShortCircuits(t *testing.T) {
 	t.Parallel()
 	fake := &jiratest.FakeClient{T: t}
-	a := newAppWithFake(t, fake)
-	a.issueCache[mainKey] = &jira.Issue{Key: mainKey}
+	app := newAppWithFake(t, fake)
+	app.issueCache[mainKey] = &jira.Issue{Key: mainKey}
 
-	cmd := a.applyParentEdit(mainKey, "not-a-key")
+	cmd := app.applyParentEdit(mainKey, "not-a-key")
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd")
 	}

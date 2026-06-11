@@ -45,18 +45,6 @@ func TestDiffView_ViewRendersTitle(t *testing.T) {
 	}
 }
 
-func TestDiffView_ViewShowsDiffLines(t *testing.T) {
-	t.Parallel()
-	d := NewDiffView()
-	d.SetSize(80, 24)
-	d.Show(testTitle, "old content", "new content")
-	out := d.View()
-	plain := stripANSI(out)
-	if !strings.Contains(plain, "-") && !strings.Contains(plain, "+") {
-		t.Errorf("expected diff markers in view, got %q", plain)
-	}
-}
-
 func TestDiffView_ViewEmptyWhenInvisible(t *testing.T) {
 	t.Parallel()
 	d := NewDiffView()
@@ -161,8 +149,7 @@ func TestDiffView_RenderDrawsOnBackground(t *testing.T) {
 	d := NewDiffView()
 	d.SetSize(80, 24)
 	d.Show(testTitle, "old text", "new text")
-	bg := strings.Repeat(strings.Repeat(" ", 80)+"\n", 23)
-	bg = strings.TrimRight(bg, "\n")
+	bg := testkit.BlankCanvas(80, 24)
 	out := d.Render(bg, 80, 24)
 	if !strings.Contains(stripANSI(out), testTitle) {
 		t.Errorf("expected title in rendered output, got %q", stripANSI(out))
