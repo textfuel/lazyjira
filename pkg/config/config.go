@@ -155,16 +155,17 @@ type UniversalKeys struct {
 }
 
 type IssueKeys struct {
-	Select       string `yaml:"select"`
-	Open         string `yaml:"open"`
-	FocusRight   string `yaml:"focusRight"`
-	Transition   string `yaml:"transition"`
-	Browser      string `yaml:"browser"`
-	URLPicker    string `yaml:"urlPicker"`
-	CopyURL      string `yaml:"copyURL"`
-	CloseJQLTab  string `yaml:"closeJQLTab"`
-	CreateBranch string `yaml:"createBranch"`
-	CreateIssue  string `yaml:"createIssue"`
+	Select        string `yaml:"select"`
+	Open          string `yaml:"open"`
+	FocusRight    string `yaml:"focusRight"`
+	Transition    string `yaml:"transition"`
+	Browser       string `yaml:"browser"`
+	URLPicker     string `yaml:"urlPicker"`
+	CopyURL       string `yaml:"copyURL"`
+	CloseJQLTab   string `yaml:"closeJQLTab"`
+	CreateBranch  string `yaml:"createBranch"`
+	CreateIssue   string `yaml:"createIssue"`
+	CreateSubtask string `yaml:"createSubtask"`
 }
 
 type ProjectKeys struct {

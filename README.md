@@ -191,7 +191,7 @@ Press `?` inside the app for all keybindings.
 - [x] Configurable navigation keys
 - [x] Searchable keybindings help popup
 - [x] Scroll detail panel without switching focus
-- [ ] Create subtasks from TUI
+- [x] Create subtasks from TUI
 - [ ] Link issues (add/remove issue links)
 - [ ] CLI mode (non-interactive commands for scripting and automation)
 - [ ] Robust issue type changer (handle subtask/parent unlinking, field validation)

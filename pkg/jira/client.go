@@ -252,7 +252,7 @@ func (c *Client) doWithBase(ctx context.Context, baseURL, method, path string, b
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		c.log("  BODY: %s\n", string(respBody))
-		return fmt.Errorf("request %s %s returned status %d: %s", method, path, resp.StatusCode, string(respBody))
+		return newAPIError(method, path, resp.StatusCode, string(respBody))
 	}
 
 	if result != nil && len(respBody) > 0 {
