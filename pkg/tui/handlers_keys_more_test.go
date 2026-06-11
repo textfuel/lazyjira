@@ -970,13 +970,14 @@ func TestHandleActionEdit_ConversionFailures(t *testing.T) {
 func gitTestRepo(t *testing.T, branches ...string) string {
 	t.Helper()
 	dir := t.TempDir()
-	commands := [][]string{
-		{"init", "-q", "-b", "main"},
-		{"config", "user.email", "test@example.com"},
-		{"config", "user.name", "test"},
-		{"config", "commit.gpgsign", "false"},
-		{"commit", "--allow-empty", "-q", "-m", "init"},
-	}
+	commands := make([][]string, 0, 5+len(branches))
+	commands = append(commands,
+		[]string{"init", "-q", "-b", "main"},
+		[]string{"config", "user.email", "test@example.com"},
+		[]string{"config", "user.name", "test"},
+		[]string{"config", "commit.gpgsign", "false"},
+		[]string{"commit", "--allow-empty", "-q", "-m", "init"},
+	)
 	for _, branch := range branches {
 		commands = append(commands, []string{"branch", branch})
 	}

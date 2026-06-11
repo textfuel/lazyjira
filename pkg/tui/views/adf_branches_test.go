@@ -1,6 +1,7 @@
 package views
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -361,7 +362,7 @@ func TestHeadingStyle_Levels(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(string(rune('0'+tt.level)), func(t *testing.T) {
+		t.Run(strconv.Itoa(tt.level), func(t *testing.T) {
 			t.Parallel()
 			style := headingStyle(tt.level)
 			testkit.AssertEqual(t, "bold", style.GetBold(), true)
