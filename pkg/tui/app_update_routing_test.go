@@ -27,16 +27,44 @@ func routingApp(t *testing.T) *App {
 	return app
 }
 
-func TestUpdate_RoutesMessages(t *testing.T) {
-	t.Parallel()
+type routingCase struct {
+	name    string
+	setup   func(app *App, fake *jiratest.FakeClient)
+	msg     tea.Msg
+	wantCmd bool
+	assert  func(t *testing.T, app *App)
+}
 
-	cases := []struct {
-		name    string
-		setup   func(app *App, fake *jiratest.FakeClient)
-		msg     tea.Msg
-		wantCmd bool
-		assert  func(t *testing.T, app *App)
-	}{
+func runRoutingCases(t *testing.T, cases []routingCase) {
+	t.Helper()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			fake := &jiratest.FakeClient{T: t}
+			app := newAppWithFake(t, fake)
+			app.keymap = DefaultKeymap()
+			app.width = 120
+			app.height = 40
+			app.layoutPanels()
+			if tc.setup != nil {
+				tc.setup(app, fake)
+			}
+
+			_, cmd := app.Update(tc.msg)
+
+			if tc.wantCmd && cmd == nil {
+				t.Error("expected non-nil cmd")
+			}
+			if tc.assert != nil {
+				tc.assert(t, app)
+			}
+		})
+	}
+}
+
+func TestUpdate_RoutesCoreMessages(t *testing.T) {
+	t.Parallel()
+	runRoutingCases(t, []routingCase{
 		{
 			name: "window size sets dimensions",
 			msg:  tea.WindowSizeMsg{Width: 100, Height: 30},
@@ -97,6 +125,12 @@ func TestUpdate_RoutesMessages(t *testing.T) {
 			msg:     autoFetchTickMsg{},
 			wantCmd: true,
 		},
+	})
+}
+
+func TestUpdate_RoutesDataMessages(t *testing.T) {
+	t.Parallel()
+	runRoutingCases(t, []routingCase{
 		{
 			name: "issues loaded fills active tab",
 			setup: func(app *App, fake *jiratest.FakeClient) {
@@ -276,6 +310,12 @@ func TestUpdate_RoutesMessages(t *testing.T) {
 				}
 			},
 		},
+	})
+}
+
+func TestUpdate_RoutesCreateAndEditMessages(t *testing.T) {
+	t.Parallel()
+	runRoutingCases(t, []routingCase{
 		{
 			name: "create meta loaded shows form",
 			setup: func(app *App, fake *jiratest.FakeClient) {
@@ -465,6 +505,12 @@ func TestUpdate_RoutesMessages(t *testing.T) {
 				}
 			},
 		},
+	})
+}
+
+func TestUpdate_RoutesJQLAndNavMessages(t *testing.T) {
+	t.Parallel()
+	runRoutingCases(t, []routingCase{
 		{
 			name: "jql submit starts search",
 			setup: func(app *App, fake *jiratest.FakeClient) {
@@ -578,6 +624,12 @@ func TestUpdate_RoutesMessages(t *testing.T) {
 				}
 			},
 		},
+	})
+}
+
+func TestUpdate_RoutesLifecycleMessages(t *testing.T) {
+	t.Parallel()
+	runRoutingCases(t, []routingCase{
 		{
 			name: "children request ignored off cloud",
 			msg:  views.ChildrenRequestMsg{Key: testKey},
@@ -640,31 +692,7 @@ func TestUpdate_RoutesMessages(t *testing.T) {
 			name: "unknown message routes to focused panel",
 			msg:  struct{ unknown bool }{unknown: true},
 		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			fake := &jiratest.FakeClient{T: t}
-			app := newAppWithFake(t, fake)
-			app.keymap = DefaultKeymap()
-			app.width = 120
-			app.height = 40
-			app.layoutPanels()
-			if tc.setup != nil {
-				tc.setup(app, fake)
-			}
-
-			_, cmd := app.Update(tc.msg)
-
-			if tc.wantCmd && cmd == nil {
-				t.Error("expected non-nil cmd")
-			}
-			if tc.assert != nil {
-				tc.assert(t, app)
-			}
-		})
-	}
+	})
 }
 
 func TestUpdate_ActiveSearchBarConsumesKeys(t *testing.T) {
