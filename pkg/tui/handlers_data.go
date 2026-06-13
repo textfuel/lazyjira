@@ -757,6 +757,17 @@ func (a *App) metaToFormField(mf jira.CreateMetaField) components.CreateFormFiel
 		SchemaItems:   mf.Schema.Items,
 	}
 
+	// Default the reporter to the current user, matching Jira's own behaviour
+	// (reporter = creator). The user can still change or clear it.
+	if mf.Schema.System == "reporter" && a.currentUser != nil {
+		key := fldName
+		if a.isCloud {
+			key = fldAccountID
+		}
+		ff.Value = map[string]string{key: a.currentUser.AccountID}
+		ff.DisplayValue = a.currentUser.DisplayName
+	}
+
 	if !mf.Required && ff.DisplayValue == "" && ft != components.CFFieldMultiText {
 		ff.DisplayValue = "None"
 	}
