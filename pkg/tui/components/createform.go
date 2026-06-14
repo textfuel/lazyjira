@@ -672,13 +672,17 @@ func (f *CreateForm) submitForm() (tea.Cmd, bool) {
 		}
 	}
 	if hasErrors {
-		count := 0
+		var names []string
 		for _, fld := range f.allFields {
 			if fld.HasError {
-				count++
+				name := fld.Name
+				if name == "" {
+					name = fld.FieldID
+				}
+				names = append(names, name)
 			}
 		}
-		f.errorMsg = fmt.Sprintf("%d required field(s) empty", count)
+		f.errorMsg = "Required field(s) empty: " + strings.Join(names, ", ")
 		return nil, true
 	}
 

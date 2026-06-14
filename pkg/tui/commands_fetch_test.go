@@ -222,14 +222,14 @@ func TestFetchCreateMeta(t *testing.T) {
 		}
 	})
 
-	t.Run("error returns createErrorMsg", func(t *testing.T) {
+	t.Run("error returns createPreFormErrorMsg", func(t *testing.T) {
 		t.Parallel()
 		fake := newFakeClient(t)
 		fake.GetCreateMetaFunc = func(_ context.Context, _, _ string) ([]jira.CreateMetaField, error) {
 			return nil, errors.New("x")
 		}
-		if _, ok := fetchCreateMeta(fake, testProject, "10001")().(createErrorMsg); !ok {
-			t.Error("want createErrorMsg")
+		if _, ok := fetchCreateMeta(fake, testProject, "10001")().(createPreFormErrorMsg); !ok {
+			t.Error("want createPreFormErrorMsg")
 		}
 	})
 }

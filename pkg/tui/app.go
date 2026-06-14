@@ -79,6 +79,7 @@ type createCtx struct {
 	projectID     string
 	issueTypeID   string
 	issueTypeName string
+	parentKey     string
 	duplicateFrom *jira.Issue
 }
 
@@ -521,6 +522,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.createForm.Resume()
 		a.createForm.SetError(msg.err.Error())
 		return a, nil
+	case createPreFormErrorMsg:
+		return a.handleCreatePreFormError(msg)
 	case issueUpdatedMsg:
 		return a.handleIssueUpdated(msg)
 	case commentAddedMsg:

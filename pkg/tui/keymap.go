@@ -43,6 +43,7 @@ const (
 	ActCloseJQLTab    Action = "closeJQLTab"
 	ActCreateBranch   Action = "createBranch"
 	ActCreateIssue    Action = "createIssue"
+	ActCreateSubtask  Action = "createSubtask"
 	ActDuplicateIssue Action = "duplicateIssue"
 	ActShowParent     Action = "showParent"
 
@@ -96,6 +97,7 @@ func DefaultKeymap() Keymap {
 		ActCloseJQLTab:    {"x"},
 		ActCreateBranch:   {"b"},
 		ActDuplicateIssue: {"ctrl+n"},
+		ActCreateSubtask:  {"S"},
 		ActShowParent:     {"backspace"},
 
 		ActNavDown:     {"j", "down", "ctrl+j"},
@@ -147,6 +149,7 @@ func KeymapFromConfig(kcfg config.KeybindingConfig) Keymap {
 	set(ActCloseJQLTab, kcfg.Issues.CloseJQLTab)
 	set(ActCreateBranch, kcfg.Issues.CreateBranch)
 	set(ActCreateIssue, kcfg.Issues.CreateIssue)
+	set(ActCreateSubtask, kcfg.Issues.CreateSubtask)
 	// Detail
 	set(ActFocusLeft, kcfg.Detail.FocusLeft)
 	set(ActInfoTab, kcfg.Detail.InfoTab)

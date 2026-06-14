@@ -224,6 +224,9 @@ func (a *App) helpBarItems() []components.HelpItem {
 			components.HelpItem{Key: km.Keys(ActNew), Description: "create"},
 			components.HelpItem{Key: km.Keys(ActJQLSearch), Description: "JQL search"},
 		)
+		if a.canCreateSubtask() {
+			items = append(items, components.HelpItem{Key: km.Keys(ActCreateSubtask), Description: "subtask"})
+		}
 		items = append(items, a.customCommandHelpItems(config.CtxIssues)...)
 		items = append(items, components.HelpItem{Key: km.Keys(ActHelp), Description: "help"})
 		return items

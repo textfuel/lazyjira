@@ -720,6 +720,26 @@ func TestCreateForm_RenderWithError(t *testing.T) {
 	}
 }
 
+func TestCreateForm_SubmitNamesEmptyRequiredFields(t *testing.T) {
+	t.Parallel()
+	form := NewCreateForm(nil)
+	form.SetSize(120, 40)
+	form.ShowForm([]CreateFormField{
+		{FieldID: "summary", Name: "Summary", Type: CFFieldSingleText, Required: true, DisplayValue: "filled"},
+		{FieldID: "priority", Name: "Priority", Type: CFFieldSingleSelect, Required: true},
+		{FieldID: "components", Name: "Components", Type: CFFieldMultiSelect, Required: true},
+	}, testIssueType, testProjectKey)
+
+	cmd, _ := form.submitForm()
+
+	if cmd != nil {
+		t.Fatal("expected no submit cmd while required fields are empty")
+	}
+	if !strings.Contains(form.errorMsg, "Priority") || !strings.Contains(form.errorMsg, "Components") {
+		t.Errorf("error should name the empty required fields, got %q", form.errorMsg)
+	}
+}
+
 func TestCreateForm_InterceptMouseWheelScrolls(t *testing.T) {
 	t.Parallel()
 	form := NewCreateForm(nil)

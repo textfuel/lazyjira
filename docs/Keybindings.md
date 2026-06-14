@@ -33,6 +33,7 @@ Detail scroll keys (`J`/`K`/`ctrl+f`/`ctrl+b`) can be remapped via `keybinding.d
 | `a` | Change assignee |
 | `n` | Create new issue (issues list) or new comment (comments tab) |
 | `ctrl+n` | Duplicate issue |
+| `S` | Create a subtask under the selected issue (issues list or the info panel's Sub tab). Parent and project are taken from the selection; not available when the selection is itself a subtask or an epic. |
 | `c` | View comments |
 | `o` | Open in browser |
 | `u` | Pick URL from description |
