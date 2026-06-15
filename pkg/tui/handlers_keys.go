@@ -7,6 +7,7 @@ import (
 
 	"github.com/textfuel/lazyjira/v2/pkg/ascii"
 	"github.com/textfuel/lazyjira/v2/pkg/git"
+	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
@@ -419,6 +420,13 @@ func (a *App) handleIssueAction(action Action) (tea.Model, tea.Cmd, bool) {
 		m, cmd := a.startCreateIssue()
 		return m, cmd, true
 
+	case ActCreateSubtask:
+		if a.canCreateSubtask() {
+			m, cmd := a.startCreateSubtask()
+			return m, cmd, true
+		}
+		return a, nil, true
+
 	case ActNew:
 		if a.side == sideLeft && a.leftFocus == focusIssues && a.projectKey != "" {
 			m, cmd := a.startCreateIssue()
@@ -483,6 +491,86 @@ func (a *App) startDuplicateIssue() (tea.Model, tea.Cmd) {
 	}
 	*a.logFlag = true
 	return a, fetchIssueTypes(a.client, a.projectID)
+}
+
+// canCreateSubtask reports whether a subtask can be created for the parent under
+// the cursor on the active surface (issues list or info-panel Sub tab). Subtasks
+// and epics (hierarchyLevel > 0) are excluded; an unknown issue type is allowed
+// and validated by the API. The board project is irrelevant: the subtask follows
+// its parent's project.
+func (a *App) canCreateSubtask() bool {
+	parent := a.currentSubtaskParent()
+	if parent == nil {
+		return false
+	}
+	if parent.IssueType != nil && (parent.IssueType.Subtask || parent.IssueType.HierarchyLevel > 0) {
+		return false
+	}
+	return true
+}
+
+// currentSubtaskParent resolves the parent issue under the cursor for the active
+// surface: the selected issue when the issues list is focused, or the selected
+// Sub-tab child when the info panel is focused. Returns nil when no valid parent
+// is selectable. Gate and startCreateSubtask share it so they never diverge.
+func (a *App) currentSubtaskParent() *jira.Issue {
+	if a.side != sideLeft {
+		return nil
+	}
+	switch a.leftFocus {
+	case focusIssues:
+		return a.currentIssue()
+	case focusInfo:
+		return a.infoPanel.SelectedSubtaskIssue()
+	default:
+		return nil
+	}
+}
+
+func (a *App) startCreateSubtask() (tea.Model, tea.Cmd) {
+	parent := a.currentSubtaskParent()
+	if parent == nil {
+		return a, nil
+	}
+
+	// A subtask lives in its parent's project, which may differ from the board
+	// (cross-project JQL tab). Derive it from the parent, not the board.
+	projectKey := projectKeyFromIssueKey(parent.Key)
+	projectID, ok := a.resolveProjectID(projectKey)
+	if !ok {
+		a.statusPanel.SetError("Cannot create subtask in " + projectKey + ": project not found")
+		return a, nil
+	}
+
+	a.createCtx = createCtx{
+		intent:     true,
+		projectKey: projectKey,
+		projectID:  projectID,
+		parentKey:  parent.Key,
+	}
+	*a.logFlag = true
+	return a, fetchIssueTypes(a.client, projectID)
+}
+
+// projectKeyFromIssueKey returns the project key prefix of an issue key
+// ("PROJ" from "PROJ-123"). Jira project keys contain no hyphen, so the key is
+// everything before the last hyphen.
+func projectKeyFromIssueKey(issueKey string) string {
+	if i := strings.LastIndex(issueKey, "-"); i > 0 {
+		return issueKey[:i]
+	}
+	return issueKey
+}
+
+// resolveProjectID maps a project key to its numeric ID via the loaded project
+// list. The cloud issue-type endpoint requires the ID, not the key.
+func (a *App) resolveProjectID(projectKey string) (string, bool) {
+	for _, p := range a.projectList.AllProjects() {
+		if p.Key == projectKey {
+			return p.ID, true
+		}
+	}
+	return "", false
 }
 
 func (a *App) startCreateIssue() (tea.Model, tea.Cmd) {

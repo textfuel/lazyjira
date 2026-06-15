@@ -329,9 +329,10 @@ func (a *App) handleComponentsLoaded(msg componentsLoadedMsg) (tea.Model, tea.Cm
 func (a *App) handleIssueTypesLoaded(msg issueTypesLoadedMsg) (tea.Model, tea.Cmd) {
 	if a.createCtx.intent {
 		a.createCtx.intent = false
+		subtaskOnly := a.createCtx.parentKey != ""
 		items := make([]components.ModalItem, 0, len(msg.issueTypes))
 		for _, t := range msg.issueTypes {
-			if !t.Subtask {
+			if t.Subtask == subtaskOnly {
 				items = append(items, components.ModalItem{ID: t.ID, Label: t.Name})
 			}
 		}
@@ -340,7 +341,11 @@ func (a *App) handleIssueTypesLoaded(msg issueTypesLoadedMsg) (tea.Model, tea.Cm
 				return components.CreateFormTypeSelectedMsg{TypeID: item.ID, TypeName: item.Label}
 			}
 		}
-		a.modal.Show("Select issue type", items)
+		title := "Select issue type"
+		if subtaskOnly {
+			title = "Select subtask type"
+		}
+		a.modal.Show(title, items)
 		return a, nil
 	}
 	items := make([]components.ModalItem, 0, len(msg.issueTypes))
@@ -453,6 +458,19 @@ func (a *App) handleCreateFormTypeSelected(msg components.CreateFormTypeSelected
 	a.createForm.SetLoading(true)
 	*a.logFlag = true
 	return a, fetchCreateMeta(a.client, a.createCtx.projectKey, msg.TypeID)
+}
+
+// handleCreatePreFormError aborts a create flow that failed before the form was
+// populated. The form is hidden (never resumed empty) and the failure is shown
+// as a readable status message carrying Jira's own wording.
+func (a *App) handleCreatePreFormError(msg createPreFormErrorMsg) (tea.Model, tea.Cmd) {
+	subtask := a.createCtx.parentKey != ""
+	text := formatCreateError(msg.err, a.createCtx.projectKey, subtask)
+	a.createForm.Hide()
+	a.createCtx = createCtx{}
+	a.statusPanel.SetError(text)
+	a.modal.ShowError("Error", []components.ModalItem{{Label: text}})
+	return a, nil
 }
 
 // handleCreateMetaLoaded builds form fields from metadata
@@ -737,6 +755,17 @@ func (a *App) metaToFormField(mf jira.CreateMetaField) components.CreateFormFiel
 		Required:      mf.Required,
 		AllowedValues: allowed,
 		SchemaItems:   mf.Schema.Items,
+	}
+
+	// Default the reporter to the current user, matching Jira's own behaviour
+	// (reporter = creator). The user can still change or clear it.
+	if mf.Schema.System == "reporter" && a.currentUser != nil {
+		key := fldName
+		if a.isCloud {
+			key = fldAccountID
+		}
+		ff.Value = map[string]string{key: a.currentUser.AccountID}
+		ff.DisplayValue = a.currentUser.DisplayName
 	}
 
 	if !mf.Required && ff.DisplayValue == "" && ft != components.CFFieldMultiText {

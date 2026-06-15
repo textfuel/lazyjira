@@ -272,6 +272,72 @@ func TestMetaToFormField_OptionalGetsNonePlaceholder(t *testing.T) {
 	testkit.AssertEqual(t, "placeholder", field.DisplayValue, "None")
 }
 
+func TestMetaToFormField_PrefillsReporterWithCurrentUser_Cloud(t *testing.T) {
+	t.Parallel()
+	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
+	app.isCloud = true
+	app.currentUser = &jira.User{AccountID: "acc-1", DisplayName: "Alice"}
+
+	field := app.metaToFormField(jira.CreateMetaField{
+		FieldID: "reporter", Name: "Reporter", Required: true,
+		Schema: jira.CreateMetaSchema{Type: schemaUser, System: "reporter"},
+	})
+
+	testkit.AssertEqual(t, "display", field.DisplayValue, "Alice")
+	v, ok := field.Value.(map[string]string)
+	if !ok || v[fldAccountID] != "acc-1" {
+		t.Errorf("reporter Value = %v, want {accountId: acc-1}", field.Value)
+	}
+}
+
+func TestMetaToFormField_PrefillsReporter_ServerUsesNameKey(t *testing.T) {
+	t.Parallel()
+	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
+	app.isCloud = false
+	app.currentUser = &jira.User{AccountID: "bob", DisplayName: "Bob"}
+
+	field := app.metaToFormField(jira.CreateMetaField{
+		FieldID: "reporter", Name: "Reporter",
+		Schema: jira.CreateMetaSchema{Type: schemaUser, System: "reporter"},
+	})
+
+	v, ok := field.Value.(map[string]string)
+	if !ok || v[fldName] != "bob" {
+		t.Errorf("reporter Value = %v, want {name: bob}", field.Value)
+	}
+}
+
+func TestMetaToFormField_ReporterEmptyWithoutCurrentUser(t *testing.T) {
+	t.Parallel()
+	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
+	app.currentUser = nil
+
+	field := app.metaToFormField(jira.CreateMetaField{
+		FieldID: "reporter", Name: "Reporter",
+		Schema: jira.CreateMetaSchema{Type: schemaUser, System: "reporter"},
+	})
+
+	if field.Value != nil {
+		t.Errorf("reporter should stay empty without a current user, got %v", field.Value)
+	}
+}
+
+func TestMetaToFormField_AssigneeNotPrefilled(t *testing.T) {
+	t.Parallel()
+	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
+	app.isCloud = true
+	app.currentUser = &jira.User{AccountID: "acc-1", DisplayName: "Alice"}
+
+	field := app.metaToFormField(jira.CreateMetaField{
+		FieldID: fldAssignee, Name: "Assignee",
+		Schema: jira.CreateMetaSchema{Type: schemaUser, System: fldAssignee},
+	})
+
+	if field.Value != nil {
+		t.Errorf("assignee must not be auto-prefilled, got %v", field.Value)
+	}
+}
+
 func TestApplyDuplicatePrefill(t *testing.T) {
 	t.Parallel()
 

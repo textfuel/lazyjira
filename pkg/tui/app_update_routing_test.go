@@ -344,6 +344,26 @@ func TestUpdate_RoutesCreateAndEditMessages(t *testing.T) {
 			msg:  createErrorMsg{err: errors.New("boom")},
 		},
 		{
+			name: "pre-form create error aborts to status",
+			setup: func(app *App, _ *jiratest.FakeClient) {
+				app.createCtx = createCtx{projectKey: "DSOTEST", parentKey: testKey}
+				app.createForm.SetLoading(true)
+			},
+			msg: createPreFormErrorMsg{err: &jira.APIError{
+				Status:   404,
+				Messages: []string{"You cannot create issues in this project."},
+			}},
+			assert: func(t *testing.T, app *App) {
+				t.Helper()
+				if app.createForm.IsVisible() {
+					t.Error("form should be hidden after a pre-form error")
+				}
+				if app.statusPanel.ErrorMessage() == "" {
+					t.Error("status panel should carry the pre-form error")
+				}
+			},
+		},
+		{
 			name:    "issue updated refetches detail",
 			setup:   func(app *App, fake *jiratest.FakeClient) { stubFullIssueFetch(fake, &jira.Issue{Key: testKey}) },
 			msg:     issueUpdatedMsg{issueKey: testKey, field: "summary"},

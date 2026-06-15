@@ -396,6 +396,9 @@ func (a *App) handleCreateFormUserChecklist(field *components.CreateFormField, i
 func (a *App) handleCreateFormSubmit(msg components.CreateFormSubmitMsg) (tea.Model, tea.Cmd) {
 	msg.Fields["project"] = map[string]string{"key": a.createCtx.projectKey}
 	msg.Fields["issuetype"] = map[string]string{"id": a.createCtx.issueTypeID}
+	if a.createCtx.parentKey != "" {
+		msg.Fields["parent"] = map[string]string{"key": a.createCtx.parentKey}
+	}
 	a.createForm.SetLoading(true)
 	*a.logFlag = true
 	return a, createIssue(a.client, msg.Fields)
