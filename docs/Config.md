@@ -236,6 +236,8 @@ Supported keys:
 
 Values are any lipgloss-accepted color: hex (`"#a6e3a1"`), ANSI 16 (`"4"`), or ANSI 256 (`"208"`).
 
+If a value is not a recognized color format, that key falls back to your terminal's default color and a warning is logged (visible with `--debug`).
+
 #### Example: Rose Pine
 
 Auto-detect between Main (dark) and Dawn (light). Palette from [Rose Pine](https://rosepinetheme.com) — All natural pine, faux fur and a bit of soho vibes for the classy minimalist.

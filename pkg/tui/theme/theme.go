@@ -2,6 +2,8 @@ package theme
 
 import (
 	"fmt"
+	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -234,11 +236,11 @@ func Init(opts Options) error {
 	}
 
 	built := preset.Build()
-	palette := applyOverrides(built.Colors, opts.Colors)
+	palette := applyOverrides(built.Colors, opts.Colors, "themeColors")
 	if preset.IsLight {
-		palette = applyOverrides(palette, opts.ColorsLight)
+		palette = applyOverrides(palette, opts.ColorsLight, "themeLight")
 	} else {
-		palette = applyOverrides(palette, opts.ColorsDark)
+		palette = applyOverrides(palette, opts.ColorsDark, "themeDark")
 	}
 
 	Default = buildTheme(palette, built.AuthorPalette)
@@ -272,14 +274,67 @@ func autoDetectPreset() *Preset {
 	return &presetList[0]
 }
 
+// ValidColor reports whether val is a color string lipgloss/termenv will
+// render correctly. Accepted forms:
+//   - hex: "#rgb", "#rrggbb", "#rrggbbaa" (case-insensitive)
+//   - ANSI decimal: "0".."255"
+//   - terminal default sentinel: "-1"
+//
+// Empty strings are rejected here; callers (e.g. applyOverrides) skip
+// empty values before calling ValidColor so users can use "" to mean
+// "leave the preset alone".
+//
+// Exported so other packages (e.g. pkg/tui/views/adf.go) can guard
+// dynamic color strings from untrusted sources (Jira ADF marks, etc.)
+// against malformed values.
+func ValidColor(val string) bool {
+	if val == "" {
+		return false
+	}
+	if strings.HasPrefix(val, "#") {
+		hex := val[1:]
+		switch len(hex) {
+		case 3, 6, 8:
+		default:
+			return false
+		}
+		for i := 0; i < len(hex); i++ {
+			c := hex[i]
+			switch {
+			case c >= '0' && c <= '9':
+			case c >= 'a' && c <= 'f':
+			case c >= 'A' && c <= 'F':
+			default:
+				return false
+			}
+		}
+		return true
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil {
+		return false
+	}
+	return n == -1 || (n >= 0 && n <= 255)
+}
+
 // applyOverrides patches a ColorPalette with any non-empty values from the
-// provided map. Unknown keys and empty values are ignored.
-func applyOverrides(p ColorPalette, m map[string]string) ColorPalette {
+// provided map. Unknown keys are silently ignored for forward-compat. Values
+// that are not a recognized color format fall back to the terminal default
+// color and emit a slog.Warn.
+//
+// scope identifies the source map ("themeColors", "themeDark",
+// "themeLight") so log lines can pinpoint the bad entry.
+func applyOverrides(p ColorPalette, m map[string]string, scope string) ColorPalette {
 	for key, val := range m {
 		if val == "" {
 			continue
 		}
 		c := lipgloss.Color(val)
+		if !ValidColor(val) {
+			slog.Warn("ignoring invalid theme color; falling back to terminal default",
+				"scope", scope, "key", key, "value", val)
+			c = lipgloss.Color("-1")
+		}
 		switch strings.ToLower(key) {
 		case "green":
 			p.Green = c

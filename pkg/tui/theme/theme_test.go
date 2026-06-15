@@ -1,12 +1,9 @@
 package theme
 
 import (
-	"regexp"
-	"slices"
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
 )
 
 func TestSetThemeDefault(t *testing.T) {
@@ -220,7 +217,7 @@ func TestPresetsListed(t *testing.T) {
 	}
 }
 
-func TestInitToleratesInvalidColorValues(t *testing.T) {
+func TestInitFallsBackOnInvalidColorValues(t *testing.T) {
 	err := Init(Options{
 		Preset: "default",
 		Colors: map[string]string{
@@ -232,14 +229,76 @@ func TestInitToleratesInvalidColorValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Init must accept malformed color values: %v", err)
 	}
-	// Palette must still be populated; lipgloss.Color is a string type so
-	// the override is stored verbatim and rendering must not panic on use.
-	if Default.Colors.Green == "" {
-		t.Error("Green became empty after invalid override")
+
+	// Each invalid value falls back to lipgloss.Color("-1"), the terminal
+	// default sentinel used elsewhere in the package (theme.go:39, 82).
+	fallback := lipgloss.Color("-1")
+	if Default.Colors.Green != fallback {
+		t.Errorf("Green = %q, want %q (terminal default)", Default.Colors.Green, fallback)
 	}
-	// Sanity check: rendering with the invalid color does not crash.
+	if Default.Colors.Blue != fallback {
+		t.Errorf("Blue = %q, want %q (terminal default)", Default.Colors.Blue, fallback)
+	}
+	if Default.Colors.Red != fallback {
+		t.Errorf("Red = %q, want %q (terminal default)", Default.Colors.Red, fallback)
+	}
+
+	// Package-level color vars must be synced to the fallback too.
+	if ColorGreen != fallback {
+		t.Errorf("ColorGreen not synced: %q, want %q", ColorGreen, fallback)
+	}
+	if ColorBlue != fallback {
+		t.Errorf("ColorBlue not synced: %q, want %q", ColorBlue, fallback)
+	}
+	if ColorRed != fallback {
+		t.Errorf("ColorRed not synced: %q, want %q", ColorRed, fallback)
+	}
+
+	// Other keys must keep their preset defaults.
+	if Default.Colors.Yellow != lipgloss.Color("3") {
+		t.Errorf("Yellow = %q, want preset default 3", Default.Colors.Yellow)
+	}
+
+	// Rendering with the fallback color does not panic.
 	_ = Default.Title.Render("smoke test")
 	_ = SetTheme("default")
+}
+
+func TestValidColor(t *testing.T) {
+	cases := []struct {
+		val  string
+		want bool
+	}{
+		// Valid hex (case-insensitive).
+		{"#abc", true},
+		{"#abcdef", true},
+		{"#ABCDEF", true},
+		{"#abcdef12", true},
+		// Valid ANSI decimal and terminal-default sentinel.
+		{"-1", true},
+		{"0", true},
+		{"15", true},
+		{"208", true},
+		{"255", true},
+		// Invalid.
+		{"", false},
+		{"#", false},
+		{"#xyz", false},
+		{"#abcd", false},
+		{"#abcde", false},
+		{"#zzzzzz", false},
+		{"-2", false},
+		{"256", false},
+		{"not-a-color", false},
+		{"#abcdef ", false}, // trailing space — we do not trim
+	}
+	for _, c := range cases {
+		t.Run(c.val, func(t *testing.T) {
+			if got := ValidColor(c.val); got != c.want {
+				t.Errorf("ValidColor(%q) = %v, want %v", c.val, got, c.want)
+			}
+		})
+	}
 }
 
 func TestPresetsReturnsCopy(t *testing.T) {
