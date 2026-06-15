@@ -298,7 +298,7 @@ func ValidColor(val string) bool {
 		default:
 			return false
 		}
-		for i := 0; i < len(hex); i++ {
+		for i := range len(hex) {
 			c := hex[i]
 			switch {
 			case c >= '0' && c <= '9':
