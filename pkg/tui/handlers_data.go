@@ -35,7 +35,7 @@ func (a *App) handleIssuesLoaded(msg issuesLoadedMsg) (tea.Model, tea.Cmd) {
 	}
 	if a.gitDetectedKey != "" {
 		detectedKey := a.gitDetectedKey
-		projectKey := strings.SplitN(detectedKey, "-", 2)[0]
+		projectKey, _, _ := strings.Cut(detectedKey, "-")
 		if !strings.EqualFold(projectKey, a.projectKey) {
 			projects := a.projectList.AllProjects()
 			for _, p := range projects {
