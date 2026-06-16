@@ -84,7 +84,17 @@ func (a *App) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) {
 		}
 		content = strings.TrimSpace(content)
 		if changed && content != "" {
-			var val any = content
+			if a.isCloud && hasMentionCandidate(content) {
+				pm := pendingMention{content: content, createDesc: true, fieldIndex: idx, convState: convState, projectKey: a.projectKey}
+				users, ok := a.projectUsers(a.projectKey)
+				if !ok {
+					a.pendingMention = &pm
+					return a, tea.Batch(append(cmds, fetchUsersForMention(a.client, a.projectKey))...)
+				}
+				cmds = append(cmds, a.completeCreateDesc(pm, users))
+				return a, tea.Batch(cmds...)
+			}
+			val := any(content)
 			if a.isCloud {
 				adf, convErr := a.converter.FromMarkdown(content, convState)
 				if convErr != nil {

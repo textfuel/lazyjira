@@ -158,7 +158,10 @@ type App struct {
 
 	editTempPath string
 	editContext  editCtx
-	converter    ADFConverter
+
+	// pendingMention holds a write deferred until the user cache is loaded.
+	pendingMention *pendingMention
+	converter      ADFConverter
 
 	onSelect    onSelectFunc
 	onChecklist onChecklistFunc
@@ -506,6 +509,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case usersLoadedMsg:
 		return a.handleUsersLoaded(msg)
+	case mentionUsersLoadedMsg:
+		return a.handleMentionUsersLoaded(msg)
 	case labelsLoadedMsg:
 		return a.handleLabelsLoaded(msg)
 	case componentsLoadedMsg:
@@ -873,7 +878,25 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 	ctx := a.editContext
 	a.editContext = editCtx{}
 
-	var body any = mdContent
+	if a.isCloud && mentionsApply(ctx.kind) && hasMentionCandidate(mdContent) {
+		pk := projectKeyFromIssueKey(ctx.issueKey)
+		if pk == "" {
+			pk = a.projectKey
+		}
+		if users, ok := a.projectUsers(pk); ok {
+			return a.completeApplyEdit(pendingMention{content: mdContent, editContext: ctx, projectKey: pk}, users)
+		}
+		a.pendingMention = &pendingMention{content: mdContent, editContext: ctx, projectKey: pk}
+		return fetchUsersForMention(a.client, pk)
+	}
+	return a.convertAndSubmit(ctx, mdContent)
+}
+
+// convertAndSubmit converts mdContent to ADF on cloud (no mention resolution)
+// and submits the edit. Used for non-cloud edits and cloud edits without any
+// @-mention to resolve.
+func (a *App) convertAndSubmit(ctx editCtx, mdContent string) tea.Cmd {
+	body := any(mdContent)
 	if a.isCloud {
 		adf, err := a.converter.FromMarkdown(mdContent, ctx.converterState)
 		if err != nil {
@@ -882,18 +905,24 @@ func (a *App) applyEdit(mdContent string) tea.Cmd {
 		}
 		body = adf
 	}
+	return a.submitEdit(ctx, body, mdContent)
+}
 
+// submitEdit dispatches a converted edit to the right write command. body is the
+// payload sent to the API (ADF on cloud, markdown otherwise); md is the raw
+// markdown used for optimistic local updates.
+func (a *App) submitEdit(ctx editCtx, body any, md string) tea.Cmd {
 	switch ctx.kind { //nolint:exhaustive
 	case editDesc:
-		a.optimisticFieldUpdate(ctx.issueKey, fldDescription, mdContent)
+		a.optimisticFieldUpdate(ctx.issueKey, fldDescription, md)
 		return updateIssueField(a.client, ctx.issueKey, fldDescription, body)
 	case editCommentNew:
 		return addComment(a.client, ctx.issueKey, body)
 	case editCommentMod:
 		return updateComment(a.client, ctx.issueKey, ctx.commentID, body)
 	case editFieldText:
-		a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, mdContent)
-		return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, mdContent)
+		a.optimisticFieldUpdate(ctx.issueKey, ctx.fieldID, md)
+		return updateIssueField(a.client, ctx.issueKey, ctx.fieldID, md)
 	}
 	return nil
 }
