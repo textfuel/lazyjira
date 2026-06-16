@@ -71,15 +71,9 @@ func run() error {
 		slog.SetDefault(slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	}
 
-	var cfg *config.Config
-	if *demo {
-		cfg = config.DefaultConfig()
-	} else {
-		var err error
-		cfg, err = config.Load()
-		if err != nil {
-			return fmt.Errorf("loading config: %w", err)
-		}
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("loading config: %w", err)
 	}
 
 	if err := theme.Init(theme.Options{
@@ -136,7 +130,7 @@ func run() error {
 	defer app.Shutdown()
 
 	p := tea.NewProgram(app, tea.WithAltScreen(), tea.WithMouseCellMotion())
-	_, err := p.Run()
+	_, err = p.Run()
 	return err
 }
 
