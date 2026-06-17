@@ -11,6 +11,8 @@ on:
       - gomod2nix.toml
       - flake.nix
       - flake.lock
+      - nix/package.nix
+      - nix/shell.nix
 
 permissions:
   contents: read

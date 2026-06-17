@@ -8,36 +8,28 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = { self, nixpkgs, flake-utils, gomod2nix }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      nixpkgs,
+      flake-utils,
+      gomod2nix,
+      self,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-        buildGoApplication = gomod2nix.legacyPackages.${system}.buildGoApplication;
-      in {
+        pkgs = nixpkgs.legacyPackages.${system}.extend gomod2nix.overlays.default;
+        inherit (pkgs) callPackage;
+      in
+      {
         packages = rec {
-          lazyjira = buildGoApplication {
-            pname = "lazyjira";
+          lazyjira = callPackage ./nix/package.nix {
             version = self.shortRev or self.dirtyShortRev or "dev";
-            src = self;
-            modules = ./gomod2nix.toml;
-            ldflags = [ "-s" "-w" "-X main.version=${self.shortRev or "dev"}" ];
-            subPackages = [ "cmd/lazyjira" ];
-            meta = with pkgs.lib; {
-              description = "Terminal UI for Jira";
-              homepage = "https://github.com/textfuel/lazyjira";
-              license = licenses.mit;
-              mainProgram = "lazyjira";
-            };
           };
           default = lazyjira;
         };
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = [
-            pkgs.go
-            gomod2nix.packages.${system}.default
-          ];
-        };
+        devShells.default = pkgs.callPackage ./nix/shell.nix { };
       }
     );
 }
