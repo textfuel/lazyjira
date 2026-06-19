@@ -143,24 +143,14 @@ Credentials saved to `~/.config/lazyjira/auth.json`.
 
 ## Themes
 
-lazyjira ships with the default ANSI 16 palette plus all four [Catppuccin](https://github.com/catppuccin/catppuccin) flavors. Set `gui.theme` in `~/.config/lazyjira/config.yml`:
+lazyjira supports the default ANSI 16 palette, Catppuccin presets, auto light/dark selection, and custom palette overrides. Set `gui.theme` in `~/.config/lazyjira/config.yml`:
 
 ```yaml
 gui:
   theme: catppuccin-mocha
 ```
 
-Supported values:
-
-| Theme                  | Description                          |
-|------------------------|--------------------------------------|
-| `default` *(or unset)* | Standard ANSI 16 palette (original)  |
-| `catppuccin-latte`     | Light flavor                         |
-| `catppuccin-frappe`    | Dark flavor (low contrast)           |
-| `catppuccin-macchiato` | Dark flavor (medium contrast)        |
-| `catppuccin-mocha`     | Dark flavor (high contrast)          |
-
-The theme takes effect on next launch.
+See the [Themes docs](docs/Config.md#themes) for supported values, palette overrides, and examples.
 
 ## Usage
 

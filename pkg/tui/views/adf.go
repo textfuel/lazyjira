@@ -344,7 +344,7 @@ func applyMarks(text string, marks []any) string {
 			text = urlStyle().Render(text)
 		case "textColor":
 			if attrs, ok := mark["attrs"].(map[string]any); ok {
-				if color, ok := attrs["color"].(string); ok {
+				if color, ok := attrs["color"].(string); ok && theme.ValidColor(color) {
 					text = lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(text)
 				}
 			}
