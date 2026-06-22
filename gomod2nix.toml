@@ -59,8 +59,8 @@ schema = 3
     version = "v2.2.1"
     hash = "sha256-QeiFzJB4/AgJTDAx6OaF4uoxmyoeP9hys14+OVc+bSc="
   [mod."github.com/alecthomas/chroma/v2"]
-    version = "v2.26.1"
-    hash = "sha256-xrxMUQQSkoPnF1OjjwRB8eM9mpopWSYr47t1WcncbKc="
+    version = "v2.27.0"
+    hash = "sha256-nL8pyVmx45wouhzd1WSYqRu2IuuyiiBqC9f+aScgZXA="
   [mod."github.com/alecthomas/go-check-sumtype"]
     version = "v0.3.1"
     hash = "sha256-2Omgn9DsUaaUf6K1WU5eirlJdySTbNkrBCpL/51fB/s="
@@ -191,8 +191,8 @@ schema = 3
     version = "v1.12.0"
     hash = "sha256-PVX2rDCkiG0vyA1CbDi3bzLeZ2T8hcqJv3pZ5YwGzMI="
   [mod."github.com/dlclark/regexp2/v2"]
-    version = "v2.1.1"
-    hash = "sha256-Bdz5dmR6mnABpsBDHH3S6HVXnZ3cmTOKPpklgb/U7BE="
+    version = "v2.2.1"
+    hash = "sha256-kd7GO+bExbWUNCZXtX/zwG4pn2ZYEYuEfIR2KfTHqMQ="
   [mod."github.com/erikgeiser/coninput"]
     version = "v0.0.0-20211004153227-1c3628e74d0f"
     hash = "sha256-OWSqN1+IoL73rWXWdbbcahZu8n2al90Y3eT5Z0vgHvU="
