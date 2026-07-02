@@ -1,39 +1,49 @@
 {
-  pkgs ? (
-    let
-      inherit (builtins) fromJSON readFile;
-      inherit ((fromJSON (readFile ../flake.lock)).nodes) nixpkgs gomod2nix;
-      fetchLocked =
-        node:
-        let
-          inherit (node.locked)
-            owner
-            repo
-            rev
-            narHash
-            ;
-        in
-
-        fetchTarball {
-          url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz";
-          sha256 = narHash;
-
-        };
-    in
-    import (fetchLocked nixpkgs) {
-      overlays = [
-        (import "${fetchLocked gomod2nix}/overlay.nix")
-      ];
-    }
-  ),
-  buildGoApplication ? pkgs.buildGoApplication,
-  version ? (
-    if builtins.pathExists ../.git then
-      builtins.substring 0 7 (pkgs.lib.commitIdFromGitRepo ../.git)
+  pkgs ? null,
+  ...
+}@args:
+let
+  pkgs =
+    if builtins.isAttrs pkgs then
+      pkgs
     else
-      "dev"
-  ),
-}:
+      (
+        let
+          inherit (builtins) fromJSON readFile;
+          inherit ((fromJSON (readFile ../flake.lock)).nodes) nixpkgs gomod2nix;
+          fetchLocked =
+            node:
+            let
+              inherit (node.locked)
+                owner
+                repo
+                rev
+                narHash
+                ;
+            in
+
+            fetchTarball {
+              url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz";
+              sha256 = narHash;
+
+            };
+        in
+        import (fetchLocked nixpkgs) {
+          inherit (args) system;
+          overlays = [
+            (import "${fetchLocked gomod2nix}/overlay.nix")
+          ];
+        }
+      );
+  buildGoApplication = args.buildGoApplication or pkgs.buildGoApplication;
+  version =
+    args.version or (
+      if builtins.pathExists ../.git then
+        builtins.substring 0 7 (pkgs.lib.commitIdFromGitRepo ../.git)
+      else
+        "dev"
+    );
+in
 buildGoApplication {
   inherit version;
 
