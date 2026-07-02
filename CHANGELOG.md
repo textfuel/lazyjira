@@ -7,9 +7,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [2.19.1] - 2026-07-02
+
 ### Added
 
-- Nix: Create a standalone `lazyjira` package and shell for non flake user.
+- Nix: Create a standalone `lazyjira` package and shell for non flake user (#96)
+
+### Fixed
+
+- Confirming a search in the issue list now moves the preview and the current issue to the ticket the cursor lands on, routing the selection through the same path as normal navigation. Actions taken right after a search target the searched ticket instead of the one that was selected before the search (#104)
 
 ## [2.19.0] - 2026-06-22
 
@@ -463,7 +469,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cross-platform: macOS, Linux, Windows
 - Homebrew install via tap
 
-[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.19.0...HEAD
+[Unreleased]: https://github.com/textfuel/lazyjira/compare/v2.19.1...HEAD
+[2.19.1]: https://github.com/textfuel/lazyjira/compare/v2.19.0...v2.19.1
 [2.19.0]: https://github.com/textfuel/lazyjira/compare/v2.18.0...v2.19.0
 [2.18.0]: https://github.com/textfuel/lazyjira/compare/v2.17.0...v2.18.0
 [2.17.0]: https://github.com/textfuel/lazyjira/compare/v2.16.1...v2.17.0
