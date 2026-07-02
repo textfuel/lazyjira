@@ -7,6 +7,7 @@ import (
 
 	"github.com/textfuel/lazyjira/v2/pkg/jira"
 	"github.com/textfuel/lazyjira/v2/pkg/tui/components"
+	"github.com/textfuel/lazyjira/v2/pkg/tui/views"
 )
 
 // handleResize handles terminal resize events.
@@ -41,8 +42,9 @@ func (a *App) handleSearchConfirmed() (tea.Model, tea.Cmd) {
 		selectedIssue := a.issuesList.SelectedIssue()
 		a.issuesList.ClearFilter()
 		if selectedIssue != nil {
-			a.issuesList.SelectByKey(selectedIssue.Key)
-			cmds = append(cmds, fetchIssueDetail(a.client, selectedIssue.Key))
+			if _, cmd := a.Update(views.IssueSelectedMsg{Issue: selectedIssue}); cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 		}
 	case a.side == sideLeft && a.leftFocus == focusInfo:
 		a.infoPanel.ClearFilter()

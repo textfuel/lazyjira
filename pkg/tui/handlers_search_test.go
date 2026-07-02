@@ -38,6 +38,25 @@ func TestHandleSearchConfirmed_IssuesSelectsAndFetches(t *testing.T) {
 	}
 }
 
+func TestHandleSearchConfirmed_UpdatesPreviewToLandedIssue(t *testing.T) {
+	t.Parallel()
+	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
+	app.issuesList.SetIssues([]jira.Issue{{Key: testKey, Summary: "alpha"}, {Key: "PLAT-2", Summary: "beta"}})
+	app.side = sideLeft
+	app.leftFocus = focusIssues
+	app.previewKey = testKey
+
+	app.issuesList.SetFilter("beta")
+	_, _ = app.handleSearchConfirmed()
+
+	if selected := app.issuesList.SelectedIssue(); selected == nil || selected.Key != "PLAT-2" {
+		t.Fatalf("cursor landed on %v, want PLAT-2", selected)
+	}
+	if current := app.currentIssue(); current == nil || current.Key != "PLAT-2" {
+		t.Errorf("currentIssue() = %v, want PLAT-2 so actions target the searched ticket", current)
+	}
+}
+
 func TestHandleSearchConfirmed_ProjectsSwitches(t *testing.T) {
 	t.Parallel()
 	app := newAppWithFake(t, &jiratest.FakeClient{T: t})
