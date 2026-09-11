@@ -28,6 +28,19 @@ func makeIssuesListWithTabs(width, height int, tabNames ...string) *IssuesList {
 	return m
 }
 
+func TestIssuesList_TitleMarksOnlyActiveTab(t *testing.T) {
+	t.Parallel()
+	m := makeIssuesListWithTabs(50, 8, "My Issues", "Done")
+
+	plain := stripANSI(topBorderLine(m))
+	if !strings.Contains(plain, "[My Issues]") {
+		t.Errorf("title = %q, want active marker around My Issues", plain)
+	}
+	if strings.Contains(plain, "[Done]") {
+		t.Errorf("title = %q, must not mark inactive tab Done", plain)
+	}
+}
+
 func TestIssuesList_TopBorderWidth_FewTabs(t *testing.T) {
 	t.Parallel()
 	const width = 50
@@ -155,6 +168,10 @@ func TestIssuesList_ActiveTabTruncated_WhenLabelExceedsBudget(t *testing.T) {
 	m := makeIssuesListWithTabs(width, 8, "A Very Long Tab Name")
 
 	line := topBorderLine(m)
+	plain := stripANSI(line)
+	if !strings.Contains(plain, "[A Very Lon…]") {
+		t.Errorf("title = %q, want active marker with truncated label", plain)
+	}
 	got := lipgloss.Width(line)
 	if got != width {
 		t.Errorf("top border width = %d, want %d (label overflowed border)\nline: %q", got, width, line)
