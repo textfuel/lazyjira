@@ -53,13 +53,13 @@ func gitCheckoutTracking(repoPath, remoteBranch string) tea.Cmd {
 	}
 }
 
-func fetchIssuesByJQL(client jira.ClientInterface, jql string, tab, maxResults int) tea.Cmd {
+func fetchIssuesByJQL(client jira.ClientInterface, jql string, tab, maxResults, epoch int) tea.Cmd {
 	return func() tea.Msg {
 		result, err := client.SearchIssues(context.Background(), jql, 0, maxResults)
 		if err != nil {
 			return errorMsg{err: err}
 		}
-		return issuesLoadedMsg{issues: result.Issues, tab: tab}
+		return issuesLoadedMsg{issues: result.Issues, tab: tab, epoch: epoch}
 	}
 }
 
@@ -191,13 +191,15 @@ type jqlSearchErrorMsg struct{ err string }
 type jqlFieldsLoadedMsg struct{ fields []jira.AutocompleteField }
 type jqlSuggestionsMsg struct{ suggestions []jira.AutocompleteSuggestion }
 
-func fetchJQLSearch(client jira.ClientInterface, jql string, maxResults int) tea.Cmd {
+// fetchJQLSearch runs resolvedJQL but reports query, the text as typed, so a
+// stored query keeps its template variables.
+func fetchJQLSearch(client jira.ClientInterface, query, resolvedJQL string, maxResults int) tea.Cmd {
 	return func() tea.Msg {
-		result, err := client.SearchIssues(context.Background(), jql, 0, maxResults)
+		result, err := client.SearchIssues(context.Background(), resolvedJQL, 0, maxResults)
 		if err != nil {
 			return jqlSearchErrorMsg{err: err.Error()}
 		}
-		return jqlSearchResultMsg{issues: result.Issues, jql: jql}
+		return jqlSearchResultMsg{issues: result.Issues, jql: query}
 	}
 }
 
