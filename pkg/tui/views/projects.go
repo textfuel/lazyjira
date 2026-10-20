@@ -134,15 +134,13 @@ func (p *ProjectList) View() string {
 		if proj.Lead != nil {
 			lead = " · " + proj.Lead.DisplayName
 		}
-		maxName := contentWidth - 10 - len(lead)
+		leadW := lipgloss.Width(lead)
+		maxName := contentWidth - 10 - leadW
 		if maxName < 5 {
 			lead = ""
 			maxName = contentWidth - 10
 		}
-		namePart := proj.Name
-		if len(namePart) > maxName {
-			namePart = namePart[:maxName-1] + "…"
-		}
+		namePart := components.TruncateEnd(proj.Name, maxName)
 		active := proj.Key == p.activeKey
 		markerChar := " "
 		if active {

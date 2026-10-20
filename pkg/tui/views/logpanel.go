@@ -74,7 +74,7 @@ func (l *LogPanel) View() string {
 		line := fmt.Sprintf("%s %s %s %s %s",
 			l.theme.Subtitle.Render(e.Time.Format("15:04:05")),
 			l.theme.KeyStyle.Render(e.Method),
-			l.theme.ValueStyle.Render(components.Truncate(e.Path, contentWidth-30)),
+			l.theme.ValueStyle.Render(components.TruncateEnd(e.Path, contentWidth-30)),
 			statusStyle.Render(strconv.Itoa(e.Status)),
 			l.theme.Subtitle.Render(e.Elapsed.Round(time.Millisecond).String()),
 		)

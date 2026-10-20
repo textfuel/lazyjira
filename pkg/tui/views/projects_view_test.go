@@ -3,6 +3,7 @@ package views
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -181,5 +182,23 @@ func TestProjectList_View_LongNameTruncated(t *testing.T) {
 	output := stripANSI(list.View())
 	if strings.Contains(output, longName) {
 		t.Errorf("expected long name to be truncated in View()")
+	}
+}
+
+func TestProjectList_View_CyrillicLongNameIsValidUTF8(t *testing.T) {
+	t.Parallel()
+	longName := strings.Repeat("Алтай. Турпортал ", 6)
+	list := NewProjectList()
+	list.SetProjects([]jira.Project{{Key: "ALTAI", Name: longName}})
+	list.SetSize(40, 24)
+	output := stripANSI(list.View())
+	if !utf8.ValidString(output) {
+		t.Errorf("View() returned invalid UTF-8: %q", output)
+	}
+	if strings.ContainsRune(output, utf8.RuneError) {
+		t.Errorf("View() contains U+FFFD replacement character: %q", output)
+	}
+	if !strings.Contains(output, "Алтай") {
+		t.Errorf("View() = %q, want cyrillic name start preserved", output)
 	}
 }
